@@ -1,31 +1,80 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useRef } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import { Search, ArrowRight } from 'lucide-react';
+import FanCarousel from './FanCarousel';
 
 const Hero: React.FC = () => {
-  return (
-    <section className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-20">
-      <div className="container mx-auto px-4 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold mb-6">
-          Discover Hands-On Learning Experiences in Nepal
-        </h1>
-        <p className="text-lg md:text-xl mb-8 max-w-2xl mx-auto">
-          Connect with local artisans, learn new skills, and unleash your creativity. 
-          From traditional crafts to modern workshops, your next learning adventure starts here.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link 
-            to="/signup" 
-            className="bg-white text-indigo-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition"
-          >
-            Start Exploring Workshops
-          </Link>
-          <button className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-indigo-600 transition">
-            Become a Provider
-          </button>
-        </div>
-      </div>
-    </section>
-  )
-}
+    const containerRef = useRef<HTMLDivElement>(null);
+    const { scrollYProgress } = useScroll({ target: containerRef, offset: ["start start", "end start"] });
 
-export default Hero
+    const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
+    const opacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
+
+    return (
+        <section ref={containerRef} className="relative min-h-screen pt-32 pb-20 px-8 flex flex-col justify-center overflow-hidden">
+
+            {/* Background Decor */}
+            <div className="absolute top-0 right-0 -z-10 w-[500px] h-[500px] bg-primary-orange/5 rounded-full blur-3xl translate-x-1/3 -translate-y-1/3" />
+            <div className="absolute bottom-0 left-0 -z-10 w-[400px] h-[400px] bg-deep-purple/5 rounded-full blur-3xl -translate-x-1/3 translate-y-1/3" />
+
+            <motion.div
+                style={{ y, opacity }}
+                className="container mx-auto max-w-6xl z-10"
+            >
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+
+                    {/* Main Content */}
+                    <div className="lg:col-span-7">
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.8, delay: 0.2 }}
+                        >
+                            <h1 className="font-serif text-6xl md:text-8xl lg:text-[7rem] leading-[0.9] text-deep-purple mb-8">
+                                Master a new <br />
+                                <span className="italic text-primary-orange">craft</span> today.
+                            </h1>
+                            <p className="font-sans text-xl text-deep-purple/70 max-w-xl mb-10 leading-relaxed">
+                                Join local artisans and expert mentors in hands-on workshops.
+                                Discover the joy of making.
+                            </p>
+
+                            {/* Search Box */}
+                            <div className="bg-white p-2 rounded-full shadow-lg max-w-lg flex items-center border border-gray-100">
+                                <div className="pl-4 text-gray-400">
+                                    <Search size={20} />
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="What do you want to learn?"
+                                    className="flex-1 px-4 py-3 bg-transparent outline-none font-sans text-deep-purple placeholder:text-gray-400"
+                                />
+                                <button className="bg-deep-purple hover:bg-deep-purple/90 text-white p-3 rounded-full transition-colors group">
+                                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+
+                    {/* Fan Carousel (Right Side) */}
+                    <div className="lg:col-span-5 hidden lg:block">
+                        <FanCarousel />
+                    </div>
+                </div>
+            </motion.div>
+
+            {/* Down Scroll Indicator */}
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1, duration: 1 }}
+                className="absolute bottom-10 left-1/2 -translate-x-1/2 text-deep-purple/40 text-sm font-sans flex flex-col items-center gap-2"
+            >
+                <span>Scroll to Explore</span>
+                <div className="w-[1px] h-12 bg-deep-purple/20" />
+            </motion.div>
+        </section>
+    );
+};
+
+export default Hero;
