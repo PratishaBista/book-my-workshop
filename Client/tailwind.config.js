@@ -15,6 +15,7 @@ export default {
         },
         primary: {
           orange: "#EE7932",
+          green: "#73A757",
         },
         deep: {
           purple: "#1A0B2E",

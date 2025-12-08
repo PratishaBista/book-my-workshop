@@ -1,13 +1,64 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDown, Menu } from 'lucide-react';
 
 const Navbar: React.FC = () => {
+    const navigate = useNavigate();
     const [communityOpen, setCommunityOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const userMenuRef = useRef<HTMLDivElement>(null);
-    const isLoggedIn = false; // TODO: Replace with actual auth state
+
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
+    const isLoggedIn = !!token;
+
+    // Get user info from token (decode JWT)
+    const getUserInfo = () => {
+        if (!token) return null;
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            return {
+                name: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || payload.name || 'User',
+                email: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || payload.email || ''
+            };
+        } catch {
+            return null;
+        }
+    };
+
+    const userInfo = getUserInfo();
+
+    // if (userInfo) {
+    //     console.log('Logged in user:', {
+    //         name: userInfo.name,
+    //         email: userInfo.email
+    //     });
+    // }
+
+    // Debug: Log full token payload
+    if (token) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            console.log('Full JWT payload:', payload);
+        } catch (e) {
+            console.error('Error decoding token:', e);
+        }
+    }
+
+    // Get first initial from name
+    const getFirstInitial = (name: string) => {
+        return name.charAt(0).toUpperCase();
+    };
+
+    // Handle logout
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('tokenExpiry');
+        setUserMenuOpen(false);
+        navigate('/');
+        // window.location.reload(); 
+    };
 
     // Close user menu when clicking outside
     useEffect(() => {
@@ -34,15 +85,15 @@ const Navbar: React.FC = () => {
 
     const userMenuItems = isLoggedIn
         ? [
-            { label: 'My Dashboard', color: '#73A757', link: '/dashboard' },
-            { label: 'My Bookings', color: '#0E0E0C', link: '/bookings' },
-            { label: 'Saved Workshops', color: '#AF82C5', link: '/saved' },
-            { label: 'Settings', color: '#73A757', link: '/settings' },
-            { label: 'Log Out', color: '#0E0E0C', link: '/logout' }
+            // { label: 'My Dashboard', link: '/dashboard' },
+            // { label: 'My Bookings', link: '/bookings' },
+            // { label: 'Saved Workshops', link: '/saved' },
+            { label: 'Settings', link: '/settings' },
+            { label: 'Log Out', link: '#', onClick: handleLogout }
         ]
         : [
-            { label: 'Login / Sign Up', color: '#73A757', link: '/login' },
-            { label: 'Become a Host', color: '#AF82C5', link: '/become-host' }
+            { label: 'Login / Sign Up', link: '/login' },
+            { label: 'Become a Host', link: '/become-host' }
         ];
 
     return (
@@ -60,7 +111,7 @@ const Navbar: React.FC = () => {
                 </Link>
 
                 {/* Desktop Navigation */}
-                <div className="hidden md:flex items-center gap-12">
+                <div className="hidden md:flex items-center gap-8">
 
                     {/* Explore Link */}
                     <Link
@@ -125,40 +176,67 @@ const Navbar: React.FC = () => {
                     </Link>
                 </div>
 
-                {/* User Menu (Hamburger) */}
-                <div className="relative" ref={userMenuRef}>
-                    <button
-                        onClick={() => setUserMenuOpen(!userMenuOpen)}
-                        className="p-2 hover:bg-deep-purple/5 rounded-lg transition-colors"
-                    >
-                        <Menu size={24} className="text-deep-purple" />
-                    </button>
+                {/* Right Side: Profile + Hamburger */}
+                <div className="flex items-center gap-4">
 
-                    {/* User Dropdown */}
-                    <AnimatePresence>
-                        {userMenuOpen && (
-                            <motion.div
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: 20 }}
-                                transition={{ duration: 0.3 }}
-                                className="absolute top-full right-0 mt-4 w-64 bg-cream-offwhite rounded-2xl shadow-xl border border-deep-purple/10 py-3 px-2"
-                            >
-                                {userMenuItems.map((item, index) => (
-                                    <Link
-                                        key={index}
-                                        to={item.link}
-                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-cream-base transition-colors group text-left"
-                                        onClick={() => setUserMenuOpen(false)}
-                                    >
-                                        <span className="font-sans text-base font-semibold text-[#0E0E0C] transition-colors">
-                                            {item.label}
-                                        </span>
-                                    </Link>
-                                ))}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                    {/* Profile Picture (only when logged in) */}
+                    {isLoggedIn && userInfo && (
+                        <Link
+                            to="/profile"
+                            className="w-10 h-10 rounded-full flex items-center justify-center transition-transform text-white font-semibold text-lg"
+                            style={{ backgroundColor: '#73A757' }}
+                        >
+                            {getFirstInitial(userInfo.name)}
+                        </Link>
+                    )}
+
+                    {/* Hamburger Menu */}
+                    <div className="relative" ref={userMenuRef}>
+                        <button
+                            onClick={() => setUserMenuOpen(!userMenuOpen)}
+                            className="p-2 hover:bg-deep-purple/5 rounded-lg transition-colors"
+                        >
+                            <Menu size={24} className="text-deep-purple" />
+                        </button>
+
+                        {/* User Dropdown */}
+                        <AnimatePresence>
+                            {userMenuOpen && (
+                                <motion.div
+                                    initial={{ opacity: 0, x: 20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: 20 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="absolute top-full right-0 mt-4 w-64 bg-cream-offwhite rounded-2xl shadow-xl border border-deep-purple/10 py-3 px-2"
+                                >
+                                    {userMenuItems.map((item, index) => (
+                                        item.onClick ? (
+                                            <button
+                                                key={index}
+                                                onClick={item.onClick}
+                                                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-cream-base transition-colors group text-left"
+                                            >
+                                                <span className="font-sans text-base font-semibold text-[#0E0E0C] transition-colors">
+                                                    {item.label}
+                                                </span>
+                                            </button>
+                                        ) : (
+                                            <Link
+                                                key={index}
+                                                to={item.link}
+                                                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-cream-base transition-colors group text-left"
+                                                onClick={() => setUserMenuOpen(false)}
+                                            >
+                                                <span className="font-sans text-base font-semibold text-[#0E0E0C] transition-colors">
+                                                    {item.label}
+                                                </span>
+                                            </Link>
+                                        )
+                                    ))}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                 </div>
             </div>
         </nav>
