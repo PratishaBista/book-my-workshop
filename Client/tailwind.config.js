@@ -8,6 +8,7 @@ export default {
       colors: {
         cream: {
           base: "#FAF8E7",
+          offwhite: "#FFFDEC",
         },
         neutral: {
           white: "#F9F9F5",
@@ -16,11 +17,11 @@ export default {
           orange: "#EE7932",
         },
         deep: {
-          purple: "#1A0B2E", // Rich dark purple for logo/anchors
+          purple: "#1A0B2E",
         }
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        sans: ['Manrope', 'Inter', 'sans-serif'],
         serif: ['Fraunces', 'serif'],
       }
     },
