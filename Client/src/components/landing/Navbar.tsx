@@ -1,13 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown, Menu } from 'lucide-react';
+import { ChevronDown, Menu, Search, ArrowRight } from 'lucide-react';
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate();
     const [communityOpen, setCommunityOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const userMenuRef = useRef<HTMLDivElement>(null);
+    const locationDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Search states
+    const [selectedLocation, setSelectedLocation] = useState('Kathmandu');
+    const [locationOpen, setLocationOpen] = useState(false);
+    const [locationSearch, setLocationSearch] = useState('');
+
+    const popularCities = [
+        'Kathmandu', 'Pokhara', 'Lalitpur', 'Bhaktapur', 'Biratnagar',
+        'Birgunj', 'Dharan', 'Hetauda', 'Butwal', 'Janakpur'
+    ];
+
+    const filteredCities = popularCities.filter(city =>
+        city.toLowerCase().includes(locationSearch.toLowerCase())
+    );
 
     // Check if user is logged in
     const token = localStorage.getItem('token');
@@ -77,6 +92,23 @@ const Navbar: React.FC = () => {
         };
     }, [userMenuOpen]);
 
+    // Close location dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (locationDropdownRef.current && !locationDropdownRef.current.contains(event.target as Node)) {
+                setLocationOpen(false);
+            }
+        };
+
+        if (locationOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [locationOpen]);
+
     const communityItems = [
         { label: 'Our Impact', color: '#73A757' },
         { label: 'Help Center', color: '#0E0E0C' },
@@ -111,7 +143,7 @@ const Navbar: React.FC = () => {
                 </Link>
 
                 {/* Desktop Navigation */}
-                <div className="hidden md:flex items-center gap-8">
+                <div className="hidden md:flex items-center gap-16">
 
                     {/* Explore Link */}
                     <Link
@@ -174,6 +206,95 @@ const Navbar: React.FC = () => {
                     >
                         Become a Host
                     </Link>
+
+                    {/* Search Bar - Compact Navbar Version */}
+                    <div className="bg-white/60 backdrop-blur-sm p-1 rounded-xl shadow-sm border border-deep-purple/10 hover:border-deep-purple/20 transition-colors">
+                        <div className="flex items-center gap-1">
+
+                            {/* Location Selector */}
+                            <div className="relative" ref={locationDropdownRef}>
+                                <button
+                                    onClick={() => setLocationOpen(!locationOpen)}
+                                    className="flex items-center gap-1.5 px-3 py-2 border-r border-deep-purple/10 hover:bg-deep-purple/5 transition-colors rounded-l-lg"
+                                >
+                                    <svg className="w-3.5 h-3.5 text-deep-purple/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    <span className="text-xs font-medium text-deep-purple whitespace-nowrap">{selectedLocation}</span>
+                                    <ChevronDown size={12} className={`text-deep-purple/40 transition-transform ${locationOpen ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {/* Location Dropdown */}
+                                <AnimatePresence>
+                                    {locationOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="absolute top-full left-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-deep-purple/10 overflow-hidden z-50"
+                                        >
+                                            {/* Search Input */}
+                                            <div className="p-2.5 border-b border-deep-purple/10">
+                                                <div className="flex items-center gap-2 px-2.5 py-1.5 bg-cream-base/50 rounded-lg">
+                                                    <Search size={13} className="text-deep-purple/30" />
+                                                    <input
+                                                        type="text"
+                                                        value={locationSearch}
+                                                        onChange={(e) => setLocationSearch(e.target.value)}
+                                                        placeholder="Search city..."
+                                                        className="flex-1 bg-transparent outline-none text-xs text-deep-purple placeholder:text-deep-purple/30"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Cities List */}
+                                            <div className="max-h-56 overflow-y-auto location-dropdown-scroll">
+                                                {filteredCities.length > 0 ? (
+                                                    filteredCities.map((city) => (
+                                                        <button
+                                                            key={city}
+                                                            onClick={() => {
+                                                                setSelectedLocation(city);
+                                                                setLocationOpen(false);
+                                                                setLocationSearch('');
+                                                            }}
+                                                            className={`w-full text-left px-3.5 py-2 text-xs transition-colors ${selectedLocation === city
+                                                                ? 'bg-primary-orange/10 text-primary-orange font-medium'
+                                                                : 'text-deep-purple hover:bg-cream-base'
+                                                                }`}
+                                                        >
+                                                            {city}
+                                                        </button>
+                                                    ))
+                                                ) : (
+                                                    <div className="px-3.5 py-6 text-center text-xs text-deep-purple/40">
+                                                        No cities found
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+
+                            {/* Search Input */}
+                            <div className="flex items-center gap-2 px-3">
+                                <Search size={14} className="text-deep-purple/30" strokeWidth={1.5} />
+                                <input
+                                    type="text"
+                                    placeholder="Search..."
+                                    className="w-32 py-2 bg-transparent outline-none font-sans text-deep-purple placeholder:text-deep-purple/30 text-xs"
+                                />
+                            </div>
+
+                            {/* Search Button with Arrow */}
+                            <button className="bg-deep-purple hover:bg-primary-orange text-white p-2 rounded-lg transition-all duration-300">
+                                <ArrowRight size={14} />
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Right Side: Profile + Hamburger */}

@@ -4,6 +4,7 @@ import Lenis from 'lenis'; // Import default export from lenis
 import Navbar from '../components/landing/Navbar';
 import Hero from '../components/landing/Hero.tsx';
 import IntroOverlay from '../components/landing/IntroOverlay';
+import Footer from '../components/landing/Footer';
 
 const LandingPage: React.FC = () => {
   const [introFinished, setIntroFinished] = useState(false);
@@ -51,6 +52,10 @@ const LandingPage: React.FC = () => {
             {/* Future sections: Features, Workshops, etc. */}
             <div className="h-screen"></div> {/* Spacer to test scroll */}
           </main>
+        )}
+
+        {introFinished && (
+          <Footer />
         )}
       </div>
     </div>

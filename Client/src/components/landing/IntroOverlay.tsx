@@ -6,10 +6,10 @@ interface IntroOverlayProps {
 }
 
 const images = [
-    "https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=800&auto=format", // Creative
-    "https://images.unsplash.com/photo-1606092195730-5d7b9af1ef4d?q=80&w=800&auto=format", // Pottery
-    "https://images.unsplash.com/photo-1544967082-d9d25d867d66?q=80&w=800&auto=format", // Workshop
-    "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=800&auto=format"  // Learning
+    "https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=800&auto=format",
+    "https://www.distinctdestinations.in/DistinctDestinationsBackEndImg/BlogImage/6-artisanal-skills-to-take-home-from-nepal-L-distinctdestinations.jpg", 
+    "https://images.unsplash.com/photo-1544967082-d9d25d867d66?q=80&w=800&auto=format",
+    "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=800&auto=format" 
 ];
 
 const IntroOverlay: React.FC<IntroOverlayProps> = ({ onComplete }) => {

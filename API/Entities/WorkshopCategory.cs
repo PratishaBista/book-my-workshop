@@ -1,0 +1,27 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace API.Entities;
+
+public class WorkshopCategory
+{
+    [Key]
+    public int Id { get; set; }
+
+    [Required]
+    [MaxLength(100)]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(500)]
+    public string? Description { get; set; }
+
+    public string? IconUrl { get; set; }
+
+    public int DisplayOrder { get; set; }
+
+    public bool IsActive { get; set; } = true;
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Navigation Property
+    public ICollection<Workshop> Workshops { get; set; } = new List<Workshop>();
+}
