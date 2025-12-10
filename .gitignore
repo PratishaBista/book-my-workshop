@@ -45,5 +45,6 @@ Documentation/
 Assets/
 
 # ignore app settings
-API/appsettings.Development.json
 API/appsettings.json
+API/appsettings.Development.json
+
