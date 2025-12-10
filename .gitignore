@@ -43,3 +43,6 @@ yarn-error.log*
 
 Documentation/
 Assets/
+
+API/appsettings.json
+API/appsettings.Development.json
