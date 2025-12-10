@@ -1,5 +1,6 @@
 using API.Data;
 using API.Entities;
+using API.Repositories;
 using API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -15,6 +16,9 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// AutoMapper
+builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
 // DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -70,6 +74,18 @@ builder.Services.AddCors(options =>
 // Services
 builder.Services.AddScoped<TokenService>();
 
+// Repositories
+builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+builder.Services.AddScoped<IWorkshopRepository, WorkshopRepository>();
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+builder.Services.AddScoped<IBookingRepository, BookingRepository>();
+builder.Services.AddScoped<IScheduleRepository, ScheduleRepository>();
+
+// Business Services
+builder.Services.AddScoped<IWorkshopService, WorkshopService>();
+builder.Services.AddScoped<IMediaService, MediaService>();
+builder.Services.AddScoped<IBookingService, BookingService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -96,7 +112,8 @@ using (var scope = app.Services.CreateScope())
     {
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
-        await DbInitializer.SeedAsync(userManager, roleManager);
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        await DbInitializer.SeedAsync(userManager, roleManager, context);
     }
     catch (Exception ex)
     {

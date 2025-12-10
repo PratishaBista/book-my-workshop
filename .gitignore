@@ -43,3 +43,7 @@ yarn-error.log*
 
 Documentation/
 Assets/
+
+# ignore app settings
+API/appsettings.Development.json
+API/appsettings.json

@@ -3,3 +3,28 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom Scrollbar for Search Dropdown */
+.location-dropdown-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #4d3d55 transparent;
+}
+
+.location-dropdown-scroll::-webkit-scrollbar {
+    width: 1px;
+}
+
+.location-dropdown-scroll::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 2px;
+}
+
+.location-dropdown-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #AF82C5 0%, #E57A44 100%);
+    border-radius: 2px;
+    transition: background 0.3s ease;
+}
+
+.location-dropdown-scroll::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #AF82C5 0%, #E57A44 100%);
+}

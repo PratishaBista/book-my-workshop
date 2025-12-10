@@ -10,12 +10,123 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
     }
 
+    // Existing DbSets
     public DbSet<Provider> Providers { get; set; }
+
+    // Workshop-related DbSets
+    public DbSet<WorkshopCategory> WorkshopCategories { get; set; }
+    public DbSet<Workshop> Workshops { get; set; }
+    public DbSet<WorkshopPricing> WorkshopPricings { get; set; }
+    public DbSet<WorkshopMedia> WorkshopMedia { get; set; }
+    public DbSet<WorkshopSchedule> WorkshopSchedules { get; set; }
+    public DbSet<Booking> Bookings { get; set; }
+    public DbSet<WorkshopReview> WorkshopReviews { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
         
         builder.Entity<ApplicationUser>().ToTable("Users");
+
+        // Workshop Category
+        builder.Entity<WorkshopCategory>()
+            .HasIndex(c => c.Name)
+            .IsUnique();
+
+        // Workshop - Provider relationship
+        builder.Entity<Workshop>()
+            .HasOne(w => w.Provider)
+            .WithMany()
+            .HasForeignKey(w => w.ProviderId)
+            .OnDelete(DeleteBehavior.Restrict); // Don't delete workshops if provider is deleted
+
+        // Workshop - Category relationship
+        builder.Entity<Workshop>()
+            .HasOne(w => w.Category)
+            .WithMany(c => c.Workshops)
+            .HasForeignKey(w => w.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict); // Don't delete workshops if category is deleted
+
+        // Workshop - Pricing (1:1)
+        builder.Entity<WorkshopPricing>()
+            .HasOne(p => p.Workshop)
+            .WithOne(w => w.Pricing)
+            .HasForeignKey<WorkshopPricing>(p => p.WorkshopId)
+            .OnDelete(DeleteBehavior.Cascade); // Delete pricing if workshop is deleted
+
+        // Workshop - Media (1:Many)
+        builder.Entity<WorkshopMedia>()
+            .HasOne(m => m.Workshop)
+            .WithMany(w => w.Media)
+            .HasForeignKey(m => m.WorkshopId)
+            .OnDelete(DeleteBehavior.Cascade); // Delete media if workshop is deleted
+
+        // Workshop - Schedule (1:Many)
+        builder.Entity<WorkshopSchedule>()
+            .HasOne(s => s.Workshop)
+            .WithMany(w => w.Schedules)
+            .HasForeignKey(s => s.WorkshopId)
+            .OnDelete(DeleteBehavior.Cascade); // Delete schedules if workshop is deleted
+
+        // Booking - User relationship
+        builder.Entity<Booking>()
+            .HasOne(b => b.User)
+            .WithMany()
+            .HasForeignKey(b => b.UserId)
+            .OnDelete(DeleteBehavior.Restrict); // Don't delete bookings if user is deleted
+
+        // Booking - WorkshopSchedule relationship
+        builder.Entity<Booking>()
+            .HasOne(b => b.WorkshopSchedule)
+            .WithMany(s => s.Bookings)
+            .HasForeignKey(b => b.WorkshopScheduleId)
+            .OnDelete(DeleteBehavior.Restrict); // Don't delete bookings if schedule is deleted
+
+        // Unique confirmation code
+        builder.Entity<Booking>()
+            .HasIndex(b => b.ConfirmationCode)
+            .IsUnique();
+
+        // Review - Workshop relationship
+        builder.Entity<WorkshopReview>()
+            .HasOne(r => r.Workshop)
+            .WithMany(w => w.Reviews)
+            .HasForeignKey(r => r.WorkshopId)
+            .OnDelete(DeleteBehavior.Cascade); // Delete reviews if workshop is deleted
+
+        // Review - User relationship
+        builder.Entity<WorkshopReview>()
+            .HasOne(r => r.User)
+            .WithMany()
+            .HasForeignKey(r => r.UserId)
+            .OnDelete(DeleteBehavior.Restrict); // Don't delete reviews if user is deleted
+
+        // Review - Booking relationship (ensures only attendees can review)
+        builder.Entity<WorkshopReview>()
+            .HasOne(r => r.Booking)
+            .WithOne(b => b.Review)
+            .HasForeignKey<WorkshopReview>(r => r.BookingId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Ensure one review per booking
+        builder.Entity<WorkshopReview>()
+            .HasIndex(r => r.BookingId)
+            .IsUnique();
+
+        // Indexes for performance
+        builder.Entity<Workshop>()
+            .HasIndex(w => w.Status);
+
+        builder.Entity<Workshop>()
+            .HasIndex(w => w.CategoryId);
+
+        builder.Entity<WorkshopSchedule>()
+            .HasIndex(s => s.StartDateTime);
+
+        builder.Entity<Booking>()
+            .HasIndex(b => b.UserId);
+
+        builder.Entity<Booking>()
+            .HasIndex(b => new { b.BookingStatus, b.PaymentStatus });
     }
 }

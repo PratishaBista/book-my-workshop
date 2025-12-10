@@ -1,6 +1,5 @@
 import React, { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { Search, ArrowRight } from 'lucide-react';
 import FanCarousel from './FanCarousel';
 
 const Hero: React.FC = () => {
@@ -38,21 +37,6 @@ const Hero: React.FC = () => {
                                 Join local artisans and expert mentors in hands-on workshops.
                                 Discover the joy of making.
                             </p>
-
-                            {/* Search Box */}
-                            <div className="bg-white p-2 rounded-full shadow-lg max-w-lg flex items-center border border-gray-100">
-                                <div className="pl-4 text-gray-400">
-                                    <Search size={20} />
-                                </div>
-                                <input
-                                    type="text"
-                                    placeholder="What do you want to learn?"
-                                    className="flex-1 px-4 py-3 bg-transparent outline-none font-sans text-deep-purple placeholder:text-gray-400"
-                                />
-                                <button className="bg-deep-purple hover:bg-deep-purple/90 text-white p-3 rounded-full transition-colors group">
-                                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                                </button>
-                            </div>
                         </motion.div>
                     </div>
 
