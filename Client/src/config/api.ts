@@ -12,7 +12,14 @@ export const API_ENDPOINTS = {
         resetPassword: `${API_URL}/api/auth/reset-password`,
         providerSignup: `${API_URL}/api/auth/provider/signup`,
     },
-    // Add more endpoints as needed
+    admin: {
+        login: `${API_URL}/api/auth/login`,
+        workshops: `${API_URL}/api/admin/workshops`,
+        categories: `${API_URL}/api/category`,
+        users: `${API_URL}/api/admin/users`,
+        providers: `${API_URL}/api/admin/providers`,
+    },
+
 };
 
 // Google OAuth
