@@ -7,9 +7,9 @@ interface IntroOverlayProps {
 
 const images = [
     "https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=800&auto=format",
-    "https://www.distinctdestinations.in/DistinctDestinationsBackEndImg/BlogImage/6-artisanal-skills-to-take-home-from-nepal-L-distinctdestinations.jpg", 
+    "https://www.distinctdestinations.in/DistinctDestinationsBackEndImg/BlogImage/6-artisanal-skills-to-take-home-from-nepal-L-distinctdestinations.jpg",
     "https://images.unsplash.com/photo-1544967082-d9d25d867d66?q=80&w=800&auto=format",
-    "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=800&auto=format" 
+    "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=800&auto=format"
 ];
 
 const IntroOverlay: React.FC<IntroOverlayProps> = ({ onComplete }) => {
@@ -64,7 +64,7 @@ const IntroOverlay: React.FC<IntroOverlayProps> = ({ onComplete }) => {
                     transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                     className="font-serif text-5xl md:text-7xl lg:text-8xl font-medium text-deep-purple tracking-tight"
                 >
-                    Book My Workshop
+                    Book my Workshop
                 </motion.h1>
 
                 <motion.p

@@ -35,7 +35,7 @@ const Hero: React.FC = () => {
                             </h1>
                             <p className="font-sans text-xl text-deep-purple/70 max-w-xl mb-10 leading-relaxed">
                                 Join local artisans and expert mentors in hands-on workshops.
-                                Discover the joy of making.
+
                             </p>
                         </motion.div>
                     </div>

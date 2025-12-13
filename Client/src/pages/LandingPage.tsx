@@ -1,15 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import Lenis from 'lenis'; // Import default export from lenis
+import Lenis from 'lenis';
 import Navbar from '../components/landing/Navbar';
-import Hero from '../components/landing/Hero.tsx';
+import Hero from '../components/landing/Hero';
 import IntroOverlay from '../components/landing/IntroOverlay';
 import Footer from '../components/landing/Footer';
+import CategoryDiscovery from '../components/landing/CategoryDiscovery';
+import Teaser from '../components/landing/Teaser';
+import WorkshopListing from '../components/landing/WorkshopListing';
+import Testimonials from '../components/landing/Testimonials';
+import TrustedBy from '../components/landing/TrustedBy';
+import Stories from '../components/landing/Stories';
+import BecomeHost from '../components/landing/BecomeHost';
 
 const LandingPage: React.FC = () => {
   const [introFinished, setIntroFinished] = useState(false);
 
-  // Initialize Leins Smooth Scroll
+  // Initialize Lenis Smooth Scroll
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.2,
@@ -39,24 +46,23 @@ const LandingPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <div className="relative z-10">
-        {introFinished && (
-          <Navbar />
-        )}
+      <div className="relative z-10 font-sans">
+        {introFinished && <Navbar />}
 
-        {/* We keep Hero in DOM but maybe hidden or simple fade in? 
-            If we delay showing it until intro is done, it's cleaner. */}
         {introFinished && (
           <main>
             <Hero />
-            {/* Future sections: Features, Workshops, etc. */}
-            <div className="h-screen"></div> {/* Spacer to test scroll */}
+            <CategoryDiscovery />
+            <WorkshopListing />
+            <Testimonials />
+            <TrustedBy />
+            <BecomeHost />
+            <Teaser />
+            <Stories />
           </main>
         )}
 
-        {introFinished && (
-          <Footer />
-        )}
+        {introFinished && <Footer />}
       </div>
     </div>
   );

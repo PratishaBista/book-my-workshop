@@ -55,7 +55,7 @@ const Navbar: React.FC = () => {
     if (token) {
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
-            console.log('Full JWT payload:', payload);
+            // console.log('Full JWT payload:', payload);
         } catch (e) {
             console.error('Error decoding token:', e);
         }
@@ -138,7 +138,7 @@ const Navbar: React.FC = () => {
                         layoutId="brand-logo"
                         src="/Badge.svg"
                         alt="Book My Workshop"
-                        className="h-28 w-auto object-contain"
+                        className="h-20 w-auto object-contain"
                     />
                 </Link>
 
@@ -202,96 +202,72 @@ const Navbar: React.FC = () => {
                     {/* Become a Host Button */}
                     <Link
                         to="/become-host"
-                        className="px-6 py-2.5 bg-primary-orange text-white font-sans text-sm font-semibold rounded-full hover:bg-primary-orange/90 transition-all hover:scale-105 active:scale-95"
+                        className="px-6 py-2.5 bg-primary-orange text-white font-sans text-sm font-semibold rounded-full hover:bg-primary-orange/90 transition-all active:scale-95"
                     >
                         Become a Host
                     </Link>
 
-                    {/* Search Bar - Compact Navbar Version */}
-                    <div className="bg-white/60 backdrop-blur-sm p-1 rounded-xl shadow-sm border border-deep-purple/10 hover:border-deep-purple/20 transition-colors">
-                        <div className="flex items-center gap-1">
+                    <div className="flex items-center border border-deep-purple/20 rounded-lg px-4 py-2 bg-white hover:border-deep-purple transition-all duration-300 group focus-within:border-primary-orange focus-within:ring-1 focus-within:ring-primary-orange/20">
 
-                            {/* Location Selector */}
-                            <div className="relative" ref={locationDropdownRef}>
-                                <button
-                                    onClick={() => setLocationOpen(!locationOpen)}
-                                    className="flex items-center gap-1.5 px-3 py-2 border-r border-deep-purple/10 hover:bg-deep-purple/5 transition-colors rounded-l-lg"
-                                >
-                                    <svg className="w-3.5 h-3.5 text-deep-purple/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    <span className="text-xs font-medium text-deep-purple whitespace-nowrap">{selectedLocation}</span>
-                                    <ChevronDown size={12} className={`text-deep-purple/40 transition-transform ${locationOpen ? 'rotate-180' : ''}`} />
-                                </button>
+                        {/* Location Selector */}
+                        <div className="relative border-r border-deep-purple/10 pr-3 mr-3" ref={locationDropdownRef}>
+                            <button
+                                onClick={() => setLocationOpen(!locationOpen)}
+                                className="flex items-center gap-2 text-xs font-semibold text-deep-purple uppercase tracking-wider hover:text-primary-orange transition-colors"
+                            >
+                                {selectedLocation}
+                                <ChevronDown size={14} className={`transition-transform duration-300 ${locationOpen ? 'rotate-180' : ''}`} />
+                            </button>
 
-                                {/* Location Dropdown */}
-                                <AnimatePresence>
-                                    {locationOpen && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: -10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -10 }}
-                                            transition={{ duration: 0.2 }}
-                                            className="absolute top-full left-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-deep-purple/10 overflow-hidden z-50"
-                                        >
-                                            {/* Search Input */}
-                                            <div className="p-2.5 border-b border-deep-purple/10">
-                                                <div className="flex items-center gap-2 px-2.5 py-1.5 bg-cream-base/50 rounded-lg">
-                                                    <Search size={13} className="text-deep-purple/30" />
-                                                    <input
-                                                        type="text"
-                                                        value={locationSearch}
-                                                        onChange={(e) => setLocationSearch(e.target.value)}
-                                                        placeholder="Search city..."
-                                                        className="flex-1 bg-transparent outline-none text-xs text-deep-purple placeholder:text-deep-purple/30"
-                                                    />
-                                                </div>
-                                            </div>
+                            {/* Dropdown Menu */}
+                            <AnimatePresence>
+                                {locationOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 8 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 8 }}
+                                        className="absolute top-full left-0 mt-4 w-48 bg-white border border-deep-purple/10 shadow-xl rounded-xl overflow-hidden py-2"
+                                    >
+                                        <div className="px-3 pb-2 mb-2 border-b border-deep-purple/5">
+                                            <input
+                                                autoFocus
+                                                type="text"
+                                                value={locationSearch}
+                                                onChange={(e) => setLocationSearch(e.target.value)}
+                                                placeholder="Find city..."
+                                                className="w-full text-xs p-2 bg-cream-base/50 rounded-md outline-none text-deep-purple"
+                                            />
+                                        </div>
+                                        <div className="max-h-48 overflow-y-auto">
+                                            {filteredCities.map((city) => (
+                                                <button
+                                                    key={city}
+                                                    onClick={() => {
+                                                        setSelectedLocation(city);
+                                                        setLocationOpen(false);
+                                                        setLocationSearch('');
+                                                    }}
+                                                    className={`w-full text-left px-4 py-2 text-sm transition-colors ${selectedLocation === city ? 'text-primary-orange font-medium bg-primary-orange/5' : 'text-deep-purple/80 hover:bg-gray-50'
+                                                        }`}
+                                                >
+                                                    {city}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
 
-                                            {/* Cities List */}
-                                            <div className="max-h-56 overflow-y-auto location-dropdown-scroll">
-                                                {filteredCities.length > 0 ? (
-                                                    filteredCities.map((city) => (
-                                                        <button
-                                                            key={city}
-                                                            onClick={() => {
-                                                                setSelectedLocation(city);
-                                                                setLocationOpen(false);
-                                                                setLocationSearch('');
-                                                            }}
-                                                            className={`w-full text-left px-3.5 py-2 text-xs transition-colors ${selectedLocation === city
-                                                                ? 'bg-primary-orange/10 text-primary-orange font-medium'
-                                                                : 'text-deep-purple hover:bg-cream-base'
-                                                                }`}
-                                                        >
-                                                            {city}
-                                                        </button>
-                                                    ))
-                                                ) : (
-                                                    <div className="px-3.5 py-6 text-center text-xs text-deep-purple/40">
-                                                        No cities found
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-
-                            {/* Search Input */}
-                            <div className="flex items-center gap-2 px-3">
-                                <Search size={14} className="text-deep-purple/30" strokeWidth={1.5} />
-                                <input
-                                    type="text"
-                                    placeholder="Search..."
-                                    className="w-32 py-2 bg-transparent outline-none font-sans text-deep-purple placeholder:text-deep-purple/30 text-xs"
-                                />
-                            </div>
-
-                            {/* Search Button with Arrow */}
-                            <button className="bg-deep-purple hover:bg-primary-orange text-white p-2 rounded-lg transition-all duration-300">
-                                <ArrowRight size={14} />
+                        {/* Search Input */}
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="text"
+                                placeholder="Search workshops..."
+                                className="w-40 bg-transparent outline-none text-sm font-sans text-deep-purple placeholder:text-deep-purple/40"
+                            />
+                            <button className="text-deep-purple hover:text-primary-orange transition-colors p-1">
+                                <ArrowRight size={18} strokeWidth={2} />
                             </button>
                         </div>
                     </div>
