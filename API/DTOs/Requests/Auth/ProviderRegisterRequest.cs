@@ -14,6 +14,12 @@ public class ProviderRegisterRequest
     public string PhoneNumber { get; set; } = string.Empty;
 
     [Required]
+    public string State { get; set; } = string.Empty;
+    
+    public string? Website { get; set; }
+    public string? ReferralSource { get; set; }
+
+    [Required]
     [EmailAddress]
     public string Email { get; set; } = string.Empty;
 

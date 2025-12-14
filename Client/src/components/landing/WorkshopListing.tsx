@@ -100,8 +100,8 @@ const WorkshopListing: React.FC = () => {
                                 key={loc}
                                 onClick={() => setActiveTab(loc)}
                                 className={`text-lg transition-colors relative pb-1 whitespace-nowrap ${activeTab === loc
-                                        ? 'text-deep-purple font-medium border-b-2 border-primary-orange'
-                                        : 'text-deep-purple/40 hover:text-deep-purple'
+                                    ? 'text-deep-purple font-medium border-b-2 border-primary-orange'
+                                    : 'text-deep-purple/40 hover:text-deep-purple'
                                     }`}
                             >
                                 {loc}
@@ -175,7 +175,7 @@ const WorkshopListing: React.FC = () => {
 
                 {/* Minimal Link CTA */}
                 <div className="mt-20 border-t border-deep-purple/10 pt-8 flex justify-end">
-                    <button className="text-xl font-serif italic text-deep-purple hover:text-primary-orange transition-colors flex items-center gap-2 group">
+                    <button className="text-xl font-serif italic text-deep-purple transition-colors flex items-center gap-2 group">
                         See all workshops
                         <span className="group-hover:translate-x-2 transition-transform duration-300">→</span>
                     </button>

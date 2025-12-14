@@ -6,6 +6,7 @@ using API.Services;
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers;
 
@@ -55,6 +56,10 @@ public class AuthController : ControllerBase
         {
             BusinessName = request.BusinessName,
             PhoneNumber = request.PhoneNumber,
+            State = request.State,
+            Address = request.State, // Initially set Address as State
+            Website = request.Website,
+            ReferralSource = request.ReferralSource,
             UserId = user.Id,
             IsApproved = false // Default to pending
         };
@@ -131,9 +136,19 @@ public class AuthController : ControllerBase
         var roles = await _userManager.GetRolesAsync(user);
         var role = roles.FirstOrDefault() ?? "User"; // Default to User if no role found
 
+        bool isApproved = true;
+        if (role == "Provider")
+        {
+            var provider = await _context.Providers.FirstOrDefaultAsync(p => p.UserId == user.Id);
+            if (provider != null)
+            {
+                isApproved = provider.IsApproved;
+            }
+        }
+
         var (token, expiry) = _tokenService.CreateToken(user, role);
 
-        return Ok(new LoginResponse { Token = token, Expiry = expiry });
+        return Ok(new LoginResponse { Token = token, Expiry = expiry, IsApproved = isApproved });
     }
 
     [HttpPost("forgot-password")]

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown, Menu, Search, ArrowRight } from 'lucide-react';
+import { ChevronDown, Menu, ArrowRight } from 'lucide-react';
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate();
@@ -32,34 +32,36 @@ const Navbar: React.FC = () => {
     const getUserInfo = () => {
         if (!token) return null;
         try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
+            const parts = token.split('.');
+            if (parts.length < 2) return null;
+
+            const payload = JSON.parse(atob(parts[1]));
             return {
                 name: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || payload.name || 'User',
-                email: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || payload.email || ''
+                email: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || payload.email || '',
+                role: payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role || 'User'
             };
-        } catch {
+        } catch (e) {
+            console.error("Invalid token format", e);
             return null;
         }
     };
 
     const userInfo = getUserInfo();
-
-    // if (userInfo) {
-    //     console.log('Logged in user:', {
-    //         name: userInfo.name,
-    //         email: userInfo.email
-    //     });
-    // }
+    const isProvider = userInfo?.role === 'Provider';
 
     // Debug: Log full token payload
-    if (token) {
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            // console.log('Full JWT payload:', payload);
-        } catch (e) {
-            console.error('Error decoding token:', e);
-        }
-    }
+    // if (token) {
+    //     try {
+    //         const parts = token.split('.');
+    //         if (parts.length >= 2) {
+    //              const payload = JSON.parse(atob(parts[1]));
+    //              // console.log('Full JWT payload:', payload);
+    //         }
+    //     } catch (e) {
+    //         // console.error('Error decoding token:', e);
+    //     }
+    // }
 
     // Get first initial from name
     const getFirstInitial = (name: string) => {
@@ -125,7 +127,7 @@ const Navbar: React.FC = () => {
         ]
         : [
             { label: 'Login / Sign Up', link: '/login' },
-            { label: 'Become a Host', link: '/become-host' }
+            { label: 'Become a Host', link: '/host-workshop' }
         ];
 
     return (
@@ -200,12 +202,15 @@ const Navbar: React.FC = () => {
                     </div>
 
                     {/* Become a Host Button */}
-                    <Link
-                        to="/become-host"
-                        className="px-6 py-2.5 bg-primary-orange text-white font-sans text-sm font-semibold rounded-full hover:bg-primary-orange/90 transition-all active:scale-95"
-                    >
-                        Become a Host
-                    </Link>
+                    {/* Become a Host Button (Hide for Providers) */}
+                    {!isProvider && (
+                        <Link
+                            to="/host-workshop"
+                            className="px-6 py-2.5 bg-primary-orange text-white font-sans text-sm font-semibold rounded-full hover:bg-primary-orange/90 transition-all active:scale-95"
+                        >
+                            Become a Host
+                        </Link>
+                    )}
 
                     <div className="flex items-center border border-deep-purple/20 rounded-lg px-4 py-2 bg-white hover:border-deep-purple transition-all duration-300 group focus-within:border-primary-orange focus-within:ring-1 focus-within:ring-primary-orange/20">
 

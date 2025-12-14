@@ -122,18 +122,58 @@ const Login: React.FC = () => {
         body: JSON.stringify({ email, password })
       });
 
-      const data = await response.json();
+      let data;
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        data = await response.text();
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+        let errorMessage = 'Login failed';
+
+        if (typeof data === 'string') {
+          errorMessage = data;
+        } else if (data.message) {
+          errorMessage = data.message;
+        }
+
+        // Professionalize specific errors
+        if (errorMessage.includes("Email not confirmed")) {
+          throw new Error("Please verify your email address before logging in. Check your inbox.");
+        }
+
+        throw new Error(errorMessage);
       }
 
       // Store token
       localStorage.setItem('token', data.token);
       localStorage.setItem('tokenExpiry', data.expiry);
+      localStorage.setItem('isApproved', data.isApproved);
 
       setSuccessMessage('Login successful!');
-      setTimeout(() => navigate('/'), 1500);
+
+      // Decode token to check role for redirection
+      try {
+        const parts = data.token.split('.');
+        if (parts.length >= 2) {
+          const payload = JSON.parse(atob(parts[1]));
+          const role = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role;
+
+          if (role === 'Provider') {
+            setTimeout(() => navigate('/host/dashboard'), 1500);
+          } else if (role === 'Admin') {
+            setTimeout(() => navigate('/admin/dashboard'), 1500);
+          } else {
+            setTimeout(() => navigate('/'), 1500);
+          }
+        } else {
+          setTimeout(() => navigate('/'), 1500);
+        }
+      } catch (e) {
+        setTimeout(() => navigate('/'), 1500);
+      }
 
     } catch (error: any) {
       setApiError(error.message || 'An error occurred. Please try again.');
