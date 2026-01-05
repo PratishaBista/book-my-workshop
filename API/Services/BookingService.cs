@@ -121,6 +121,8 @@ public class BookingService : IBookingService
 
         // Get full booking details
         var bookingDetail = await _bookingRepository.GetBookingWithDetailsAsync(booking.Id);
+        if (bookingDetail == null) throw new Exception("Booking created but failed to retrieve details.");
+
         var response = _mapper.Map<BookingResponse>(bookingDetail);
         
         // Set review eligibility
@@ -227,6 +229,27 @@ public class BookingService : IBookingService
     public async Task<bool> CanUserReviewWorkshopAsync(string userId, int workshopId)
     {
         return await _bookingRepository.CanUserReviewWorkshopAsync(userId, workshopId);
+    }
+
+    public async Task<bool> ConfirmBookingPaymentAsync(int bookingId, string transactionUuid)
+    {
+        var booking = await _bookingRepository.GetByIdAsync(bookingId);
+        if (booking == null) return false;
+
+        // Idempotency check
+        if (booking.PaymentStatus == PaymentStatus.Paid) return true;
+
+        booking.BookingStatus = BookingStatus.Confirmed;
+        booking.PaymentStatus = PaymentStatus.Paid;
+        booking.PaymentCompletedAt = DateTime.UtcNow;
+        booking.TransactionId = transactionUuid;
+        booking.PaymentGateway = "eSewa";
+
+        _bookingRepository.Update(booking);
+        await _bookingRepository.SaveChangesAsync();
+
+        _logger.LogInformation($"Payment confirmed for Booking {booking.Id}. Transaction: {transactionUuid}");
+        return true;
     }
 
     private string GenerateConfirmationCode()

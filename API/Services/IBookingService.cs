@@ -15,4 +15,5 @@ public interface IBookingService
     Task<IEnumerable<BookingResponse>> GetUserBookingsAsync(string userId);
     Task<bool> CancelBookingAsync(int bookingId, string userId, string? reason = null);
     Task<bool> CanUserReviewWorkshopAsync(string userId, int workshopId);
+    Task<bool> ConfirmBookingPaymentAsync(int bookingId, string transactionUuid);
 }
