@@ -82,6 +82,5 @@ Thumbs.db
 
 Documentation/
 
-# hide properties folder and it's file launchsetting of API folder
-API/Properties/w?atch
-API/Properties/launchSettings.jsonAPI/Properties/launchSettings.json
+API/Properties/launchSettings.json
+API/build_error.txt
