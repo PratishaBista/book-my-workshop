@@ -1,50 +1,87 @@
+##########################
+# .NET Build Artifacts
+##########################
 bin/
 obj/
 out/
 
+# Visual Studio / Rider / VS Code
 .vs/
+.vscode/
+.idea/
 *.user
 *.suo
 *.cache
-*.log
 *.pdb
+*.rsuser
+*.sln.docstates
 
-.idea/
+# Logs
+*.log
+msbuild.log
 
+# NuGet
 publish/
-
 *.nupkg
 *.snupkg
 packages/
 *.vsix
 .nuget/
 
-*.rsuser
-*.sln.docstates
-
+##########################
+# Node.js / React / Vite
+##########################
 node_modules/
 jspm_packages/
-
 dist/
+dist-ssr/
 build/
 
-# .env
-# .env.local
-# .env.development.local
-# .env.test.local
-# .env.production.local
-
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-.vscode/
-.DS_Store
+##########################
+# Environment & Secrets
+##########################
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
 
-Documentation/
-Assets/
-
-# ignore app settings
 API/appsettings.json
 API/appsettings.Development.json
+API/appsettings.Production.json
 
+##########################
+# Sensitive files and credentials
+##########################
+# Certificate and key files
+*.pem
+*.key
+*.pfx
+*.p12
+*.jks
+*.crt
+
+# Common secrets/credentials files
+secrets*.json
+credentials
+*.publishsettings
+
+##########################
+# OS Files
+##########################
+.DS_Store
+Thumbs.db
+
+Documentation/
+
+# hide properties folder and it's file launchsetting of API folder
+API/Properties/w?atch
+API/Properties/launchSettings.jsonAPI/Properties/launchSettings.json
