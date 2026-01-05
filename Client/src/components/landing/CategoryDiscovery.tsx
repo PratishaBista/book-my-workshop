@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-// Custom SVG Icons for a handcrafted feel
 const icons = {
     pottery: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-12 h-12 mb-3 opacity-80">
@@ -105,25 +104,20 @@ const CategoryDiscovery: React.FC = () => {
                             }}
                             className="cursor-pointer group relative"
                         >
-                            {/* String / Thread illusion */}
                             <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-[1px] h-4 bg-deep-purple/20 z-0"></div>
 
-                            {/* Card Body */}
                             <div
                                 className="h-48 rounded-lg flex flex-col items-center justify-center relative shadow-sm border border-black/5 overflow-hidden transition-shadow duration-300 group-hover:shadow-xl"
                                 style={{ backgroundColor: cat.color }}
                             >
-                                {/* Vintage Texture Overlay (CSS Noise) */}
                                 <div
                                     className="absolute inset-0 opacity-20 pointer-events-none mix-blend-multiply"
                                     style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
                                 />
 
-                                {/* Gift Tag Hole */}
                                 <div className="absolute top-3 left-1/2 -translate-x-1/2 w-3 h-3 bg-cream-base rounded-full shadow-[inset_0_1px_4px_rgba(0,0,0,0.2)] border border-white/50 z-10"></div>
                                 <div className="absolute top-3 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full border border-black/10 z-10"></div>
 
-                                {/* Content */}
                                 <div className="relative z-10 flex flex-col items-center transform transition-transform duration-500 group-hover:scale-110">
                                     <div className="text-deep-purple/80 group-hover:text-deep-purple transition-colors">
                                         {cat.icon}

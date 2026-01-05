@@ -1,152 +1,166 @@
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import HostDashboardNavbar from '../../components/host/HostDashboardNavbar';
-import Footer from '../../components/landing/Footer';
-import { Plus, Home, Settings, Calendar, AlertCircle } from 'lucide-react';
+import { HostHeader } from './components/HostHeader';
+import { HostSidebar } from './components/HostSidebar';
+import { HostOverview } from './views/HostOverview';
+import { MyWorkshops } from './views/MyWorkshops';
+import { BusinessProfile } from './views/BusinessProfile';
+import { PlaceholderView } from './views/PlaceholderView';
+import type { HostTab, ProviderProfile } from '../../types/host';
+import { ProviderStatus } from '../../types/host';
+
+
+import { API_ENDPOINTS } from '../../config/api';
 
 const HostDashboard: React.FC = () => {
     const navigate = useNavigate();
-    const [isApproved, setIsApproved] = useState(false);
-    const [user, setUser] = useState<any>(null);
+    const [activeTab, setActiveTab] = useState<HostTab>('overview');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [profile, setProfile] = useState<ProviderProfile | null>(null);
+    const [loading, setLoading] = useState(true);
 
+    // Auth & Permission Check
     useEffect(() => {
-        // 1. Check Auth
-        const token = localStorage.getItem('token');
-        if (!token) {
-            navigate('/login');
-            return;
-        }
+        const checkAuthAndFetchProfile = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                navigate('/login');
+                return;
+            }
 
-        // 2. Decode user info
-        try {
-            const parts = token.split('.');
-            if (parts.length < 2) throw new Error("Invalid token format");
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                const rawRoles = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role;
 
-            const payload = JSON.parse(atob(parts[1]));
-            setUser({
-                name: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || payload.name,
-                email: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || payload.email,
-                role: payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role
-            });
+                // Handle both single string and array of roles
+                const userRoles = Array.isArray(rawRoles) ? rawRoles : [rawRoles];
 
-            // 3. Check Approval Status (Simulated from localStorage for now, 
-            //    in real app should be a claim or API fetch)
-            const approved = localStorage.getItem('isApproved') === 'true';
-            setIsApproved(approved);
+                if (!userRoles.includes('Provider') && !userRoles.includes('Admin')) {
+                    navigate('/');
+                    return;
+                }
 
-        } catch (e) {
-            console.error(e);
-            navigate('/login');
-        }
+                // Fetch full provider profile - Cache busting added
+                const response = await fetch(`${API_ENDPOINTS.provider.profile}?_t=${Date.now()}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log("DEBUG: Profile Loaded", {
+                        status: data.status,
+                        isApproved: data.isApproved,
+                        typeOfStatus: typeof data.status
+                    });
+                    setProfile(data);
+                    localStorage.setItem('isApproved', (data.isApproved || data.status === 2).toString());
+                } else if (response.status === 403) {
+                    console.error("Access Forbidden: Your session might be outdated.");
+                    localStorage.removeItem('token');
+                    navigate('/login?error=session_outdated');
+                } else if (response.status === 404) {
+                    // This happens if an Admin tries to visit the Host Dashboard but isn't a host
+                    console.error("Provider profile not found.");
+                    navigate('/'); // Send back to home
+                } else {
+                    console.error("Dashboard fetch failed:", response.status);
+                    navigate('/login');
+                }
+            } catch (err) {
+                console.error("Dashboard auth/fetch failed:", err);
+                navigate('/login');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        checkAuthAndFetchProfile();
     }, [navigate]);
 
-    // const handleLogout = () => {
-    //     localStorage.clear();
-    //     navigate('/');
-    // };
+    const renderContent = () => {
+        if (!profile) return null;
+
+        // Logic fallback: You are approved if the flag is true OR if your current status is Approved.
+        const isApproved = profile.isApproved || profile.status === ProviderStatus.Approved;
+        console.log("DEBUG: Final isApproved for render:", isApproved);
+
+        switch (activeTab) {
+            case 'overview': return (
+                <HostOverview
+                    status={profile.status}
+                    onStartOnboarding={() => setActiveTab('profile')}
+                />
+            );
+            case 'workshops': return <MyWorkshops isApproved={isApproved} />;
+            case 'bookings':
+                return <PlaceholderView
+                    title="Participant Bookings"
+                    description="Keep track of everyone joining your workshops. You'll be able to mark attendance and manage groups here."
+                />;
+            case 'earnings':
+                return <PlaceholderView
+                    title="Earnings & Payouts"
+                    description="Total transparency on your workshop income, platform commissions, and scheduled payouts to your bank."
+                />;
+            case 'reviews':
+                return <PlaceholderView
+                    title="Student Reviews"
+                    description="See what your participants are saying. Respond to feedback and build your reputation as a top artisan."
+                />;
+            case 'profile':
+                return <BusinessProfile profile={profile} onUpdate={(updated) => setProfile(updated)} />;
+            case 'support':
+                return <PlaceholderView
+                    title="Host Support"
+                    description="Need help? Raise a ticket or chat with our community managers to optimize your workshop business."
+                />;
+            case 'settings':
+                return <PlaceholderView
+                    title="Account Settings"
+                    description="Manage your notification preferences, security settings, and shared platform credentials."
+                />;
+            default: return (
+                <HostOverview
+                    status={profile.status}
+                    onStartOnboarding={() => setActiveTab('profile')}
+                />
+            );
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="h-screen bg-cream-base flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-orange"></div>
+            </div>
+        );
+    }
 
     return (
-        <div className="min-h-screen bg-cream-base flex flex-col font-sans text-deep-purple">
-            <HostDashboardNavbar />
+        <div className="flex flex-col h-screen bg-cream-base font-sans text-deep-purple overflow-hidden">
+            {/* 1. Full Width Header */}
+            <HostHeader />
 
-            <main className="flex-grow pt-28 px-6 max-w-7xl mx-auto w-full">
+            {/* 2. Main Layout (Sidebar + Content) */}
+            <div className="flex flex-1 overflow-hidden">
+                {/* Sidebar (Below Header) */}
+                <HostSidebar
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    isOpen={isSidebarOpen}
+                    setIsOpen={setIsSidebarOpen}
+                />
 
-                {/* 1. Header & Welcome */}
-                <div className="flex justify-between items-end mb-8">
-                    <div>
-                        <h1 className="font-serif text-4xl mb-2">
-                            Welcome back, <span className="text-primary-orange">{user?.name?.split(' ')[0]}</span>
-                        </h1>
-                        <p className="text-gray-500">Manage your workshops and bookings</p>
+                {/* Main Content Area */}
+                <main className="flex-1 overflow-y-auto p-8 relative scrollbar-hide">
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-primary-orange/5 rounded-full blur-3xl -z-10 -mr-48 -mt-48" />
+                    <div className="absolute bottom-0 left-0 w-96 h-96 bg-deep-purple/5 rounded-full blur-3xl -z-10 -ml-48 -mb-48" />
+
+                    <div className="max-w-7xl mx-auto h-full">
+                        {renderContent()}
                     </div>
-                </div>
-
-                {/* 2. Status Banner (If Pending) */}
-                {!isApproved && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-8 flex items-start gap-4"
-                    >
-                        <div className="bg-yellow-100 p-2 rounded-full text-yellow-700 mt-1">
-                            <AlertCircle size={20} />
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-yellow-800 text-sm mb-1">Your host account is under review</h3>
-                            <p className="text-yellow-700 text-sm leading-relaxed">
-                                Thanks for signing up! We're currently reviewing your details to ensure the quality of our community.
-                                You'll be notified via email once approved. In the meantime, you can complete your profile.
-                            </p>
-                        </div>
-                    </motion.div>
-                )}
-
-                {/* 3. Dashboard Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-
-                    {/* Left Column: Quick Actions */}
-                    <div className="space-y-6">
-                        {/* Create Workshop Card */}
-                        <div className={`rounded-2xl p-6 border transition-all ${isApproved ? 'bg-white border-deep-purple/10 hover:shadow-lg cursor-pointer' : 'bg-gray-50 border-gray-100 opacity-70 cursor-not-allowed'}`}>
-                            <div className="w-12 h-12 rounded-full bg-primary-orange/10 flex items-center justify-center text-primary-orange mb-4">
-                                <Plus size={24} />
-                            </div>
-                            <h3 className="font-bold text-lg mb-2">Create Workshop</h3>
-                            <p className="text-sm text-gray-500 mb-4">Launch a new experience for your audience.</p>
-                            <button
-                                disabled={!isApproved}
-                                className={`px-4 py-2 rounded-lg text-sm font-semibold w-full transition-colors ${isApproved ? 'bg-deep-purple text-white hover:bg-deep-purple/90' : 'bg-gray-200 text-gray-400'}`}
-                            >
-                                {isApproved ? 'Create Now' : 'Pending Approval'}
-                            </button>
-                        </div>
-
-                        {/* Profile Card */}
-                        <div className="bg-white border border-deep-purple/10 rounded-2xl p-6 hover:shadow-lg transition-all">
-                            <div className="flex items-center gap-4 mb-4">
-                                <div className="w-12 h-12 rounded-full bg-deep-purple text-white flex items-center justify-center text-xl font-serif">
-                                    {user?.name?.charAt(0)}
-                                </div>
-                                <div>
-                                    <h3 className="font-bold">{user?.name}</h3>
-                                    <p className="text-xs text-gray-400">{user?.role}</p>
-                                </div>
-                            </div>
-                            <button className="flex items-center gap-2 text-sm font-semibold text-deep-purple hover:text-primary-orange transition-colors w-full border-t border-gray-100 pt-4">
-                                <Settings size={16} />
-                                Edit Profile
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Right Column: Your Workshops (Empty State) */}
-                    <div className="md:col-span-2">
-                        <div className="bg-white border border-deep-purple/10 rounded-2xl p-8 min-h-[400px] flex flex-col">
-                            <h3 className="font-bold text-xl mb-6 flex items-center gap-2">
-                                <Calendar size={20} className="text-primary-orange" />
-                                Your Workshops
-                            </h3>
-
-                            {/* Empty State */}
-                            <div className="flex-grow flex flex-col items-center justify-center text-center">
-                                <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                                    <Home size={32} className="text-gray-300" />
-                                </div>
-                                <h4 className="font-bold text-gray-400 mb-2">No workshops yet</h4>
-                                <p className="text-sm text-gray-400 max-w-xs mx-auto">
-                                    {isApproved
-                                        ? "You haven't published any workshops yet. Click 'Create Workshop' to get started!"
-                                        : "Once approved, your published workshops will appear here."}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </main>
-
-            <Footer />
+                </main>
+            </div>
         </div>
     );
 };

@@ -14,10 +14,9 @@ const images = [
 
 const IntroOverlay: React.FC<IntroOverlayProps> = ({ onComplete }) => {
     useEffect(() => {
-        // Timer to trigger the transition to the main page
         const timer = setTimeout(() => {
             onComplete();
-        }, 3500); // 3.5 seconds total intro
+        }, 3500); 
         return () => clearTimeout(timer);
     }, [onComplete]);
 
@@ -26,7 +25,6 @@ const IntroOverlay: React.FC<IntroOverlayProps> = ({ onComplete }) => {
             className="fixed inset-0 z-[60] flex items-center justify-center bg-cream-base overflow-hidden"
             exit={{ opacity: 0, pointerEvents: 'none', transition: { duration: 0.8 } }}
         >
-            {/* Parallax Images Background (Slides in) */}
             <div className="absolute inset-0 z-0 pointer-events-none">
                 {images.map((img, index) => (
                     <motion.img
@@ -55,7 +53,6 @@ const IntroOverlay: React.FC<IntroOverlayProps> = ({ onComplete }) => {
                 ))}
             </div>
 
-            {/* Main Brand Title */}
             <div className="relative z-10 text-center">
                 <motion.h1
                     layoutId="brand-logo"

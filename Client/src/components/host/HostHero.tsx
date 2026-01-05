@@ -1,11 +1,37 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
+import { API_ENDPOINTS } from '../../config/api';
+import Toast from '../ui/Toast';
+import type { ToastType } from '../ui/Toast';
 
 const HostHero: React.FC = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+    // Toast State
+    const [toast, setToast] = useState({
+        message: '',
+        type: 'success' as ToastType,
+        isVisible: false
+    });
+
+    const showToast = (message: string, type: ToastType = 'success') => {
+        setToast({ message, type, isVisible: true });
+    };
+
+    // Password Strength
+    const [passwordStrength, setPasswordStrength] = useState({
+        hasMinLength: false,
+        hasUppercase: false,
+        hasLowercase: false,
+        hasNumber: false,
+        hasSpecial: false
+    });
+
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -20,23 +46,49 @@ const HostHero: React.FC = () => {
         referralSource: ''
     });
 
+    // Toast is handled by internal useEffect in Toast component
+    const checkPasswordStrength = (pwd: string) => {
+        setPasswordStrength({
+            hasMinLength: pwd.length >= 8,
+            hasUppercase: /[A-Z]/.test(pwd),
+            hasLowercase: /[a-z]/.test(pwd),
+            hasNumber: /[0-9]/.test(pwd),
+            hasSpecial: /[@$!%*?&#]/.test(pwd)
+        });
+    };
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+
+        if (name === 'password') {
+            checkPasswordStrength(value);
+        }
     };
 
     const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData(prev => ({ ...prev, hasBusinessName: e.target.checked }));
     };
 
+    const validateForm = () => {
+        if (!formData.firstName || !formData.lastName) return "Name is required.";
+        if (!formData.state) return "Please select your state.";
+        if (!formData.phone) return "Mobile phone number is required.";
+        if (!formData.email) return "Email is required.";
+        if (!formData.password) return "Password is required.";
+        if (formData.password.length < 8) return "Password must be at least 8 characters.";
+        if (formData.password !== formData.confirmPassword) return "Passwords do not match.";
+        return null;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        setError('');
 
-        // Basic Validation
-        if (formData.password !== formData.confirmPassword) {
-            setError("Passwords do not match");
+        // 1. Client-side Validation
+        const validationError = validateForm();
+        if (validationError) {
+            showToast(validationError, 'error');
             setLoading(false);
             return;
         }
@@ -54,7 +106,8 @@ const HostHero: React.FC = () => {
                 referralSource: formData.referralSource
             };
 
-            const response = await fetch('https://localhost:7166/api/auth/provider/signup', {
+            console.log("Sending Provider Signup Payload:", payload);
+            const response = await fetch(API_ENDPOINTS.auth.providerSignup, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -69,75 +122,36 @@ const HostHero: React.FC = () => {
             }
 
             if (!response.ok) {
-                // If text response
-                if (typeof data === 'string') {
-                    setError(data);
-                    setLoading(false);
-                    return;
-                }
-
-                // Handle API error structure (ASP.NET Identity often returns array of errors)
-                if (Array.isArray(data)) {
-                    // Extract descriptions if array of object, or strings
-                    const messages = data.map((err: any) => err.description || err.code || JSON.stringify(err)).join(', ');
-                    setError(messages || 'Registration failed');
-                } else if (data.message) {
-                    setError(data.message);
+                console.error("Provider Signup Failed:", data);
+                if (typeof data === 'object' && data.errors) {
+                    const messages = Object.values(data.errors).flat().join(' ');
+                    showToast(messages || 'Validation failed.', 'error');
+                } else if (Array.isArray(data)) {
+                    const messages = data.map((err: any) => err.description || err.code).join(', ');
+                    showToast(messages || 'Registration failed.', 'error');
+                } else if (typeof data === 'object' && data.message) {
+                    showToast(data.message, 'error');
                 } else if (typeof data === 'string') {
-                    setError(data);
+                    showToast(data, 'error');
                 } else {
-                    setError('Registration failed. Please try again.');
+                    showToast('Registration failed. Please check your inputs.', 'error');
                 }
                 setLoading(false);
                 return;
             }
 
-            // Success: Store token & redirect
-            // Success: Registration complete. Now auto-verify (Dev) or Login logic
-            // The API returns { message, token } (NOT a login token, but EmailConfirmationToken)
+            // Success - Email sent with verification link
+            showToast('Registration successful! Please verify your email.', 'success');
 
-            if (data.token) {
-                // Auto-verify for development convenience
-                try {
-                    const verifyResponse = await fetch('https://localhost:7166/api/auth/verify-email', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: formData.email, token: data.token })
-                    });
+            // Explicitly clear any old tokens to prevent "Identity Crisis"
+            localStorage.removeItem('token');
+            localStorage.removeItem('isApproved');
 
-                    if (verifyResponse.ok) {
-                        // After verification, we must LOGIN to get the actual JWT
-                        const loginResponse = await fetch('https://localhost:7166/api/auth/login', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email: formData.email, password: formData.password })
-                        });
-
-                        const loginData = await loginResponse.json();
-
-                        if (loginResponse.ok) {
-                            localStorage.setItem('token', loginData.token);
-                            localStorage.setItem('tokenExpiry', loginData.expiry);
-                            localStorage.setItem('isApproved', (loginData.isApproved || false).toString());
-                            navigate('/host/dashboard');
-                            return;
-                        }
-                    }
-                } catch (verifyErr) {
-                    console.error("Auto-verification failed", verifyErr);
-                }
-
-                // Fallback if auto-verify/login fails
-                alert('Registration successful! Please check your email to verify your account.');
-                navigate('/login');
-            } else {
-                alert('Registration successful! Please check your email.');
-                navigate('/login');
-            }
+            setTimeout(() => navigate('/login'), 2000);
 
         } catch (err) {
             console.error(err);
-            setError('Something went wrong. Is the server running?');
+            showToast('Network error. Is the server running?', 'error');
         } finally {
             setLoading(false);
         }
@@ -145,7 +159,7 @@ const HostHero: React.FC = () => {
 
     return (
         <section className="pt-24 pb-12 bg-cream-base min-h-screen flex items-center" id="register">
-            <div className="max-w-7xl mx-auto px-6 w-full flex flex-col md:flex-row items-center gap-12">
+            <div className="max-w-7xl mx-auto px-6 w-full flex flex-col md:flex-row items-start gap-12">
 
                 {/* Left Side: Image & Text */}
                 <div className="md:w-1/2 space-y-8">
@@ -164,7 +178,6 @@ const HostHero: React.FC = () => {
                     </motion.div>
 
                     <div className="relative rounded-2xl overflow-hidden shadow-2xl aspect-[4/3]">
-                        {/* Placeholder for the painting image in the screenshot */}
                         <img
                             src="https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=2071&auto=format&fit=crop"
                             alt="Art Workshop"
@@ -183,16 +196,11 @@ const HostHero: React.FC = () => {
                         className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100"
                     >
                         <div className="mb-6">
-                            <h3 className="text-2xl font-bold text-deep-purple mb-2">Learn more</h3>
-                            <p className="text-sm text-gray-500">Create your host account</p>
+                            <h3 className="text-2xl font-bold text-deep-purple mb-2">Create your host account</h3>
+                            <p className="text-sm text-gray-500">Sign up to start hosting your classes</p>
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            {error && (
-                                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100">
-                                    {error}
-                                </div>
-                            )}
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -305,38 +313,82 @@ const HostHero: React.FC = () => {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-medium text-gray-500 mb-1">Create password *</label>
-                                    <input
-                                        type="password"
-                                        name="password"
-                                        value={formData.password}
-                                        onChange={handleChange}
-                                        placeholder="At least 8 characters"
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-orange/20 focus:border-primary-orange outline-none transition-all"
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            name="password"
+                                            value={formData.password}
+                                            onChange={handleChange}
+                                            placeholder="8+ chars"
+                                            className="w-full px-4 py-3 pr-10 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-orange/20 focus:border-primary-orange outline-none transition-all"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        >
+                                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        </button>
+                                    </div>
+
+                                    {/* Password Strength Meter */}
+                                    {formData.password && (
+                                        <div className="mt-2 space-y-1 text-[10px]">
+                                            <div className="flex flex-wrap gap-2">
+                                                <span className={passwordStrength.hasMinLength ? 'text-green-600' : 'text-gray-400'}>
+                                                    {passwordStrength.hasMinLength ? '✓' : '○'} 8+ chars
+                                                </span>
+                                                <span className={passwordStrength.hasUppercase ? 'text-green-600' : 'text-gray-400'}>
+                                                    {passwordStrength.hasUppercase ? '✓' : '○'} Upper
+                                                </span>
+                                                <span className={passwordStrength.hasLowercase ? 'text-green-600' : 'text-gray-400'}>
+                                                    {passwordStrength.hasLowercase ? '✓' : '○'} Lower
+                                                </span>
+                                                <span className={passwordStrength.hasNumber ? 'text-green-600' : 'text-gray-400'}>
+                                                    {passwordStrength.hasNumber ? '✓' : '○'} Num
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
                             <div>
                                 <label className="block text-xs font-medium text-gray-500 mb-1">Confirm password *</label>
-                                <input
-                                    type="password"
-                                    name="confirmPassword"
-                                    value={formData.confirmPassword}
-                                    onChange={handleChange}
-                                    placeholder="Confirm your password"
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-orange/20 focus:border-primary-orange outline-none transition-all"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        name="confirmPassword"
+                                        value={formData.confirmPassword}
+                                        onChange={handleChange}
+                                        placeholder="Confirm your password"
+                                        className="w-full px-4 py-3 pr-10 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-orange/20 focus:border-primary-orange outline-none transition-all"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    >
+                                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                </div>
                             </div>
 
                             <div>
                                 <label className="block text-xs font-medium text-gray-500 mb-1">How did you hear about us?</label>
-                                <input
-                                    type="text"
+                                <select
                                     name="referralSource"
                                     value={formData.referralSource}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-orange/20 focus:border-primary-orange outline-none transition-all"
-                                />
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-orange/20 focus:border-primary-orange outline-none transition-all appearance-none text-gray-700"
+                                >
+                                    <option value="">Please select</option>
+                                    <option value="Social Media">Social Media (Instagram/Facebook)</option>
+                                    <option value="Friend/Family">Friend or Family</option>
+                                    <option value="Google Search">Google Search</option>
+                                    <option value="Advertisement">Advertisement</option>
+                                    <option value="Other">Other</option>
+                                </select>
                             </div>
 
                             <button
@@ -349,6 +401,14 @@ const HostHero: React.FC = () => {
                         </form>
                     </motion.div>
                 </div>
+
+                <Toast
+                    isVisible={toast.isVisible}
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}
+                />
+
             </div>
         </section>
     );

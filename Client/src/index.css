@@ -4,7 +4,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom Scrollbar for Search Dropdown */
 .location-dropdown-scroll {
     scrollbar-width: thin;
     scrollbar-color: #4d3d55 transparent;

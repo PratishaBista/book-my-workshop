@@ -8,7 +8,6 @@ const HostDashboardNavbar: React.FC = () => {
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const userMenuRef = useRef<HTMLDivElement>(null);
 
-    // Get user info (simplified for header)
     const token = localStorage.getItem('token');
     const getUserInfo = () => {
         if (!token) return null;
@@ -34,7 +33,6 @@ const HostDashboardNavbar: React.FC = () => {
         navigate('/');
     };
 
-    // Close menu on click outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
@@ -49,7 +47,6 @@ const HostDashboardNavbar: React.FC = () => {
         <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100">
             <div className="px-8 py-3 flex items-center justify-between">
 
-                {/* Logo - Links to Dashboard */}
                 <Link to="/host/dashboard" className="flex items-center gap-2">
                     <img
                         src="/Badge.svg"
@@ -57,14 +54,12 @@ const HostDashboardNavbar: React.FC = () => {
                         className="h-10 w-auto object-contain"
                     />
                     <span className="font-serif text-lg font-bold text-deep-purple hidden md:block">
-                        Host Dashboard
+                        Host
                     </span>
                 </Link>
 
-                {/* Right Side Actions */}
                 <div className="flex items-center gap-6">
 
-                    {/* Help Link */}
                     <Link to="/host/help" className="text-sm font-medium text-gray-500 hover:text-primary-orange transition-colors hidden md:block">
                         Help
                     </Link>

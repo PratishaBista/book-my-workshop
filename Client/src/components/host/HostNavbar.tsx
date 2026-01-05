@@ -15,7 +15,6 @@ const HostNavbar: React.FC = () => {
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
             <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-                {/* Logo */}
                 <Link to="/" className="z-50 flex items-center gap-2">
                     <motion.img
                         layoutId="brand-logo"
@@ -25,7 +24,6 @@ const HostNavbar: React.FC = () => {
                     />
                 </Link>
 
-                {/* Navigation Links */}
                 <div className="hidden md:flex items-center gap-8">
                     {navItems.map((item) => (
                         <a

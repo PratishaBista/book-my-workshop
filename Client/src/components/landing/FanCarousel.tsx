@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
-// 3 sets of workshop images
 const imageSets = [
     {
         left: "https://images.unsplash.com/photo-1452860606245-08befc0ff44b?q=80&w=600&auto=format",
@@ -28,21 +27,19 @@ const FanCarousel: React.FC = () => {
         const interval = setInterval(() => {
             setPositionIndex((prev) => {
                 const next = prev + 1;
-                // After 3 position rotations, move to next image set
                 if (next >= 3) {
                     setCurrentSet((prevSet) => (prevSet + 1) % imageSets.length);
                     return 0;
                 }
                 return next;
             });
-        }, 4000); // Change every 4 seconds
+        }, 4000); 
 
         return () => clearInterval(interval);
     }, []);
 
     const currentImages = imageSets[currentSet];
 
-    // Rotate positions: each image gets to be center, left, then right
     const positions = [
         { left: currentImages.left, center: currentImages.center, right: currentImages.right },
         { left: currentImages.right, center: currentImages.left, right: currentImages.center },
@@ -54,10 +51,8 @@ const FanCarousel: React.FC = () => {
     return (
         <div className="relative w-full h-[600px] flex items-start justify-center pt-4">
 
-            {/* Fan of 3 Cards */}
             <div className="relative w-full flex items-start justify-center">
 
-                {/* Left Card - Tilted Left */}
                 <motion.div
                     key={`left-${positionIndex}`}
                     initial={{ opacity: 0, x: -100, rotate: -8 }}
@@ -73,7 +68,6 @@ const FanCarousel: React.FC = () => {
                     />
                 </motion.div>
 
-                {/* Center Card - Straight */}
                 <motion.div
                     key={`center-${positionIndex}`}
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -89,7 +83,6 @@ const FanCarousel: React.FC = () => {
                     />
                 </motion.div>
 
-                {/* Right Card - Tilted Right */}
                 <motion.div
                     key={`right-${positionIndex}`}
                     initial={{ opacity: 0, x: 100, rotate: 8 }}
@@ -106,7 +99,6 @@ const FanCarousel: React.FC = () => {
                 </motion.div>
             </div>
 
-            {/* Progress Dots */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-30">
                 {imageSets.map((_, idx) => (
                     <button

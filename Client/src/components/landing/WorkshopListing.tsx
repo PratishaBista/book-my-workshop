@@ -1,79 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { API_ENDPOINTS } from '../../config/api';
 
-const locations = ["Kathmandu", "Lalitpur", "Bhaktapur", "Pokhara", "Chitwan"];
+const locations = ["All", "Kathmandu", "Lalitpur", "Bhaktapur", "Pokhara", "Chitwan"];
 
-const workshops = [
-    {
-        id: 1,
-        title: 'Traditional Pottery Wheel',
-        location: 'Bhaktapur',
-        category: 'Pottery',
-        price: 'NPR 2500',
-        image: 'https://images.unsplash.com/photo-1565193566173-0929d9956932?auto=format&fit=crop&q=80&w=800',
-        rating: 4.8,
-        reviewCount: 124,
-        businessYears: 5,
-        frequency: 'Daily',
-        wishlistCount: 2304
-    },
-    {
-        id: 2,
-        title: 'Mithila Art Workshop',
-        location: 'Kathmandu',
-        category: 'Art',
-        price: 'NPR 1800',
-        image: 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?auto=format&fit=crop&q=80&w=800',
-        rating: 4.9,
-        reviewCount: 89,
-        businessYears: 12,
-        frequency: 'Weekends',
-        wishlistCount: 1540
-    },
-    {
-        id: 3,
-        title: 'Organic Soap Making',
-        location: 'Lalitpur',
-        category: 'Crafts',
-        price: 'NPR 3200',
-        image: 'https://images.unsplash.com/photo-1600857062241-98e5dba7f214?auto=format&fit=crop&q=80&w=800',
-        rating: 4.7,
-        reviewCount: 56,
-        businessYears: 3,
-        frequency: 'Monthly',
-        wishlistCount: 890
-    },
-    {
-        id: 4,
-        title: 'Coffee Brewing 101',
-        location: 'Pokhara',
-        category: 'Cooking',
-        price: 'NPR 2000',
-        image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&q=80&w=800',
-        rating: 5.0,
-        reviewCount: 210,
-        businessYears: 8,
-        frequency: 'Daily',
-        wishlistCount: 3400
-    },
-    {
-        id: 5,
-        title: 'Thangka Painting',
-        location: 'Kathmandu',
-        category: 'Art',
-        price: 'NPR 4500',
-        image: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&q=80&w=800',
-        rating: 4.9,
-        reviewCount: 45,
-        businessYears: 20,
-        frequency: 'Regularly',
-        wishlistCount: 980
-    },
-];
+interface Workshop {
+    id: number;
+    title: string;
+    slug: string;
+    locationName: string;
+    locationAddress: string; 
+    categoryName: string;
+    basePrice: number;
+    currency: string;
+    primaryImageUrl: string;
+    averageRating: number | null;
+    reviewCount: number;
+}
 
 const WorkshopListing: React.FC = () => {
-    const [activeTab, setActiveTab] = useState("Kathmandu");
+    const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState("All");
+    const [workshops, setWorkshops] = useState<Workshop[]>([]);
+    const [loading, setLoading] = useState(true);
     const [wishlist, setWishlist] = useState<number[]>([]);
+
+    useEffect(() => {
+        const fetchWorkshops = async () => {
+            setLoading(true);
+            try {
+                const response = await fetch(`${API_ENDPOINTS.workshop.public}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setWorkshops(data);
+                }
+            } catch (error) {
+                console.error('Error fetching workshops:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchWorkshops();
+    }, []);
 
     const toggleWishlist = (id: number) => {
         setWishlist(prev =>
@@ -81,7 +51,15 @@ const WorkshopListing: React.FC = () => {
         );
     };
 
-    const filteredWorkshops = workshops.filter(w => w.location === activeTab);
+    const filteredWorkshops = workshops.filter(w => {
+        if (activeTab === "All") return true;
+
+        const term = activeTab.toLowerCase();
+        const inName = (w.locationName || "").toLowerCase().includes(term);
+        const inAddress = (w.locationAddress || "").toLowerCase().includes(term);
+
+        return inName || inAddress;
+    });
 
     return (
         <section className="py-24 md:py-32 px-6 bg-[#F9F9F5]">
@@ -93,7 +71,6 @@ const WorkshopListing: React.FC = () => {
                         </h2>
                     </div>
 
-                    {/* Minimalist Tabs */}
                     <div className="flex gap-6 overflow-x-auto pb-2 mt-8 md:mt-0 no-scrollbar">
                         {locations.map((loc) => (
                             <button
@@ -110,70 +87,77 @@ const WorkshopListing: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-16">
-                    <AnimatePresence mode="popLayout">
-                        {filteredWorkshops.map((workshop) => (
-                            <motion.div
-                                key={workshop.id}
-                                layout
-                                initial={{ opacity: 0, scale: 0.98 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.98 }}
-                                transition={{ duration: 0.4 }}
-                                className="group cursor-pointer"
-                            >
-                                {/* Image Frame - Sharp Corners, clean */}
-                                <div className="relative aspect-[4/3] mb-6 overflow-hidden bg-gray-200">
-                                    <img
-                                        src={workshop.image}
-                                        alt={workshop.title}
-                                        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                                    />
-                                    {/* Wishlist Button - Top Right, Minimal */}
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); toggleWishlist(workshop.id); }}
-                                        className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-full hover:bg-white transition-colors"
-                                    >
-                                        <svg
-                                            viewBox="0 0 24 24"
-                                            className={`w-5 h-5 transition-colors ${wishlist.includes(workshop.id) ? 'fill-primary-orange stroke-primary-orange' : 'fill-transparent stroke-gray-900'}`}
-                                            strokeWidth="2"
+                    {loading ? (
+                        <div className="col-span-full py-20 flex justify-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-orange"></div>
+                        </div>
+                    ) : filteredWorkshops.length === 0 ? (
+                        <div className="col-span-full py-20 text-center">
+                            <p className="text-deep-purple/40 font-serif text-2xl italic">No sessions found in {activeTab} yet.</p>
+                        </div>
+                    ) : (
+                        <AnimatePresence mode="popLayout">
+                            {filteredWorkshops.map((workshop) => (
+                                <motion.div
+                                    key={workshop.id}
+                                    layout
+                                    initial={{ opacity: 0, scale: 0.98 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.98 }}
+                                    transition={{ duration: 0.4 }}
+                                    className="group cursor-pointer"
+                                    onClick={() => navigate(`/workshop/${workshop.slug || workshop.id}`)}
+                                >
+                                    <div className="relative aspect-[4/3] mb-6 overflow-hidden bg-gray-200">
+                                        {workshop.primaryImageUrl ? (
+                                            <img
+                                                src={workshop.primaryImageUrl}
+                                                alt={workshop.title}
+                                                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full bg-gradient-to-br from-deep-purple/10 to-primary-orange/10 flex items-center justify-center">
+                                                <span className="text-deep-purple/20 font-serif text-4xl">Image</span>
+                                            </div>
+                                        )}
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); toggleWishlist(workshop.id); }}
+                                            className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-full hover:bg-white transition-colors"
                                         >
-                                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                                        </svg>
-                                    </button>
-                                </div>
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                className={`w-5 h-5 transition-colors ${wishlist.includes(workshop.id) ? 'fill-primary-orange stroke-primary-orange' : 'fill-transparent stroke-gray-900'}`}
+                                                strokeWidth="2"
+                                            >
+                                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                                            </svg>
+                                        </button>
+                                    </div>
 
-                                {/* Content Details - Minimalist Hierarchy */}
-                                <div className="flex flex-col gap-3">
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-deep-purple/40 border-b border-deep-purple/10 pb-3">
+                                            <span>{workshop.categoryName}</span>
+                                            <div className='flex items-center gap-1'>
+                                                <span>★ {workshop.averageRating?.toFixed(1) || 'N/A'}</span>
+                                            </div>
+                                        </div>
 
-                                    {/* Meta Row */}
-                                    <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-deep-purple/40 border-b border-deep-purple/10 pb-3">
-                                        <span>{workshop.category}</span>
-                                        <div className='flex items-center gap-1'>
-                                            <span>★ {workshop.rating}</span>
+                                        <h3 className="text-2xl font-serif text-deep-purple leading-tight group-hover:text-primary-orange transition-colors line-clamp-2">
+                                            {workshop.title}
+                                        </h3>
+
+                                        <div className="flex items-center justify-between mt-2 font-sans">
+                                            <span className="text-deep-purple/60 text-sm">{workshop.locationName}</span>
+                                            <span className="font-semibold text-deep-purple text-lg">{workshop.currency} {workshop.basePrice}</span>
                                         </div>
                                     </div>
-
-                                    {/* Title */}
-                                    <h3 className="text-2xl font-serif text-deep-purple leading-tight group-hover:text-primary-orange transition-colors">
-                                        {workshop.title}
-                                    </h3>
-
-                                    {/* Footer Info */}
-                                    <div className="flex items-center justify-between mt-2 font-sans">
-                                        <span className="text-deep-purple/60 text-sm">{workshop.location}</span>
-                                        <span className="font-semibold text-deep-purple text-lg">{workshop.price}</span>
-                                    </div>
-
-                                </div>
-                            </motion.div>
-                        ))}
-                    </AnimatePresence>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+                    )}
                 </div>
 
-                {/* Minimal Link CTA */}
                 <div className="mt-20 border-t border-deep-purple/10 pt-8 flex justify-end">
                     <button className="text-xl font-serif italic text-deep-purple transition-colors flex items-center gap-2 group">
                         See all workshops

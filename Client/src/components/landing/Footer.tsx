@@ -6,7 +6,6 @@ const Footer: React.FC = () => {
     return (
         <footer className="bg-deep-purple text-cream-base pt-24 px-6 md:px-12 pb-6 overflow-hidden relative">
 
-            {/* Hand-drawn decorative line SVG at top */}
             <div className="absolute top-0 left-0 w-full h-8 text-primary-orange/20 overflow-hidden">
                 <svg viewBox="0 0 1200 40" preserveAspectRatio="none" className="w-full h-full fill-none stroke-current stroke-[3]">
                     <path d="M0,20 C150,40 300,0 450,20 C600,40 750,0 900,20 C1050,40 1200,0 1350,20" vectorEffect="non-scaling-stroke" />
@@ -15,7 +14,6 @@ const Footer: React.FC = () => {
 
             <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between gap-12 md:gap-24 mb-16 relative z-10">
 
-                {/* 1. Brand Mission / Left */}
                 <div className="md:w-5/12 pt-8">
                     <h2 className="font-serif text-5xl md:text-7xl leading-none mb-6 text-cream-base">
                         Craft something <br />
@@ -26,7 +24,6 @@ const Footer: React.FC = () => {
                         Subscribe for newsletter, exclusive discounts, and more.
                     </p>
 
-                    {/* Newsletter Minimal */}
                     <div className="mt-8 max-w-sm">
                         <div className="relative border-b border-cream-base/30 focus-within:border-primary-orange transition-colors">
                             <input
@@ -41,7 +38,6 @@ const Footer: React.FC = () => {
                     </div>
                 </div>
 
-                {/* 2. Links / Right - Staggered/Organic */}
                 <div className="md:w-6/12 flex gap-12 md:gap-24 items-start pt-4">
                     <div>
                         <h4 className="font-mono text-xs uppercase tracking-[0.2em] text-primary-orange mb-6">Explore</h4>
@@ -57,11 +53,10 @@ const Footer: React.FC = () => {
                     <div>
                         <h4 className="font-mono text-xs uppercase tracking-[0.2em] text-primary-orange mb-6">Company</h4>
                         <ul className="space-y-3 font-sans text-lg text-cream-base/60">
-                            {['About Us', 'Become a Host', 'Careers', 'Sitemap'].map(item => (
-                                <li key={item}>
-                                    <Link to="#" className="transition-colors">{item}</Link>
-                                </li>
-                            ))}
+                            <li><Link to="/about" className="transition-colors hover:text-white">About Us</Link></li>
+                            <li><Link to="/host-workshop" className="transition-colors hover:text-white">Become a Host</Link></li>
+                            <li><Link to="/careers" className="transition-colors hover:text-white">Careers</Link></li>
+                            <li><Link to="/sitemap" className="transition-colors hover:text-white">Sitemap</Link></li>
                         </ul>
                         <div className="mt-12">
                             <h4 className="font-mono text-xs uppercase tracking-[0.2em] text-primary-orange mb-4">(Connect with us)</h4>

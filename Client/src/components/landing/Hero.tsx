@@ -12,7 +12,6 @@ const Hero: React.FC = () => {
     return (
         <section ref={containerRef} className="relative min-h-screen pt-32 pb-20 px-8 flex flex-col justify-center overflow-hidden">
 
-            {/* Background Decor */}
             <div className="absolute top-0 right-0 -z-10 w-[500px] h-[500px] bg-primary-orange/5 rounded-full blur-3xl translate-x-1/3 -translate-y-1/3" />
             <div className="absolute bottom-0 left-0 -z-10 w-[400px] h-[400px] bg-deep-purple/5 rounded-full blur-3xl -translate-x-1/3 translate-y-1/3" />
 
@@ -22,7 +21,6 @@ const Hero: React.FC = () => {
             >
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
 
-                    {/* Main Content */}
                     <div className="lg:col-span-7">
                         <motion.div
                             initial={{ opacity: 0, y: 30 }}
@@ -40,14 +38,12 @@ const Hero: React.FC = () => {
                         </motion.div>
                     </div>
 
-                    {/* Fan Carousel (Right Side) */}
                     <div className="lg:col-span-5 hidden lg:block">
                         <FanCarousel />
                     </div>
                 </div>
             </motion.div>
 
-            {/* Down Scroll Indicator */}
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
