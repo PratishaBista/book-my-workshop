@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace API.Controllers;
 
 [ApiController]
-[Route("api/workshop/{workshopId}/[controller]")]
+[Route("api/media")]
 [Authorize(Roles = "Provider,Admin")]
 public class MediaController : ControllerBase
 {
@@ -32,8 +32,31 @@ public class MediaController : ControllerBase
         _logger = logger;
     }
 
+    [HttpGet("ping")]
+    [AllowAnonymous]
+    public IActionResult Ping() => Ok("Media controller is alive");
+
+    // POST: api/media/upload
+    [HttpPost("/api/media/upload")]
+    public async Task<IActionResult> UploadGeneralMedia([FromForm] IFormFile file)
+    {
+        try
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { message = "No file provided." });
+
+            var (url, publicId) = await _mediaService.UploadMediaAsync(file, "general");
+            return Ok(new { url, publicId });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in general media upload");
+            return StatusCode(500, new { message = "Upload failed." });
+        }
+    }
+
     // POST: api/workshop/{workshopId}/media
-    [HttpPost]
+    [HttpPost("~/api/workshop/{workshopId}/media")]
     public async Task<IActionResult> UploadMedia(int workshopId, [FromForm] UploadMediaRequest request)
     {
         try
@@ -78,7 +101,6 @@ public class MediaController : ControllerBase
                 UploadedAt = DateTime.UtcNow
             };
 
-            // If this is set as primary, unmark other primary media
             if (request.IsPrimary)
             {
                 var existingPrimary = await _mediaRepository.FindAsync(m => m.WorkshopId == workshopId && m.IsPrimary);
@@ -221,7 +243,6 @@ public class MediaController : ControllerBase
             media.DisplayOrder = request.DisplayOrder;
             media.IsPrimary = request.IsPrimary;
 
-            // If setting as primary, unmark others
             if (request.IsPrimary)
             {
                 var existingPrimary = await _mediaRepository.FindAsync(m => m.WorkshopId == workshopId && m.IsPrimary && m.Id != mediaId);

@@ -28,6 +28,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         
         builder.Entity<ApplicationUser>().ToTable("Users");
 
+        // Provider Slug unique constraint
+        builder.Entity<Provider>()
+            .HasIndex(p => p.Slug)
+            .IsUnique();
+
         // Workshop Category
         builder.Entity<WorkshopCategory>()
             .HasIndex(c => c.Name)
@@ -38,49 +43,49 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasOne(w => w.Provider)
             .WithMany()
             .HasForeignKey(w => w.ProviderId)
-            .OnDelete(DeleteBehavior.Restrict); // Don't delete workshops if provider is deleted
+            .OnDelete(DeleteBehavior.Restrict); 
 
         // Workshop - Category relationship
         builder.Entity<Workshop>()
             .HasOne(w => w.Category)
             .WithMany(c => c.Workshops)
             .HasForeignKey(w => w.CategoryId)
-            .OnDelete(DeleteBehavior.Restrict); // Don't delete workshops if category is deleted
+            .OnDelete(DeleteBehavior.Restrict); 
 
         // Workshop - Pricing (1:1)
         builder.Entity<WorkshopPricing>()
             .HasOne(p => p.Workshop)
             .WithOne(w => w.Pricing)
             .HasForeignKey<WorkshopPricing>(p => p.WorkshopId)
-            .OnDelete(DeleteBehavior.Cascade); // Delete pricing if workshop is deleted
+            .OnDelete(DeleteBehavior.Cascade); 
 
         // Workshop - Media (1:Many)
         builder.Entity<WorkshopMedia>()
             .HasOne(m => m.Workshop)
             .WithMany(w => w.Media)
             .HasForeignKey(m => m.WorkshopId)
-            .OnDelete(DeleteBehavior.Cascade); // Delete media if workshop is deleted
+            .OnDelete(DeleteBehavior.Cascade); 
 
         // Workshop - Schedule (1:Many)
         builder.Entity<WorkshopSchedule>()
             .HasOne(s => s.Workshop)
             .WithMany(w => w.Schedules)
             .HasForeignKey(s => s.WorkshopId)
-            .OnDelete(DeleteBehavior.Cascade); // Delete schedules if workshop is deleted
+            .OnDelete(DeleteBehavior.Cascade); 
 
         // Booking - User relationship
         builder.Entity<Booking>()
             .HasOne(b => b.User)
             .WithMany()
             .HasForeignKey(b => b.UserId)
-            .OnDelete(DeleteBehavior.Restrict); // Don't delete bookings if user is deleted
+            .OnDelete(DeleteBehavior.Restrict); 
 
         // Booking - WorkshopSchedule relationship
         builder.Entity<Booking>()
             .HasOne(b => b.WorkshopSchedule)
             .WithMany(s => s.Bookings)
             .HasForeignKey(b => b.WorkshopScheduleId)
-            .OnDelete(DeleteBehavior.Restrict); // Don't delete bookings if schedule is deleted
+            .OnDelete(DeleteBehavior.Restrict); 
 
         // Unique confirmation code
         builder.Entity<Booking>()
@@ -92,14 +97,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasOne(r => r.Workshop)
             .WithMany(w => w.Reviews)
             .HasForeignKey(r => r.WorkshopId)
-            .OnDelete(DeleteBehavior.Cascade); // Delete reviews if workshop is deleted
-
+            .OnDelete(DeleteBehavior.Cascade); 
         // Review - User relationship
         builder.Entity<WorkshopReview>()
             .HasOne(r => r.User)
             .WithMany()
             .HasForeignKey(r => r.UserId)
-            .OnDelete(DeleteBehavior.Restrict); // Don't delete reviews if user is deleted
+            .OnDelete(DeleteBehavior.Restrict); 
 
         // Review - Booking relationship (ensures only attendees can review)
         builder.Entity<WorkshopReview>()

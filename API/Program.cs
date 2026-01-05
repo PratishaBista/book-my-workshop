@@ -2,6 +2,7 @@ using API.Data;
 using API.Entities;
 using API.Repositories;
 using API.Services;
+using API.Enums;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -85,6 +86,8 @@ builder.Services.AddScoped<IScheduleRepository, ScheduleRepository>();
 builder.Services.AddScoped<IWorkshopService, WorkshopService>();
 builder.Services.AddScoped<IMediaService, MediaService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IPaymentService, EsewaPaymentService>();
 
 var app = builder.Build();
 
@@ -93,6 +96,11 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "API V1");
+        c.RoutePrefix = string.Empty;
+    });
 }
 
 app.UseHttpsRedirection();
@@ -113,6 +121,17 @@ using (var scope = app.Services.CreateScope())
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
         var context = services.GetRequiredService<ApplicationDbContext>();
+        // Data Integrity Fix for IsApproved
+        var approvedProviders = await context.Providers
+            .Where(p => p.Status == ProviderStatus.Approved && !p.IsApproved)
+            .ToListAsync();
+        
+        if (approvedProviders.Any())
+        {
+            foreach (var p in approvedProviders) p.IsApproved = true;
+            await context.SaveChangesAsync();
+        }
+
         await DbInitializer.SeedAsync(userManager, roleManager, context);
     }
     catch (Exception ex)

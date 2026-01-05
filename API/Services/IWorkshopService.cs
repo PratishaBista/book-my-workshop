@@ -14,6 +14,7 @@ public interface IWorkshopService
     Task<WorkshopDetailResponse> CreateWorkshopAsync(int providerId, CreateWorkshopRequest request);
     Task<WorkshopDetailResponse> UpdateWorkshopAsync(int workshopId, int providerId, UpdateWorkshopRequest request);
     Task<bool> DeleteWorkshopAsync(int workshopId, int providerId);
+    Task<WorkshopDetailResponse?> GetWorkshopBySlugAsync(string slug);
     Task<WorkshopDetailResponse?> GetWorkshopByIdAsync(int id);
     Task<IEnumerable<WorkshopListResponse>> GetAllPublishedWorkshopsAsync();
     Task<IEnumerable<WorkshopListResponse>> GetWorkshopsByCategoryAsync(int categoryId);

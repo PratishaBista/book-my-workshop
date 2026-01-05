@@ -26,11 +26,11 @@ public static class DbInitializer
             {
                 UserName = adminEmail,
                 Email = adminEmail,
-                FullName = "System Administrator",
+                FullName = "Pratisha Bista",
                 EmailConfirmed = true
             };
 
-            var result = await userManager.CreateAsync(admin, "Admin@123"); // Strong password
+            var result = await userManager.CreateAsync(admin, "Admin@123"); 
             if (result.Succeeded)
             {
                 await userManager.AddToRoleAsync(admin, UserRoles.Admin);

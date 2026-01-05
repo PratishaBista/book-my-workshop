@@ -25,6 +25,10 @@ public class Workshop
     public string? Tagline { get; set; }
 
     [Required]
+    [MaxLength(500)]
+    public string Slug { get; set; } = string.Empty;
+
+    [Required]
     public string Description { get; set; } = string.Empty; // HTML content
 
     // Duration

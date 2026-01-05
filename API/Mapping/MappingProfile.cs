@@ -17,7 +17,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Provider, opt => opt.Ignore())
             .ForMember(dest => dest.Category, opt => opt.Ignore())
             .ForMember(dest => dest.Pricing, opt => opt.Ignore())
-            .ForMember(dest => dest.Media, opt => opt.Ignore())
+            .ForMember(dest => dest.Media, opt => opt.MapFrom(src => src.Media))
             .ForMember(dest => dest.Schedules, opt => opt.Ignore())
             .ForMember(dest => dest.Reviews, opt => opt.Ignore())
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => WorkshopStatus.Draft))
@@ -125,6 +125,12 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Workshop, opt => opt.MapFrom(src => src.WorkshopSchedule.Workshop))
             .ForMember(dest => dest.CanReview, opt => opt.Ignore())
             .ForMember(dest => dest.HasReviewed, opt => opt.MapFrom(src => src.Review != null));
+
+        CreateMap<WorkshopMediaRequest, WorkshopMedia>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.WorkshopId, opt => opt.Ignore())
+            .ForMember(dest => dest.Workshop, opt => opt.Ignore())
+            .ForMember(dest => dest.UploadedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
 
         CreateMap<Workshop, WorkshopInfoResponse>()
             .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category.Name))

@@ -6,6 +6,7 @@ public class WorkshopDetailResponse
 {
     public int Id { get; set; }
     public string Title { get; set; } = string.Empty;
+    public string Slug { get; set; } = string.Empty;
     public string? Tagline { get; set; }
     public string Description { get; set; } = string.Empty;
     public TimeSpan Duration { get; set; }
@@ -61,6 +62,8 @@ public class ProviderResponse
     public int Id { get; set; }
     public string BusinessName { get; set; } = string.Empty;
     public string? Address { get; set; }
+    public string? LogoUrl { get; set; }
+    public string? CoverImageUrl { get; set; }
 }
 
 public class PricingResponse

@@ -23,10 +23,18 @@ public class WorkshopPublicController : ControllerBase
     }
 
     // GET: api/workshops/public/{id}
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetWorkshopDetail(int id)
+    // GET: api/workshops/public/{idOrSlug}
+    [HttpGet("{idOrSlug}")]
+    public async Task<IActionResult> GetWorkshopDetail(string idOrSlug)
     {
-        var workshop = await _workshopService.GetWorkshopByIdAsync(id);
+        if (int.TryParse(idOrSlug, out int id))
+        {
+             var workshopById = await _workshopService.GetWorkshopByIdAsync(id);
+             if (workshopById != null) return Ok(workshopById);
+             return NotFound();
+        }
+
+        var workshop = await _workshopService.GetWorkshopBySlugAsync(idOrSlug);
         if (workshop == null)
         {
             return NotFound();

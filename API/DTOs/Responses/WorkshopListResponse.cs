@@ -6,6 +6,7 @@ public class WorkshopListResponse
 {
     public int Id { get; set; }
     public string Title { get; set; } = string.Empty;
+    public string Slug { get; set; } = string.Empty;
     public string? Tagline { get; set; }
     public TimeSpan Duration { get; set; }
     public int MaxCapacity { get; set; }

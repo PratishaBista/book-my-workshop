@@ -25,7 +25,7 @@ public class WorkshopMedia
 
     public bool IsPrimary { get; set; } = false; // Featured/thumbnail image
 
-    public int DisplayOrder { get; set; } // For carousel ordering
+    public int DisplayOrder { get; set; }
 
     public long? FileSizeBytes { get; set; }
 

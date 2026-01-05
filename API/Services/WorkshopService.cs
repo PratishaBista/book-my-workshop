@@ -5,6 +5,8 @@ using API.Enums;
 using API.Repositories;
 using AutoMapper;
 using Ganss.Xss;
+using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
 
 namespace API.Services;
 
@@ -38,11 +40,10 @@ public class WorkshopService : IWorkshopService
 
     public async Task<WorkshopDetailResponse> CreateWorkshopAsync(int providerId, CreateWorkshopRequest request)
     {
-        // Validate provider is approved
         var provider = await _providerRepository.GetByIdAsync(providerId);
-        if (provider == null || !provider.IsApproved)
+        if (provider == null)
         {
-            throw new UnauthorizedAccessException("Provider is not approved to create workshops.");
+            throw new UnauthorizedAccessException("Provider record not found.");
         }
 
         // Validate category exists
@@ -70,6 +71,7 @@ public class WorkshopService : IWorkshopService
         // Map to workshop entity
         var workshop = _mapper.Map<Workshop>(request);
         workshop.ProviderId = providerId;
+        workshop.Slug = GenerateSlug(request.Title, request.LocationAddress);
 
         // Create workshop
         await _workshopRepository.AddAsync(workshop);
@@ -119,6 +121,7 @@ public class WorkshopService : IWorkshopService
         // Map updates
         _mapper.Map(request, workshop);
         workshop.UpdatedAt = DateTime.UtcNow;
+        workshop.Slug = GenerateSlug(request.Title, request.LocationAddress);
 
         // Update pricing
         if (workshop.Pricing != null)
@@ -153,6 +156,16 @@ public class WorkshopService : IWorkshopService
         await _workshopRepository.SaveChangesAsync();
 
         return true;
+    }
+
+    public async Task<WorkshopDetailResponse?> GetWorkshopBySlugAsync(string slug)
+    {
+        var workshops = await _workshopRepository.FindAsync(w => w.Slug == slug && w.IsActive);
+        var workshopEntity = workshops.FirstOrDefault();
+        
+        if (workshopEntity == null) return null;
+        
+        return await GetWorkshopByIdAsync(workshopEntity.Id);
     }
 
     public async Task<WorkshopDetailResponse?> GetWorkshopByIdAsync(int id)
@@ -209,7 +222,8 @@ public class WorkshopService : IWorkshopService
             throw new UnauthorizedAccessException("You do not have permission to publish this workshop.");
         }
 
-        workshop.Status = WorkshopStatus.Published;
+        // Move to review stage rather than straight to published
+        workshop.Status = WorkshopStatus.PendingReview;
         workshop.UpdatedAt = DateTime.UtcNow;
         _workshopRepository.Update(workshop);
         await _workshopRepository.SaveChangesAsync();
@@ -323,5 +337,14 @@ public class WorkshopService : IWorkshopService
     {
         var schedules = await _scheduleRepository.GetUpcomingSchedulesForWorkshopAsync(workshopId);
         return _mapper.Map<IEnumerable<ScheduleResponse>>(schedules);
+    }
+
+    private string GenerateSlug(string title, string address)
+    {
+        var raw = $"{title} {address}".ToLower();
+        var str = Regex.Replace(raw, @"[^a-z0-9\s-]", "");
+        str = Regex.Replace(str, @"\s+", " ").Trim();
+        str = Regex.Replace(str, @"\s", "-");
+        return str;
     }
 }

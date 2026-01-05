@@ -1,7 +1,9 @@
 using API.Data;
 using API.Entities;
 using API.Enums;
+using API.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,14 +11,18 @@ namespace API.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-[Authorize(Roles = UserRoles.Admin)] // Secure: Only Admins can access
+[Authorize(Roles = UserRoles.Admin)]
 public class AdminController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IEmailService _emailService;
 
-    public AdminController(ApplicationDbContext context)
+    public AdminController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IEmailService emailService)
     {
         _context = context;
+        _userManager = userManager;
+        _emailService = emailService;
     }
 
     // GET: api/admin/providers/pending
@@ -24,16 +30,23 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> GetPendingProviders()
     {
         var pendingProviders = await _context.Providers
-            .Include(p => p.User) // Include User details (Email, Name)
-            .Where(p => !p.IsApproved)
+            .Include(p => p.User)
+            .Where(p => p.Status == ProviderStatus.PendingReview)
             .Select(p => new
             {
                 p.Id,
                 p.BusinessName,
                 p.PhoneNumber,
+                p.State,
+                p.Address,
+                p.Website,
+                p.Tagline,
+                p.Description,
+                p.Slug,
+                p.ReferralSource,
                 ContactPerson = p.User.FullName,
                 Email = p.User.Email,
-                RegisteredAt = DateTime.Now 
+                RegisteredAt = p.CreatedAt
             })
             .ToListAsync();
 
@@ -47,13 +60,141 @@ public class AdminController : ControllerBase
         var provider = await _context.Providers.FindAsync(id);
         if (provider == null) return NotFound("Provider not found");
 
-        if (provider.IsApproved) return BadRequest("Provider is already approved");
+        if (provider.Status == ProviderStatus.Approved) return BadRequest("Provider is already approved");
 
+        provider.Status = ProviderStatus.Approved;
         provider.IsApproved = true;
+        provider.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        // Optional: Sending email notification to provider here (not implemented)
+        // Send Approval Email
+        var user = await _userManager.FindByIdAsync(provider.UserId);
+        if (user != null && !string.IsNullOrEmpty(user.Email))
+        {
+            var dashboardLink = "http://localhost:4000/host/dashboard";
+            var emailBody = EmailTemplates.GetHostApprovalEmail(user.FullName ?? provider.BusinessName, dashboardLink);
+            await _emailService.SendEmailAsync(user.Email, "Account Approved - BookMyWorkshop", emailBody);
+        }
 
         return Ok(new { Message = $"Provider '{provider.BusinessName}' approved successfully." });
+    }
+
+    // GET: api/admin/workshops/pending
+    [HttpGet("workshops/pending")]
+    public async Task<IActionResult> GetPendingWorkshops()
+    {
+        var pendingWorkshops = await _context.Workshops
+            .Include(w => w.Provider)
+            .ThenInclude(p => p.User)
+            .Include(w => w.Category)
+            .Include(w => w.Pricing)
+            .Where(w => w.Status == WorkshopStatus.PendingReview)
+            .Select(w => new
+            {
+                w.Id,
+                w.Title,
+                w.Description,
+                w.Tagline,
+                w.Duration,
+                w.MaxCapacity,
+                w.LocationAddress,
+                w.LocationName,
+                ProviderName = w.Provider.BusinessName,
+                ProviderContact = w.Provider.User.FullName,
+                ProviderEmail = w.Provider.User.Email,
+                SubmittedAt = w.UpdatedAt,
+                CategoryName = w.Category.Name,
+                Price = w.Pricing != null ? w.Pricing.BasePrice : 0
+            })
+            .ToListAsync();
+
+        return Ok(pendingWorkshops);
+    }
+
+    // PUT: api/admin/approve-workshop/{id}
+    [HttpPut("approve-workshop/{id}")]
+    public async Task<IActionResult> ApproveWorkshop(int id)
+    {
+        var workshop = await _context.Workshops.FindAsync(id);
+        if (workshop == null) return NotFound("Workshop not found");
+
+        if (workshop.Status == WorkshopStatus.Published) return BadRequest("Workshop is already published");
+
+        workshop.Status = WorkshopStatus.Published;
+        // workshop.PublishedAt = DateTime.UtcNow; 
+        await _context.SaveChangesAsync();
+
+        return Ok(new { Message = $"Workshop '{workshop.Title}' approved and published." });
+    }
+
+    // PUT: api/admin/reject-workshop/{id}
+    [HttpPut("reject-workshop/{id}")]
+    public async Task<IActionResult> RejectWorkshop(int id)
+    {
+        var workshop = await _context.Workshops.FindAsync(id);
+        if (workshop == null) return NotFound("Workshop not found");
+
+        workshop.Status = WorkshopStatus.Rejected;
+        await _context.SaveChangesAsync();
+
+        return Ok(new { Message = $"Workshop '{workshop.Title}' has been rejected." });
+    }
+
+    // GET: api/admin/users
+    [HttpGet("users")]
+    public async Task<IActionResult> GetUsers([FromQuery] string? role)
+    {
+
+        if (role == "Provider")
+        {
+            var providers = await _context.Providers
+                .Include(p => p.User)
+                //.Where(p => p.IsApproved)
+                .Select(p => new
+                {
+                    Id = p.User.Id,
+                    FullName = p.BusinessName,
+                    p.User.Email,
+                    p.User.PhoneNumber,
+                    p.User.EmailConfirmed,
+                    Role = "Provider",
+                    ProviderId = p.Id,
+                    Status = p.Status == ProviderStatus.Approved ? "Active" :
+                             p.Status == ProviderStatus.PendingReview ? "Pending" :
+                             p.Status == ProviderStatus.Incomplete ? "Incomplete" : "Other"
+                })
+                .ToListAsync();
+            return Ok(providers);
+        }
+
+        if (role == "Customer")
+        {
+
+            var customers = await _userManager.GetUsersInRoleAsync(UserRoles.User);
+
+            var admins = await _userManager.GetUsersInRoleAsync(UserRoles.Admin);
+            var adminIds = admins.Select(a => a.Id).ToHashSet();
+
+            var providerUserIds = await _context.Providers.Select(p => p.UserId).ToListAsync();
+            var providerUserIdSet = providerUserIds.ToHashSet();
+
+            var filteredCustomers = customers
+                .Where(u => !adminIds.Contains(u.Id))
+                .Where(u => !providerUserIdSet.Contains(u.Id))
+                .Select(u => new
+                {
+                    u.Id,
+                    u.FullName,
+                    u.Email,
+                    u.PhoneNumber,
+                    u.EmailConfirmed,
+                    Role = "Customer",
+                    Status = "Active"
+                });
+
+            return Ok(filteredCustomers);
+        }
+
+        return BadRequest("Please specify a role (Customer or Provider).");
     }
 }
