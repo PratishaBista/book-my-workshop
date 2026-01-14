@@ -170,7 +170,7 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
                             onMouseLeave={() => setCommunityOpen(false)}
                         >
                             <button className="flex items-center gap-2 font-sans text-base font-semibold text-[#0E0E0C]">
-                                Community
+                                About Us
                                 <motion.div animate={{ rotate: communityOpen ? 180 : 0 }}>
                                     <ChevronDown size={18} />
                                 </motion.div>

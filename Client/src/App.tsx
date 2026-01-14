@@ -12,6 +12,7 @@ import Profile from './pages/profile/Profile';
 import ProfileQR from './pages/profile/ProfileQR';
 import PaymentSuccess from './pages/payment/PaymentSuccess';
 import PaymentFailure from './pages/payment/PaymentFailure';
+import { WorkshopCreationPage } from './pages/host/WorkshopCreationPage';
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import PublicRoute from './components/auth/PublicRoute'
 
@@ -36,6 +37,8 @@ function App() {
           <Route path="/u/:username/qr" element={<ProfileQR />} />
           <Route path="/settings/*" element={<Settings />} />
           <Route path="/host/dashboard" element={<HostDashboard />} />
+          <Route path="/host/workshop/create" element={<WorkshopCreationPage />} />
+          <Route path="/host/workshop/edit/:id" element={<WorkshopCreationPage />} />
           <Route path="/payment/success" element={<PaymentSuccess />} />
           <Route path="/payment/failure" element={<PaymentFailure />} />
         </Route>
