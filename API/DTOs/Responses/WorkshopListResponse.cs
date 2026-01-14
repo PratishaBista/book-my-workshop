@@ -8,15 +8,16 @@ public class WorkshopListResponse
     public string Title { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public string? Tagline { get; set; }
+    public string? Subtitle { get; set; }
+    public WorkshopType WorkshopType { get; set; }
     public TimeSpan Duration { get; set; }
     public int MaxCapacity { get; set; }
     public string LocationAddress { get; set; } = string.Empty;
     public string? LocationName { get; set; }
     public WorkshopStatus Status { get; set; }
     
-    // Category
-    public int CategoryId { get; set; }
-    public string CategoryName { get; set; } = string.Empty;
+    // Categories
+    public List<CategoryResponse> Categories { get; set; } = new();
     
     // Provider
     public int ProviderId { get; set; }

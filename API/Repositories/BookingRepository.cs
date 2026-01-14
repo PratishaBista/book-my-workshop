@@ -20,7 +20,7 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
         return await _dbSet
             .Include(b => b.WorkshopSchedule)
                 .ThenInclude(s => s.Workshop)
-                    .ThenInclude(w => w.Category)
+                    .ThenInclude(w => w.Categories)
             .Include(b => b.WorkshopSchedule)
                 .ThenInclude(s => s.Workshop)
                     .ThenInclude(w => w.Media.OrderBy(m => m.DisplayOrder))
@@ -35,7 +35,7 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
             .Include(b => b.User)
             .Include(b => b.WorkshopSchedule)
                 .ThenInclude(s => s.Workshop)
-                    .ThenInclude(w => w.Category)
+                    .ThenInclude(w => w.Categories)
             .Include(b => b.WorkshopSchedule)
                 .ThenInclude(s => s.Workshop)
                     .ThenInclude(w => w.Provider)

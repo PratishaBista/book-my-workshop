@@ -19,7 +19,7 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
     public async Task<IEnumerable<Workshop>> GetPublishedWorkshopsAsync()
     {
         return await _dbSet
-            .Include(w => w.Category)
+            .Include(w => w.Categories)
             .Include(w => w.Provider)
             .Include(w => w.Pricing)
             .Include(w => w.Media.OrderBy(m => m.DisplayOrder))
@@ -31,11 +31,11 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
     public async Task<IEnumerable<Workshop>> GetWorkshopsByCategoryAsync(int categoryId)
     {
         return await _dbSet
-            .Include(w => w.Category)
+            .Include(w => w.Categories)
             .Include(w => w.Provider)
             .Include(w => w.Pricing)
             .Include(w => w.Media.OrderBy(m => m.DisplayOrder))
-            .Where(w => w.CategoryId == categoryId 
+            .Where(w => w.Categories.Any(c => c.Id == categoryId) 
                      && w.Status == WorkshopStatus.Published 
                      && w.IsActive)
             .OrderByDescending(w => w.CreatedAt)
@@ -45,7 +45,7 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
     public async Task<IEnumerable<Workshop>> GetWorkshopsByProviderAsync(int providerId)
     {
         return await _dbSet
-            .Include(w => w.Category)
+            .Include(w => w.Categories)
             .Include(w => w.Pricing)
             .Include(w => w.Media.OrderBy(m => m.DisplayOrder))
             .Include(w => w.Schedules)
@@ -57,7 +57,7 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
     public async Task<Workshop?> GetWorkshopWithDetailsAsync(int id)
     {
         return await _dbSet
-            .Include(w => w.Category)
+            .Include(w => w.Categories)
             .Include(w => w.Provider)
                 .ThenInclude(p => p.User)
             .Include(w => w.Pricing)
@@ -74,26 +74,27 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
         string? location = null)
     {
         var query = _dbSet
-            .Include(w => w.Category)
+            .Include(w => w.Categories)
             .Include(w => w.Provider)
             .Include(w => w.Pricing)
             .Include(w => w.Media.OrderBy(m => m.DisplayOrder))
             .Where(w => w.Status == WorkshopStatus.Published && w.IsActive);
 
-        // Search in title, tagline, and description
+        // Search in title, tagline, subtitle, and description
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             searchTerm = searchTerm.ToLower();
             query = query.Where(w => 
                 w.Title.ToLower().Contains(searchTerm) ||
                 (w.Tagline != null && w.Tagline.ToLower().Contains(searchTerm)) ||
+                (w.Subtitle != null && w.Subtitle.ToLower().Contains(searchTerm)) ||
                 w.Description.ToLower().Contains(searchTerm));
         }
 
         // Filter by category
         if (categoryId.HasValue)
         {
-            query = query.Where(w => w.CategoryId == categoryId.Value);
+            query = query.Where(w => w.Categories.Any(c => c.Id == categoryId.Value));
         }
 
         // Filter by location
@@ -112,7 +113,7 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
     {
         // Featured workshops: published, has upcoming schedules, sorted by rating
         return await _dbSet
-            .Include(w => w.Category)
+            .Include(w => w.Categories)
             .Include(w => w.Provider)
             .Include(w => w.Pricing)
             .Include(w => w.Media.OrderBy(m => m.DisplayOrder))

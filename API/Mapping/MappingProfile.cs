@@ -15,7 +15,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Id, opt => opt.Ignore())
             .ForMember(dest => dest.ProviderId, opt => opt.Ignore())
             .ForMember(dest => dest.Provider, opt => opt.Ignore())
-            .ForMember(dest => dest.Category, opt => opt.Ignore())
+            .ForMember(dest => dest.Categories, opt => opt.Ignore())
             .ForMember(dest => dest.Pricing, opt => opt.Ignore())
             .ForMember(dest => dest.Media, opt => opt.MapFrom(src => src.Media))
             .ForMember(dest => dest.Schedules, opt => opt.Ignore())
@@ -29,7 +29,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Id, opt => opt.Ignore())
             .ForMember(dest => dest.ProviderId, opt => opt.Ignore())
             .ForMember(dest => dest.Provider, opt => opt.Ignore())
-            .ForMember(dest => dest.Category, opt => opt.Ignore())
+            .ForMember(dest => dest.Categories, opt => opt.Ignore())
             .ForMember(dest => dest.Pricing, opt => opt.Ignore())
             .ForMember(dest => dest.Media, opt => opt.Ignore())
             .ForMember(dest => dest.Schedules, opt => opt.Ignore())
@@ -40,7 +40,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
 
         CreateMap<Workshop, WorkshopListResponse>()
-            .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category.Name))
+            .ForMember(dest => dest.Categories, opt => opt.MapFrom(src => src.Categories))
             .ForMember(dest => dest.ProviderBusinessName, opt => opt.MapFrom(src => src.Provider.BusinessName))
             .ForMember(dest => dest.BasePrice, opt => opt.MapFrom(src => src.Pricing != null ? src.Pricing.BasePrice : 0))
             .ForMember(dest => dest.Currency, opt => opt.MapFrom(src => src.Pricing != null ? src.Pricing.Currency : "NPR"))
@@ -51,7 +51,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.NextScheduleDate, opt => opt.MapFrom(src => src.Schedules.Where(s => s.StartDateTime > DateTime.UtcNow && s.Status == ScheduleStatus.Upcoming).OrderBy(s => s.StartDateTime).Select(s => (DateTime?)s.StartDateTime).FirstOrDefault()));
 
         CreateMap<Workshop, WorkshopDetailResponse>()
-            .ForMember(dest => dest.Category, opt => opt.MapFrom(src => src.Category))
+            .ForMember(dest => dest.Categories, opt => opt.MapFrom(src => src.Categories))
             .ForMember(dest => dest.Provider, opt => opt.MapFrom(src => src.Provider))
             .ForMember(dest => dest.Pricing, opt => opt.MapFrom(src => src.Pricing))
             .ForMember(dest => dest.Media, opt => opt.MapFrom(src => src.Media.OrderBy(m => m.DisplayOrder)))
@@ -133,7 +133,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.UploadedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
 
         CreateMap<Workshop, WorkshopInfoResponse>()
-            .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category.Name))
+            .ForMember(dest => dest.Categories, opt => opt.MapFrom(src => src.Categories))
             .ForMember(dest => dest.PrimaryImageUrl, opt => opt.MapFrom(src => src.Media.FirstOrDefault(m => m.IsPrimary) != null ? src.Media.FirstOrDefault(m => m.IsPrimary)!.Url : src.Media.OrderBy(m => m.DisplayOrder).FirstOrDefault() != null ? src.Media.OrderBy(m => m.DisplayOrder).FirstOrDefault()!.Url : null));
 
         // Review mappings

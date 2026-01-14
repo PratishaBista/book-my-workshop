@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using API.Enums;
 
 namespace API.DTOs.Requests;
 
@@ -11,8 +12,14 @@ public class CreateWorkshopRequest
     [MaxLength(300)]
     public string? Tagline { get; set; }
 
+    [MaxLength(300)]
+    public string? Subtitle { get; set; }
+
     [Required(ErrorMessage = "Description is required")]
     public string Description { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Workshop type is required")]
+    public WorkshopType WorkshopType { get; set; } = WorkshopType.PublicClass;
 
     [Required(ErrorMessage = "Duration is required")]
     public TimeSpan Duration { get; set; }
@@ -24,8 +31,10 @@ public class CreateWorkshopRequest
     [Range(0, 1000)]
     public int? MinCapacity { get; set; }
 
-    [Required(ErrorMessage = "Category is required")]
-    public int CategoryId { get; set; }
+    [Required(ErrorMessage = "At least one category is required")]
+    [MinLength(1, ErrorMessage = "Select at least one category")]
+    [MaxLength(6, ErrorMessage = "You can select up to 6 categories")]
+    public List<int> CategoryIds { get; set; } = new();
 
     [Required(ErrorMessage = "Location address is required")]
     [MaxLength(500)]
@@ -37,13 +46,25 @@ public class CreateWorkshopRequest
     public decimal? Latitude { get; set; }
     public decimal? Longitude { get; set; }
 
+    public string? VenueDescription { get; set; }
+
     [MaxLength(1000)]
     public string? LocationDetails { get; set; }
 
+    public string? WhatToBring { get; set; }
+    public string? SkillLevel { get; set; }
+    public string? Suitability { get; set; }
+    public string? CancellationPolicy { get; set; }
+    public int BookingCutoffHours { get; set; } = 2;
+
+    // Legacy fields
     public string? SafetyRequirements { get; set; }
     public string? WhatsIncluded { get; set; }
 
     // Pricing
+    [Required]
+    public PricingType PricingType { get; set; } = PricingType.PerPerson;
+
     [Required]
     [Range(0, double.MaxValue)]
     public decimal BasePrice { get; set; }

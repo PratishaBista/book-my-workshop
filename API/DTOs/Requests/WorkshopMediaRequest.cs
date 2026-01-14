@@ -15,5 +15,9 @@ public class WorkshopMediaRequest
 
     public bool IsPrimary { get; set; }
     
+    public int StoryPodId { get; set; }
+    
     public int DisplayOrder { get; set; }
+
+    public string? AspectRatio { get; set; }
 }

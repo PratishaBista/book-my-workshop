@@ -46,11 +46,11 @@ public class WorkshopService : IWorkshopService
             throw new UnauthorizedAccessException("Provider record not found.");
         }
 
-        // Validate category exists
-        var category = await _categoryRepository.GetByIdAsync(request.CategoryId);
-        if (category == null || !category.IsActive)
+        // Validate categories exist
+        var categories = await _categoryRepository.FindAsync(c => request.CategoryIds.Contains(c.Id) && c.IsActive);
+        if (categories.Count() != request.CategoryIds.Count)
         {
-            throw new ArgumentException("Invalid category selected.");
+            throw new ArgumentException("One or more selected categories are invalid.");
         }
 
         // Sanitize HTML description
@@ -71,6 +71,7 @@ public class WorkshopService : IWorkshopService
         // Map to workshop entity
         var workshop = _mapper.Map<Workshop>(request);
         workshop.ProviderId = providerId;
+        workshop.Categories = categories.ToList();
         workshop.Slug = GenerateSlug(request.Title, request.LocationAddress);
 
         // Create workshop
@@ -102,11 +103,11 @@ public class WorkshopService : IWorkshopService
             throw new UnauthorizedAccessException("You do not have permission to update this workshop.");
         }
 
-        // Validate category
-        var category = await _categoryRepository.GetByIdAsync(request.CategoryId);
-        if (category == null || !category.IsActive)
+        // Validate categories
+        var categories = await _categoryRepository.FindAsync(c => request.CategoryIds.Contains(c.Id) && c.IsActive);
+        if (categories.Count() != request.CategoryIds.Count)
         {
-            throw new ArgumentException("Invalid category selected.");
+            throw new ArgumentException("One or more selected categories are invalid.");
         }
 
         // Sanitize description
@@ -120,6 +121,7 @@ public class WorkshopService : IWorkshopService
 
         // Map updates
         _mapper.Map(request, workshop);
+        workshop.Categories = categories.ToList();
         workshop.UpdatedAt = DateTime.UtcNow;
         workshop.Slug = GenerateSlug(request.Title, request.LocationAddress);
 

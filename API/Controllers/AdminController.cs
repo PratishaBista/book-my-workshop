@@ -86,7 +86,7 @@ public class AdminController : ControllerBase
         var pendingWorkshops = await _context.Workshops
             .Include(w => w.Provider)
             .ThenInclude(p => p.User)
-            .Include(w => w.Category)
+            .Include(w => w.Categories)
             .Include(w => w.Pricing)
             .Where(w => w.Status == WorkshopStatus.PendingReview)
             .Select(w => new
@@ -103,7 +103,7 @@ public class AdminController : ControllerBase
                 ProviderContact = w.Provider.User.FullName,
                 ProviderEmail = w.Provider.User.Email,
                 SubmittedAt = w.UpdatedAt,
-                CategoryName = w.Category.Name,
+                CategoryNames = w.Categories.Select(c => c.Name).ToList(),
                 Price = w.Pricing != null ? w.Pricing.BasePrice : 0
             })
             .ToListAsync();

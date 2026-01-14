@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using API.Enums;
 
 namespace API.DTOs.Requests;
 
@@ -11,8 +12,14 @@ public class UpdateWorkshopRequest
     [MaxLength(300)]
     public string? Tagline { get; set; }
 
+    [MaxLength(300)]
+    public string? Subtitle { get; set; }
+
     [Required]
     public string Description { get; set; } = string.Empty;
+
+    [Required]
+    public WorkshopType WorkshopType { get; set; } = WorkshopType.PublicClass;
 
     [Required]
     public TimeSpan Duration { get; set; }
@@ -25,7 +32,9 @@ public class UpdateWorkshopRequest
     public int? MinCapacity { get; set; }
 
     [Required]
-    public int CategoryId { get; set; }
+    [MinLength(1)]
+    [MaxLength(6)]
+    public List<int> CategoryIds { get; set; } = new();
 
     [Required]
     [MaxLength(500)]
@@ -37,13 +46,24 @@ public class UpdateWorkshopRequest
     public decimal? Latitude { get; set; }
     public decimal? Longitude { get; set; }
 
+    public string? VenueDescription { get; set; }
+
     [MaxLength(1000)]
     public string? LocationDetails { get; set; }
+
+    public string? WhatToBring { get; set; }
+    public string? SkillLevel { get; set; }
+    public string? Suitability { get; set; }
+    public string? CancellationPolicy { get; set; }
+    public int BookingCutoffHours { get; set; } = 2;
 
     public string? SafetyRequirements { get; set; }
     public string? WhatsIncluded { get; set; }
 
     // Pricing updates
+    [Required]
+    public PricingType PricingType { get; set; } = PricingType.PerPerson;
+
     [Required]
     [Range(0, double.MaxValue)]
     public decimal BasePrice { get; set; }

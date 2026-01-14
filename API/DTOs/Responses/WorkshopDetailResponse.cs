@@ -8,7 +8,9 @@ public class WorkshopDetailResponse
     public string Title { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public string? Tagline { get; set; }
+    public string? Subtitle { get; set; }
     public string Description { get; set; } = string.Empty;
+    public WorkshopType WorkshopType { get; set; }
     public TimeSpan Duration { get; set; }
     public int MaxCapacity { get; set; }
     public int? MinCapacity { get; set; }
@@ -20,9 +22,10 @@ public class WorkshopDetailResponse
     public decimal? Latitude { get; set; }
     public decimal? Longitude { get; set; }
     public string? LocationDetails { get; set; }
+    public string? VenueDescription { get; set; }
     
-    // Category
-    public CategoryResponse Category { get; set; } = null!;
+    // Categories
+    public List<CategoryResponse> Categories { get; set; } = new();
     
     // Provider
     public ProviderResponse Provider { get; set; } = null!;
@@ -41,7 +44,14 @@ public class WorkshopDetailResponse
     public double? AverageRating { get; set; }
     public int ReviewCount { get; set; }
     
-    // Optional sections
+    // Additional sections
+    public string? WhatToBring { get; set; }
+    public string? SkillLevel { get; set; }
+    public string? Suitability { get; set; }
+    public string? CancellationPolicy { get; set; }
+    public int BookingCutoffHours { get; set; }
+
+    // Legacy fields
     public string? SafetyRequirements { get; set; }
     public string? WhatsIncluded { get; set; }
     
@@ -68,6 +78,7 @@ public class ProviderResponse
 
 public class PricingResponse
 {
+    public PricingType PricingType { get; set; }
     public decimal BasePrice { get; set; }
     public string Currency { get; set; } = "NPR";
     public decimal? GroupDiscountPercentage { get; set; }
@@ -82,7 +93,9 @@ public class MediaResponse
     public MediaType MediaType { get; set; }
     public string Url { get; set; } = string.Empty;
     public bool IsPrimary { get; set; }
+    public int StoryPodId { get; set; }
     public int DisplayOrder { get; set; }
+    public string? AspectRatio { get; set; }
 }
 
 public class ScheduleResponse
