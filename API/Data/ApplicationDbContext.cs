@@ -45,12 +45,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasForeignKey(w => w.ProviderId)
             .OnDelete(DeleteBehavior.Restrict); 
 
-        // Workshop - Category relationship
-        builder.Entity<Workshop>()
-            .HasOne(w => w.Category)
-            .WithMany(c => c.Workshops)
-            .HasForeignKey(w => w.CategoryId)
-            .OnDelete(DeleteBehavior.Restrict); 
 
         // Workshop - Pricing (1:1)
         builder.Entity<WorkshopPricing>()
@@ -121,8 +115,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<Workshop>()
             .HasIndex(w => w.Status);
 
-        builder.Entity<Workshop>()
-            .HasIndex(w => w.CategoryId);
 
         builder.Entity<WorkshopSchedule>()
             .HasIndex(s => s.StartDateTime);

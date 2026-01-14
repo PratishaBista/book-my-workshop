@@ -25,7 +25,12 @@ public class WorkshopMedia
 
     public bool IsPrimary { get; set; } = false; // Featured/thumbnail image
 
+    public int StoryPodId { get; set; } // Groups media into "chapters" (1-5)
+
     public int DisplayOrder { get; set; }
+
+    [MaxLength(20)]
+    public string? AspectRatio { get; set; } // e.g., "9:16", "16:9"
 
     public long? FileSizeBytes { get; set; }
 

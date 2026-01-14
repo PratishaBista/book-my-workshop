@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using API.Enums;
 
 namespace API.Entities;
 
@@ -14,6 +15,9 @@ public class WorkshopPricing
 
     [ForeignKey(nameof(WorkshopId))]
     public Workshop Workshop { get; set; } = null!;
+
+    [Required]
+    public PricingType PricingType { get; set; } = PricingType.PerPerson;
 
     // Base Pricing
     [Required]

@@ -24,12 +24,19 @@ public class Workshop
     [MaxLength(300)]
     public string? Tagline { get; set; }
 
+    [MaxLength(300)]
+    public string? Subtitle { get; set; }
+
     [Required]
     [MaxLength(500)]
     public string Slug { get; set; } = string.Empty;
 
     [Required]
-    public string Description { get; set; } = string.Empty; // HTML content
+    public string Description { get; set; } = string.Empty; // HTML content or Rich Text
+
+    // Workshop Type
+    [Required]
+    public WorkshopType WorkshopType { get; set; } = WorkshopType.PublicClass;
 
     // Duration
     [Required]
@@ -43,12 +50,8 @@ public class Workshop
     [Range(0, 1000)]
     public int? MinCapacity { get; set; }
 
-    // Category
-    [Required]
-    public int CategoryId { get; set; }
-
-    [ForeignKey(nameof(CategoryId))]
-    public WorkshopCategory Category { get; set; } = null!;
+    // Categories (Many-to-Many)
+    public ICollection<WorkshopCategory> Categories { get; set; } = new List<WorkshopCategory>();
 
     // Location (simple for now, will enhance with maps later)
     [Required]
@@ -64,14 +67,23 @@ public class Workshop
     [MaxLength(1000)]
     public string? LocationDetails { get; set; } // "2nd floor, red building"
 
+    public string? VenueDescription { get; set; } // Human description of the place
+
     // Status
     public WorkshopStatus Status { get; set; } = WorkshopStatus.Draft;
 
     public bool IsActive { get; set; } = true;
 
-    // Optional Sections
-    public string? SafetyRequirements { get; set; } // "Age 18+, closed shoes required"
-    public string? WhatsIncluded { get; set; } // "Materials, refreshments, certificate"
+    // Additional Details
+    public string? WhatToBring { get; set; } // Structured list or detailed string
+    public string? SkillLevel { get; set; } // "Beginner", "Advanced", etc.
+    public string? Suitability { get; set; } // "Age 18+", "Suitable for kids", etc.
+    public string? CancellationPolicy { get; set; }
+    public int BookingCutoffHours { get; set; } = 2; // Default: Book at least 2 hours in advance
+
+    // Legacy fields (keeping for compatibility or migration if needed, but moving to new structure)
+    public string? SafetyRequirements { get; set; } 
+    public string? WhatsIncluded { get; set; } 
 
     // Audit Fields
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
