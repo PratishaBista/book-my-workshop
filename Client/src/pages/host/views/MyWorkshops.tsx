@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
     Plus, Search, Filter, MoreVertical,
     Edit, CheckCircle2,
@@ -14,16 +15,13 @@ interface Workshop {
     tagline: string;
     status: number; // 0=Draft, 1=PendingReview, 2=Published, 3=Rejected
     createdAt: string;
-    categoryName: string;
+    categories: { id: number; name: string }[];
     maxCapacity: number;
     primaryImageUrl?: string;
 }
 
-interface MyWorkshopsProps {
-    isApproved?: boolean;
-}
-
-export const MyWorkshops: React.FC<MyWorkshopsProps> = ({ isApproved = true }) => {
+export const MyWorkshops: React.FC = () => {
+    const navigate = useNavigate();
     const [workshops, setWorkshops] = useState<Workshop[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -83,7 +81,7 @@ export const MyWorkshops: React.FC<MyWorkshopsProps> = ({ isApproved = true }) =
 
     const filteredWorkshops = workshops.filter(w =>
         w.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        w.categoryName?.toLowerCase().includes(searchQuery.toLowerCase())
+        w.categories?.some(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
     return (
@@ -94,10 +92,7 @@ export const MyWorkshops: React.FC<MyWorkshopsProps> = ({ isApproved = true }) =
                     <p className="text-gray-500 mt-1">Manage, edit, and track your creative offerings.</p>
                 </div>
                 <button
-                    onClick={() => {
-                        setSelectedWorkshopId(undefined);
-                        setShowCreateModal(true);
-                    }}
+                    onClick={() => navigate('/host/workshop/create')}
                     className="flex items-center gap-2 px-6 py-3 bg-primary-orange text-white rounded-2xl font-bold shadow-lg shadow-orange-200 hover:bg-primary-orange/90 transition-all active:scale-95"
                 >
                     <Plus size={20} />
@@ -176,7 +171,9 @@ export const MyWorkshops: React.FC<MyWorkshopsProps> = ({ isApproved = true }) =
                                 <div className="p-6 space-y-4">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <span className="text-[10px] font-bold text-primary-orange uppercase tracking-[0.2em]">{workshop.categoryName}</span>
+                                            <span className="text-[10px] font-bold text-primary-orange uppercase tracking-[0.2em]">
+                                                {workshop.categories?.map(c => c.name).join(', ') || 'Uncategorized'}
+                                            </span>
                                             <h4 className="text-xl font-bold text-deep-purple mt-1 line-clamp-1">{workshop.title}</h4>
                                         </div>
                                         <button
@@ -233,10 +230,7 @@ export const MyWorkshops: React.FC<MyWorkshopsProps> = ({ isApproved = true }) =
                                             </button>
                                         ) : (
                                             <button
-                                                onClick={() => {
-                                                    setSelectedWorkshopId(workshop.id);
-                                                    setShowCreateModal(true);
-                                                }}
+                                                onClick={() => navigate(`/host/workshop/edit/${workshop.id}`)}
                                                 className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-deep-purple text-white rounded-xl text-xs font-bold hover:bg-deep-purple/90 transition-all"
                                             >
                                                 <Edit size={14} />
