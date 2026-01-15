@@ -2,8 +2,7 @@ namespace API.Dtos.Requests;
 
 public class UpdateProfileRequest
 {
-    public string? FirstName { get; set; }
-    public string? Surname { get; set; }
+    public string? FullName { get; set; }
     public string? Bio { get; set; }
     public string? Pronouns { get; set; }
     public string? Location { get; set; }

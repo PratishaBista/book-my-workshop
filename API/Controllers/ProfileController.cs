@@ -90,8 +90,6 @@ public class ProfileController : ControllerBase
         return new ProfileResponse
         {
             Email = user.Email!,
-            FirstName = user.FirstName,
-            Surname = user.Surname,
             FullName = user.FullName,
             Bio = user.Bio,
             Pronouns = user.Pronouns,
@@ -115,8 +113,6 @@ public class ProfileController : ControllerBase
         return new ProfileResponse
         {
             Email = user.Email!,
-            FirstName = user.FirstName,
-            Surname = user.Surname,
             FullName = user.FullName,
             Bio = user.Bio,
             Pronouns = user.Pronouns,
@@ -139,8 +135,8 @@ public class ProfileController : ControllerBase
         var user = await _userManager.FindByEmailAsync(email);
         if (user == null) return NotFound();
 
-        user.FirstName = request.FirstName;
-        user.Surname = request.Surname;
+        user.FullName = request.FullName ?? string.Empty;
+
         user.Bio = request.Bio;
         user.Pronouns = request.Pronouns;
         user.Location = request.Location;
@@ -156,16 +152,12 @@ public class ProfileController : ControllerBase
             user.ProfileUsername = request.ProfileUsername;
         }
 
-        user.FullName = string.Join(" ", new[] { request.FirstName, request.Surname }.Where(s => !string.IsNullOrEmpty(s)));
-
         var result = await _userManager.UpdateAsync(user);
         if (!result.Succeeded) return BadRequest(result.Errors);
 
         return new ProfileResponse
         {
             Email = user.Email!,
-            FirstName = user.FirstName,
-            Surname = user.Surname,
             FullName = user.FullName,
             Bio = user.Bio,
             Pronouns = user.Pronouns,

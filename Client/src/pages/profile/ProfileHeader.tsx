@@ -30,13 +30,13 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                     animate={{ scale: 1, opacity: 1 }}
                     className="relative z-10 -mt-16 md:-mt-24"
                 >
-                    <div className="w-32 h-32 md:w-44 md:h-44 rounded-[2.5rem] bg-cream-base p-1.5 shadow-2xl overflow-hidden border border-white/40">
-                        <div className="w-full h-full rounded-[2rem] overflow-hidden bg-primary-orange/5 relative group">
+                    <div className="w-32 h-32 md:w-44 md:h-44 rounded-full bg-cream-base p-1.5 shadow-2xl overflow-hidden border border-white/40">
+                        <div className="w-full h-full rounded-full overflow-hidden bg-primary-orange/5 relative group">
                             {profile?.profilePictureUrl ? (
                                 <img src={profile.profilePictureUrl} alt="Avatar" className="w-full h-full object-cover" />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-5xl font-bold bg-[#73A757] text-white">
-                                    {profile?.firstName?.[0] || 'U'}
+                                <div className="w-full h-full flex items-center justify-center bg-[#73A757] text-white text-4xl font-bold">
+                                    {profile.fullName ? profile.fullName[0].toUpperCase() : 'U'}
                                 </div>
                             )}
                         </div>
@@ -51,7 +51,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                             className="flex items-center gap-3 text-primary-orange font-bold text-xs tracking-[0.2em] uppercase whitespace-nowrap"
                         >
                             <div className="w-10 h-[2px] bg-primary-orange/60" />
-                            <span>{profile?.fullName || 'Artisan'}</span>
+                            <span>{profile?.fullName || '[empty]'}</span>
                         </motion.div>
 
                         <div className="flex items-center gap-3">

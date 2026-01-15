@@ -70,7 +70,11 @@ const Profile: React.FC = () => {
 
             if (response.ok) {
                 const data = await response.json();
-                setProfile(data);
+                const processedProfile = {
+                    ...data,
+                    fullName: data.fullName || [data.firstName, data.surname].filter(Boolean).join(' ') || ''
+                };
+                setProfile(processedProfile);
             }
         } catch (error) {
             console.error('Error fetching profile:', error);
@@ -154,7 +158,7 @@ const Profile: React.FC = () => {
                             <div className="space-y-4">
                                 <h3 className="text-2xl font-bold font-serif text-deep-purple">Story</h3>
                                 <p className="text-deep-purple/70 leading-relaxed text-lg font-medium">
-                                    {profile?.bio || "This user is still crafting their story. Stay tuned for more about their workshop journey!"}
+                                    {profile?.bio || "[empty]"}
                                 </p>
                             </div>
 
@@ -185,8 +189,8 @@ const Profile: React.FC = () => {
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id as any)}
                                         className={`flex items-center gap-3 px-8 py-3 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${activeTab === tab.id
-                                                ? 'bg-deep-purple text-cream-base shadow-lg'
-                                                : 'text-deep-purple/40 hover:text-deep-purple'
+                                            ? 'bg-deep-purple text-cream-base shadow-lg'
+                                            : 'text-deep-purple/40 hover:text-deep-purple'
                                             }`}
                                     >
                                         <tab.icon size={18} />

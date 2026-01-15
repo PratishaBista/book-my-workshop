@@ -20,6 +20,7 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
     const [locationSearch, setLocationSearch] = useState('');
     const [profilePic, setProfilePic] = useState<string | null>(null);
     const [username, setUsername] = useState<string | null>(null);
+    const [fullName, setFullName] = useState<string | null>(null);
 
     const fetchNavbarProfile = async () => {
         const token = localStorage.getItem('token');
@@ -32,6 +33,7 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
                 const data = await response.json();
                 setProfilePic(data.profilePictureUrl);
                 setUsername(data.profileUsername);
+                setFullName(data.fullName);
             }
         } catch (e) {
             console.error("error fetching navbar profile", e);
@@ -269,7 +271,7 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
                                     <img src={profilePic} alt="Profile" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center bg-[#73A757]">
-                                        {getFirstInitial(userInfo.name)}
+                                        {getFirstInitial(fullName || userInfo.name)}
                                     </div>
                                 )}
                             </Link>

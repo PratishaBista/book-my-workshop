@@ -24,8 +24,7 @@ const EditProfile: React.FC = () => {
 
     const [initialProfile, setInitialProfile] = useState<any>(null);
     const [profile, setProfile] = useState({
-        firstName: '',
-        surname: '',
+        fullName: '',
         bio: '',
         pronouns: '',
         location: '',
@@ -59,7 +58,7 @@ const EditProfile: React.FC = () => {
             window.removeEventListener('settings-save', handleSaveEvent);
             window.removeEventListener('settings-reset', handleResetEvent);
         };
-    }, [initialProfile]); 
+    }, [initialProfile]);
 
     const fetchProfile = async () => {
         try {
@@ -70,8 +69,7 @@ const EditProfile: React.FC = () => {
             if (response.ok) {
                 const data = await response.json();
                 const fetchedProfile = {
-                    firstName: data.firstName || '',
-                    surname: data.surname || '',
+                    fullName: data.fullName || '',
                     bio: data.bio || '',
                     pronouns: data.pronouns || '',
                     location: data.location || '',
@@ -144,8 +142,8 @@ const EditProfile: React.FC = () => {
         if (saving) return;
 
         const currentProfile = profileRef.current;
-        if (!currentProfile.firstName.trim()) {
-            showToast('First name is mandatory', 'error');
+        if (!currentProfile.fullName.trim()) {
+            showToast('Full name is mandatory', 'error');
             return;
         }
 
@@ -219,12 +217,12 @@ const EditProfile: React.FC = () => {
                     </div>
 
                     <div className="absolute -bottom-16 left-8 group">
-                        <div className="w-32 h-32 rounded-3xl bg-cream-base border-4 border-white shadow-xl overflow-hidden relative">
+                        <div className="w-32 h-32 rounded-full bg-cream-base border-4 border-white shadow-xl overflow-hidden relative">
                             {profile.profilePictureUrl ? (
                                 <img src={profile.profilePictureUrl} alt="Avatar" className="w-full h-full object-cover" />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-primary-orange/10 text-primary-orange text-3xl font-bold">
-                                    {profile.firstName ? profile.firstName[0] : 'U'}
+                                <div className="w-full h-full flex items-center justify-center bg-[#73A757] text-white text-4xl font-bold">
+                                    {profile.fullName ? profile.fullName[0].toUpperCase() : 'U'}
                                 </div>
                             )}
                             <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
@@ -242,24 +240,13 @@ const EditProfile: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-6">
                         <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-widest text-deep-purple/40 ml-1">First Name</label>
+                            <label className="text-xs font-bold uppercase tracking-widest text-deep-purple/40 ml-1">Full Name</label>
                             <input
                                 type="text"
-                                value={profile.firstName}
-                                onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
+                                value={profile.fullName}
+                                onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
                                 className="w-full px-5 py-4 bg-white rounded-2xl border border-deep-purple/5 focus:border-primary-orange outline-none transition-all shadow-sm"
-                                placeholder="Enter first name"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-widest text-deep-purple/40 ml-1">Surname</label>
-                            <input
-                                type="text"
-                                value={profile.surname}
-                                onChange={(e) => setProfile({ ...profile, surname: e.target.value })}
-                                className="w-full px-5 py-4 bg-white rounded-2xl border border-deep-purple/5 focus:border-primary-orange outline-none transition-all shadow-sm"
-                                placeholder="Optional"
+                                placeholder="Enter your full name"
                             />
                         </div>
 
@@ -336,7 +323,7 @@ const EditProfile: React.FC = () => {
                 </div>
             </div>
 
-            <div className="h-20" /> 
+            <div className="h-20" />
 
             <Toast
                 isVisible={toast.isVisible}
