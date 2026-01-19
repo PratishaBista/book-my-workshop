@@ -27,6 +27,7 @@ public class PaymentController : ControllerBase
     }
 
     [HttpPost("initiate")]
+    [Authorize(Roles = API.Enums.UserRoles.User)]
     public async Task<ActionResult<PaymentInitiateResponse>> InitiatePayment([FromBody] CreateBookingRequest request)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
