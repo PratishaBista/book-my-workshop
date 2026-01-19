@@ -4,12 +4,21 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDown, Menu, ArrowRight } from 'lucide-react';
 import { API_ENDPOINTS } from '../../config/api';
 
+import { useAuth } from '../../context/AuthContext';
+
 interface NavbarProps {
     minimal?: boolean;
 }
 
 const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
     const navigate = useNavigate();
+    const { user, isAuthenticated, logout } = useAuth();
+
+    // Derived state from context
+    const isCustomer = user?.role === 'User';
+    const isProvider = user?.role === 'Provider';
+    const isAdmin = user?.role === 'Admin';
+
     const [communityOpen, setCommunityOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const userMenuRef = useRef<HTMLDivElement>(null);
@@ -41,12 +50,14 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
     };
 
     useEffect(() => {
-        fetchNavbarProfile();
+        if (isAuthenticated) {
+            fetchNavbarProfile();
+        }
 
         const handleUpdate = () => fetchNavbarProfile();
         window.addEventListener('profile-updated', handleUpdate);
         return () => window.removeEventListener('profile-updated', handleUpdate);
-    }, []);
+    }, [isAuthenticated]);
 
     const popularCities = [
         'Kathmandu', 'Pokhara', 'Lalitpur', 'Bhaktapur', 'Biratnagar',
@@ -57,32 +68,6 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
         city.toLowerCase().includes(locationSearch.toLowerCase())
     );
 
-    const token = localStorage.getItem('token');
-    const isLoggedIn = !!token;
-
-    // Get user info from token (decode JWT)
-    const getUserInfo = () => {
-        if (!token) return null;
-        try {
-            const parts = token.split('.');
-            if (parts.length < 2) return null;
-
-            const payload = JSON.parse(atob(parts[1]));
-            return {
-                name: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || payload.name || 'User',
-                email: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || payload.email || '',
-                role: payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role || 'User'
-            };
-        } catch (e) {
-            console.error("Invalid token format", e);
-            return null;
-        }
-    };
-
-    const userInfo = getUserInfo();
-    const isProvider = userInfo?.role === 'Provider';
-    const isCustomer = userInfo?.role === 'User';
-
     // Get first initial from name
     const getFirstInitial = (name: string) => {
         return name.charAt(0).toUpperCase();
@@ -90,8 +75,7 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
 
     // Handle logout
     const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('tokenExpiry');
+        logout();
         setUserMenuOpen(false);
         navigate('/');
     };
@@ -138,8 +122,8 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
 
 
     const getLogoLink = () => {
-        if (userInfo?.role === 'Admin') return '/admin';
-        if (userInfo?.role === 'Provider') return '/host/dashboard';
+        if (isAdmin) return '/admin';
+        if (isProvider) return '/host/dashboard';
         return '/';
     };
 
@@ -205,10 +189,9 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
                     </div>
                 )}
 
-                {/* Right Side: Search, Home/Host, Profile */}
                 <div className="flex items-center gap-8">
                     <div className="hidden lg:flex items-center gap-6">
-                        {!minimal && !isProvider && (
+                        {!minimal && (
                             <Link
                                 to="/host-workshop"
                                 className="px-6 py-2.5 bg-primary-orange text-white font-sans text-sm font-semibold rounded-full hover:bg-primary-orange/90 transition-all active:scale-95"
@@ -261,8 +244,7 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
 
                     <div className="flex items-center gap-4">
 
-                        {/* Profile Avatar - CUSTOMERS ONLY */}
-                        {isLoggedIn && userInfo && isCustomer && (
+                        {isAuthenticated && user && isCustomer && (
                             <Link
                                 to={username ? `/u/${username}` : '/settings/edit-profile'}
                                 className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-lg overflow-hidden bg-primary-orange/10 group cursor-pointer ring-2 ring-transparent hover:ring-primary-orange/50 transition-all"
@@ -271,11 +253,12 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
                                     <img src={profilePic} alt="Profile" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center bg-[#73A757]">
-                                        {getFirstInitial(fullName || userInfo.name)}
+                                        {getFirstInitial(fullName || user.name)}
                                     </div>
                                 )}
                             </Link>
                         )}
+
 
                         <div className="relative" ref={userMenuRef}>
                             <button onClick={() => setUserMenuOpen(!userMenuOpen)} className="p-2 hover:bg-deep-purple/5 rounded-lg transition-colors">
@@ -289,20 +272,14 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
                                         exit={{ opacity: 0, x: 20 }}
                                         className="absolute top-full right-0 mt-4 w-64 bg-cream-offwhite rounded-2xl shadow-xl border border-deep-purple/10 py-3 px-2"
                                     >
-                                        {isLoggedIn ? (
+                                        {isAuthenticated && isCustomer ? (
                                             <>
-
-                                                {/* Customer Items */}
-                                                {isCustomer && (
-                                                    <>
-                                                        <Link to={username ? `/u/${username}` : '/settings/edit-profile'} onClick={() => setUserMenuOpen(false)} className="w-full block px-4 py-3 rounded-lg hover:bg-cream-base text-left font-semibold">
-                                                            My Profile
-                                                        </Link>
-                                                        <Link to="/settings" onClick={() => setUserMenuOpen(false)} className="w-full block px-4 py-3 rounded-lg hover:bg-cream-base text-left font-semibold">
-                                                            Settings
-                                                        </Link>
-                                                    </>
-                                                )}
+                                                <Link to={username ? `/u/${username}` : '/settings/edit-profile'} onClick={() => setUserMenuOpen(false)} className="w-full block px-4 py-3 rounded-lg hover:bg-cream-base text-left font-semibold">
+                                                    My Profile
+                                                </Link>
+                                                <Link to="/settings" onClick={() => setUserMenuOpen(false)} className="w-full block px-4 py-3 rounded-lg hover:bg-cream-base text-left font-semibold">
+                                                    Settings
+                                                </Link>
 
                                                 <button onClick={handleLogout} className="w-full block px-4 py-3 rounded-lg hover:bg-cream-base text-left font-semibold text-red-500">
                                                     Log Out
@@ -310,7 +287,19 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
                                             </>
                                         ) : (
                                             <>
-                                                <Link to="/login" onClick={() => setUserMenuOpen(false)} className="w-full block px-4 py-3 rounded-lg hover:bg-cream-base text-left font-semibold">
+                                                <Link
+                                                    to="/login"
+                                                    onClick={() => {
+                                                        setUserMenuOpen(false);
+                                                        // If a Host/Admin is viewing this (isAuthenticated=true but falls into this block),
+                                                        // force clear their session so they can actually access the login page
+                                                        // without being redirected back to their dashboard.
+                                                        if (isAuthenticated) {
+                                                            logout();
+                                                        }
+                                                    }}
+                                                    className="w-full block px-4 py-3 rounded-lg hover:bg-cream-base text-left font-semibold"
+                                                >
                                                     Login / Sign Up
                                                 </Link>
                                                 <Link to="/host-workshop" onClick={() => setUserMenuOpen(false)} className="w-full block px-4 py-3 rounded-lg hover:bg-cream-base text-left font-semibold">

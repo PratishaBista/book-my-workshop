@@ -5,6 +5,7 @@ import { Eye, EyeOff, Mail, Lock, User, CheckCircle, XCircle } from 'lucide-reac
 import { API_ENDPOINTS, GOOGLE_CLIENT_ID } from '../../config/api';
 import Navbar from '../../components/landing/Navbar';
 import Footer from '../../components/landing/Footer';
+import { useAuth } from '../../context/AuthContext';
 
 declare global {
   interface Window {
@@ -21,8 +22,11 @@ interface ValidationErrors {
   confirmPassword?: string;
 }
 
+
+
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const { login, logout } = useAuth();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/';
   const [activeTab, setActiveTab] = useState<TabType>('login');
@@ -57,9 +61,8 @@ const Login: React.FC = () => {
         throw new Error(data.message || 'Google login failed');
       }
 
-      // Store token
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('tokenExpiry', data.expiry);
+      // Store token via context to update state
+      login(data.token, data.expiry);
 
       setSuccessMessage('Google login successful!');
 
@@ -245,9 +248,8 @@ const Login: React.FC = () => {
         throw new Error(errorMessage);
       }
 
-      // Store token
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('tokenExpiry', data.expiry);
+      // Update AuthContext
+      login(data.token, data.expiry);
       localStorage.setItem('isApproved', data.isApproved);
 
       setSuccessMessage('Login successful!');
@@ -263,26 +265,26 @@ const Login: React.FC = () => {
           const isProvider = Array.isArray(role) ? role.includes('Provider') : role === 'Provider';
 
           if (isProvider) {
-            setTimeout(() => navigate('/host/dashboard'), 1500);
+            setTimeout(() => navigate('/host/dashboard'), 500);
           } else if (isAdmin) {
             // RESTRICTED: Admins cannot log in here
-            localStorage.clear();
+            logout(); // Use context logout
             setSuccessMessage('');
             setApiError('Administrative accounts are restricted from this login portal.');
             setLoading(false);
             return;
           } else {
             sessionStorage.setItem('introShown', 'true');
-            setTimeout(() => navigate(from, { replace: true }), 1500);
+            setTimeout(() => navigate(from, { replace: true }), 500);
           }
         } else {
           sessionStorage.setItem('introShown', 'true');
-          setTimeout(() => navigate(from, { replace: true }), 1500);
+          setTimeout(() => navigate(from, { replace: true }), 500);
         }
       } catch (e) {
         console.error("Token decode error:", e);
         // Only redirect on actual decode error, not flow logic
-        setTimeout(() => navigate('/'), 1500);
+        setTimeout(() => navigate('/'), 500);
       }
 
     } catch (error: any) {

@@ -28,6 +28,20 @@ const WorkshopDetail: React.FC = () => {
     // For "read more" functionality if description is huge
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
+    const token = localStorage.getItem('token');
+    const isLoggedIn = !!token;
+    let isCustomer = false;
+    if (token) {
+        try {
+            const parts = token.split('.');
+            if (parts.length >= 2) {
+                const payload = JSON.parse(atob(parts[1]));
+                const role = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role;
+                isCustomer = role === 'User';
+            }
+        } catch (e) { console.error(e); }
+    }
+
     const bookingCardRef = useRef<HTMLDivElement>(null);
 
     const toggleSection = (section: string) => {
@@ -225,8 +239,8 @@ const WorkshopDetail: React.FC = () => {
                     </div>
                 ) : (
                     <div className={`grid gap-4 w-full aspect-[4/3] md:aspect-[2/1] rounded-2xl overflow-hidden ${allMedia.length === 1 ? 'grid-cols-1' :
-                            allMedia.length === 2 ? 'grid-cols-2' :
-                                'grid-cols-1 md:grid-cols-3 md:grid-rows-2'
+                        allMedia.length === 2 ? 'grid-cols-2' :
+                            'grid-cols-1 md:grid-cols-3 md:grid-rows-2'
                         }`}>
                         {/* Primary Item */}
                         <div className={`${allMedia.length > 2 ? 'md:col-span-2 md:row-span-2' : ''} relative group`}>
@@ -433,8 +447,8 @@ const WorkshopDetail: React.FC = () => {
                                                 disabled={schedule.isSoldOut}
                                                 onClick={() => setSelectedScheduleId(schedule.id)}
                                                 className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${selectedScheduleId === schedule.id
-                                                        ? 'border-deep-purple bg-deep-purple text-white shadow-lg'
-                                                        : 'border-gray-100 hover:border-gray-300 bg-white text-deep-purple'
+                                                    ? 'border-deep-purple bg-deep-purple text-white shadow-lg'
+                                                    : 'border-gray-100 hover:border-gray-300 bg-white text-deep-purple'
                                                     } ${schedule.isSoldOut ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             >
                                                 <div className="text-left">
@@ -458,18 +472,27 @@ const WorkshopDetail: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Action Button */}
                             <button
                                 onClick={handleReserve}
-                                disabled={loading}
-                                className="w-full py-4 bg-primary-orange text-white rounded-xl font-bold text-lg hover:bg-orange-600 transition-colors disabled:opacity-70 disabled:cursor-not-allowed mb-4 shadow-lg shadow-orange-200"
+                                disabled={loading || (isLoggedIn && !isCustomer)}
+                                className={`w-full py-4 rounded-xl font-bold text-lg transition-colors mb-4 shadow-lg
+                                    ${(isLoggedIn && !isCustomer)
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
+                                        : 'bg-primary-orange text-white hover:bg-orange-600 shadow-orange-200 disabled:opacity-70 disabled:cursor-not-allowed'
+                                    }`}
                             >
-                                {loading ? 'Processing...' : 'Reserve Spot'}
+                                {loading ? 'Processing...' : (isLoggedIn && !isCustomer) ? 'Available for Users Only' : 'Reserve Spot'}
                             </button>
 
-                            <p className="text-center text-xs text-gray-400">
-                                You won't be charged yet.
-                            </p>
+                            {(isLoggedIn && !isCustomer) ? (
+                                <p className="text-center text-xs text-red-400">
+                                    Please login as a customer to book.
+                                </p>
+                            ) : (
+                                <p className="text-center text-xs text-gray-400">
+                                    You won't be charged yet.
+                                </p>
+                            )}
                         </div>
 
                         {/* Trust Module */}
