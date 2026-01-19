@@ -60,12 +60,15 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
     {
-        policy.WithOrigins("http://localhost:4000", "http://localhost:5173", "http://localhost:4001")
+        policy.WithOrigins(
+                "http://localhost:5173",  // Public/Customer app
+                "http://localhost:5174",  // Host/Provider app
+                "http://localhost:5175"   // Admin app
+              )
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -121,7 +124,6 @@ using (var scope = app.Services.CreateScope())
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
         var context = services.GetRequiredService<ApplicationDbContext>();
-        // Data Integrity Fix for IsApproved
         var approvedProviders = await context.Providers
             .Where(p => p.Status == ProviderStatus.Approved && !p.IsApproved)
             .ToListAsync();
