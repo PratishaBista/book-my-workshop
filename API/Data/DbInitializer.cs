@@ -1,6 +1,7 @@
 using API.Entities;
 using API.Enums;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace API.Data;
 
@@ -63,70 +64,60 @@ public static class DbInitializer
             {
                 Name = "Art & Craft",
                 Description = "Painting, drawing, pottery, sculpture, and other artistic workshops",
-                DisplayOrder = 1,
                 IsActive = true
             },
             new WorkshopCategory
             {
                 Name = "Cooking & Baking",
                 Description = "Culinary workshops including cooking, baking, and food preparation",
-                DisplayOrder = 2,
                 IsActive = true
             },
             new WorkshopCategory
             {
                 Name = "Wellness & Fitness",
                 Description = "Yoga, meditation, fitness, and wellness workshops",
-                DisplayOrder = 3,
                 IsActive = true
             },
             new WorkshopCategory
             {
                 Name = "Technology & Programming",
                 Description = "Coding, web development, app development, and tech workshops",
-                DisplayOrder = 4,
                 IsActive = true
             },
             new WorkshopCategory
             {
                 Name = "Photography & Videography",
                 Description = "Photography, videography, and visual media workshops",
-                DisplayOrder = 5,
                 IsActive = true
             },
             new WorkshopCategory
             {
                 Name = "Music & Dance",
                 Description = "Musical instruments, singing, dancing, and performance workshops",
-                DisplayOrder = 6,
                 IsActive = true
             },
             new WorkshopCategory
             {
                 Name = "Business & Entrepreneurship",
                 Description = "Business skills, entrepreneurship, and professional development",
-                DisplayOrder = 7,
                 IsActive = true
             },
             new WorkshopCategory
             {
                 Name = "Language Learning",
                 Description = "Foreign language learning and communication skills",
-                DisplayOrder = 8,
                 IsActive = true
             },
             new WorkshopCategory
             {
                 Name = "DIY & Home Improvement",
                 Description = "Do-it-yourself projects, woodworking, and home improvement",
-                DisplayOrder = 9,
                 IsActive = true
             },
             new WorkshopCategory
             {
                 Name = "Kids & Family",
                 Description = "Workshops designed specifically for children and families",
-                DisplayOrder = 10,
                 IsActive = true
             }
         };

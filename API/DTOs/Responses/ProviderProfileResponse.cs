@@ -1,6 +1,6 @@
 using API.Enums;
 
-namespace API.Dtos.Responses;
+namespace API.DTOs.Responses;
 
 public class ProviderProfileResponse
 {
@@ -9,6 +9,9 @@ public class ProviderProfileResponse
     public string PhoneNumber { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
     public string State { get; set; } = string.Empty;
+    public string? VenueName { get; set; }
+    public decimal? Latitude { get; set; }
+    public decimal? Longitude { get; set; }
     public string? Website { get; set; }
     
     // New Branding Fields
@@ -21,6 +24,8 @@ public class ProviderProfileResponse
     // Lifecycle Status
     public ProviderStatus Status { get; set; }
     public bool IsApproved { get; set; }
+
+    public List<VenueResponse> Venues { get; set; } = new();
 
     public string ContactPerson { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;

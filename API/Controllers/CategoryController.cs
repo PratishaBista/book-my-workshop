@@ -1,4 +1,5 @@
 using API.DTOs.Requests;
+using API.DTOs.Responses;
 using API.Repositories;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
@@ -23,8 +24,26 @@ public class CategoryController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAllCategories()
     {
+        // If it's an admin, show all categories with stats.
+        if (User.IsInRole("Admin"))
+        {
+            var allCategories = await _categoryRepository.GetAllAsync();
+            var response = allCategories.Select(c => new CategoryAdminResponse
+            {
+                Id = c.Id,
+                Name = c.Name,
+                Description = c.Description,
+                IconUrl = c.IconUrl,
+                IsActive = c.IsActive,
+                CreatedAt = c.CreatedAt,
+                WorkshopCount = c.Workshops.Count
+            }).OrderBy(c => c.Name);
+            
+            return Ok(response);
+        }
+
         var categories = await _categoryRepository.GetActiveCategoriesAsync();
-        return Ok(categories);
+        return Ok(categories.OrderBy(c => c.Name));
     }
 
     // POST: api/category (Admin only)
@@ -43,5 +62,40 @@ public class CategoryController : ControllerBase
         await _categoryRepository.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetAllCategories), new { id = category.Id }, category);
+    }
+
+    // PUT: api/category/{id} (Admin only)
+    [HttpPut("{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateCategory(int id, [FromBody] UpdateCategoryRequest request)
+    {
+        var category = await _categoryRepository.GetByIdAsync(id);
+        if (category == null) return NotFound();
+
+        var isUnique = await _categoryRepository.IsCategoryNameUniqueAsync(request.Name, id);
+        if (!isUnique)
+        {
+            return BadRequest(new { message = "Category name already exists." });
+        }
+
+        _mapper.Map(request, category);
+        _categoryRepository.Update(category);
+        await _categoryRepository.SaveChangesAsync();
+
+        return Ok(category);
+    }
+
+    // DELETE: api/category/{id} (Admin only)
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> DeleteCategory(int id)
+    {
+        var category = await _categoryRepository.GetByIdAsync(id);
+        if (category == null) return NotFound();
+
+        _categoryRepository.Delete(category);
+        await _categoryRepository.SaveChangesAsync();
+
+        return NoContent();
     }
 }

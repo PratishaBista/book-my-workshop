@@ -21,6 +21,7 @@ public interface IWorkshopService
     Task<IEnumerable<WorkshopListResponse>> GetProviderWorkshopsAsync(int providerId);
     Task<IEnumerable<WorkshopListResponse>> SearchWorkshopsAsync(string? searchTerm, int? categoryId, string? location);
     Task<IEnumerable<WorkshopListResponse>> GetFeaturedWorkshopsAsync(int count = 6);
+    Task<IEnumerable<WorkshopListResponse>> GetRelatedWorkshopsAsync(int id, int count = 5);
     
     // Workshop Publishing
     Task<bool> PublishWorkshopAsync(int workshopId, int providerId);

@@ -65,4 +65,12 @@ public class WorkshopPublicController : ControllerBase
         var workshops = await _workshopService.GetFeaturedWorkshopsAsync(count);
         return Ok(workshops);
     }
+
+    // GET: api/workshops/public/provider/{providerId}
+    [HttpGet("provider/{providerId}")]
+    public async Task<IActionResult> GetWorkshopsByProvider(int providerId)
+    {
+        var workshops = await _workshopService.GetProviderWorkshopsAsync(providerId);
+        return Ok(workshops);
+    }
 }

@@ -14,11 +14,18 @@ public class CategoryRepository : GenericRepository<WorkshopCategory>, ICategory
     {
     }
 
+    public override async Task<IEnumerable<WorkshopCategory>> GetAllAsync()
+    {
+        return await _dbSet
+            .Include(c => c.Workshops)
+            .ToListAsync();
+    }
+
     public async Task<IEnumerable<WorkshopCategory>> GetActiveCategoriesAsync()
     {
         return await _dbSet
             .Where(c => c.IsActive)
-            .OrderBy(c => c.DisplayOrder)
+            .OrderBy(c => c.Name)
             .ToListAsync();
     }
 

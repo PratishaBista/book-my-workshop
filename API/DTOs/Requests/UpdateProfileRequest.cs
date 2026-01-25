@@ -1,4 +1,4 @@
-namespace API.Dtos.Requests;
+namespace API.DTOs.Requests;
 
 public class UpdateProfileRequest
 {

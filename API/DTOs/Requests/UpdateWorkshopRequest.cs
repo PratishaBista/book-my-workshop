@@ -31,14 +31,14 @@ public class UpdateWorkshopRequest
     [Range(0, 1000)]
     public int? MinCapacity { get; set; }
 
-    [Required]
-    [MinLength(1)]
     [MaxLength(6)]
     public List<int> CategoryIds { get; set; } = new();
 
     [Required]
     [MaxLength(500)]
     public string LocationAddress { get; set; } = string.Empty;
+
+    public int? VenueId { get; set; }
 
     [MaxLength(200)]
     public string? LocationName { get; set; }

@@ -220,8 +220,16 @@ namespace API.Migrations
                     b.Property<bool>("IsApproved")
                         .HasColumnType("bit");
 
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(18, 10)
+                        .HasColumnType("decimal(18,10)");
+
                     b.Property<string>("LogoUrl")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(18, 10)
+                        .HasColumnType("decimal(18,10)");
 
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
@@ -250,6 +258,9 @@ namespace API.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("VenueName")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Website")
                         .HasColumnType("nvarchar(max)");
 
@@ -264,6 +275,55 @@ namespace API.Migrations
                     b.ToTable("Providers");
                 });
 
+            modelBuilder.Entity("API.Entities.Venue", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("Latitude")
+                        .HasPrecision(18, 10)
+                        .HasColumnType("decimal(18,10)");
+
+                    b.Property<decimal>("Longitude")
+                        .HasPrecision(18, 10)
+                        .HasColumnType("decimal(18,10)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("ProviderId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId");
+
+                    b.ToTable("Venues");
+                });
+
             modelBuilder.Entity("API.Entities.Workshop", b =>
                 {
                     b.Property<int>("Id")
@@ -271,6 +331,16 @@ namespace API.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<double?>("AIConfidenceScore")
+                        .HasColumnType("float");
+
+                    b.Property<bool?>("AIIsConfident")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("AISuggestedCategory")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("BookingCutoffHours")
                         .HasColumnType("int");
@@ -291,8 +361,12 @@ namespace API.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsManuallyCategorized")
+                        .HasColumnType("bit");
+
                     b.Property<decimal?>("Latitude")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 10)
+                        .HasColumnType("decimal(18,10)");
 
                     b.Property<string>("LocationAddress")
                         .IsRequired()
@@ -308,7 +382,8 @@ namespace API.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<decimal?>("Longitude")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 10)
+                        .HasColumnType("decimal(18,10)");
 
                     b.Property<int>("MaxCapacity")
                         .HasColumnType("int");
@@ -355,6 +430,9 @@ namespace API.Migrations
                     b.Property<string>("VenueDescription")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("VenueId")
+                        .HasColumnType("int");
+
                     b.Property<string>("WhatToBring")
                         .HasColumnType("nvarchar(max)");
 
@@ -369,6 +447,8 @@ namespace API.Migrations
                     b.HasIndex("ProviderId");
 
                     b.HasIndex("Status");
+
+                    b.HasIndex("VenueId");
 
                     b.ToTable("Workshops");
                 });
@@ -387,9 +467,6 @@ namespace API.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
-
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("int");
 
                     b.Property<string>("IconUrl")
                         .HasColumnType("nvarchar(max)");
@@ -763,6 +840,17 @@ namespace API.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("API.Entities.Venue", b =>
+                {
+                    b.HasOne("API.Entities.Provider", "Provider")
+                        .WithMany("Venues")
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provider");
+                });
+
             modelBuilder.Entity("API.Entities.Workshop", b =>
                 {
                     b.HasOne("API.Entities.Provider", "Provider")
@@ -771,7 +859,14 @@ namespace API.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("API.Entities.Venue", "Venue")
+                        .WithMany("Workshops")
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Provider");
+
+                    b.Navigation("Venue");
                 });
 
             modelBuilder.Entity("API.Entities.WorkshopMedia", b =>
@@ -903,6 +998,16 @@ namespace API.Migrations
             modelBuilder.Entity("API.Entities.Booking", b =>
                 {
                     b.Navigation("Review");
+                });
+
+            modelBuilder.Entity("API.Entities.Provider", b =>
+                {
+                    b.Navigation("Venues");
+                });
+
+            modelBuilder.Entity("API.Entities.Venue", b =>
+                {
+                    b.Navigation("Workshops");
                 });
 
             modelBuilder.Entity("API.Entities.Workshop", b =>

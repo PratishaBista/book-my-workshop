@@ -22,19 +22,22 @@ public class WorkshopService : IWorkshopService
     private readonly IGenericRepository<Provider> _providerRepository;
     private readonly IMapper _mapper;
     private readonly HtmlSanitizer _htmlSanitizer;
+    private readonly IMLService _mlService;
 
     public WorkshopService(
         IWorkshopRepository workshopRepository,
         ICategoryRepository categoryRepository,
         IScheduleRepository scheduleRepository,
         IGenericRepository<Provider> providerRepository,
-        IMapper mapper)
+        IMapper mapper,
+        IMLService mlService)
     {
         _workshopRepository = workshopRepository;
         _categoryRepository = categoryRepository;
         _scheduleRepository = scheduleRepository;
         _providerRepository = providerRepository;
         _mapper = mapper;
+        _mlService = mlService;
         _htmlSanitizer = new HtmlSanitizer();
     }
 
@@ -80,6 +83,21 @@ public class WorkshopService : IWorkshopService
         // Create pricing
         var pricing = _mapper.Map<WorkshopPricing>(request);
         pricing.WorkshopId = workshop.Id;
+        try 
+        {
+            var (category, confidence, isConfident) = await _mlService.PredictCategoryAsync(workshop.Title, workshop.Description);
+            if (category != null)
+            {
+                workshop.AISuggestedCategory = category;
+                workshop.AIConfidenceScore = confidence;
+                workshop.AIIsConfident = isConfident;
+            }
+        }
+        catch (Exception ex) 
+        {
+            Console.WriteLine($"ML Error during creation: {ex.Message}");
+        }
+
         workshop.Pricing = pricing;
 
         await _workshopRepository.SaveChangesAsync();
@@ -125,7 +143,22 @@ public class WorkshopService : IWorkshopService
         workshop.UpdatedAt = DateTime.UtcNow;
         workshop.Slug = GenerateSlug(request.Title, request.LocationAddress);
 
-        // Update pricing
+        // Perform ML Classification on Update
+        try 
+        {
+            var (category, confidence, isConfident) = await _mlService.PredictCategoryAsync(workshop.Title, workshop.Description);
+            if (category != null)
+            {
+                workshop.AISuggestedCategory = category;
+                workshop.AIConfidenceScore = confidence;
+                workshop.AIIsConfident = isConfident;
+            }
+        }
+        catch (Exception ex) 
+        {
+            Console.WriteLine($"ML Error during update: {ex.Message}");
+        }
+
         if (workshop.Pricing != null)
         {
             _mapper.Map(request, workshop.Pricing);
@@ -227,6 +260,15 @@ public class WorkshopService : IWorkshopService
         // Move to review stage rather than straight to published
         workshop.Status = WorkshopStatus.PendingReview;
         workshop.UpdatedAt = DateTime.UtcNow;
+
+        var (pCategory, pConfidence, pIsConfident) = await _mlService.PredictCategoryAsync(workshop.Title, workshop.Description);
+        if (pCategory != null)
+        {
+            workshop.AISuggestedCategory = pCategory;
+            workshop.AIConfidenceScore = pConfidence;
+            workshop.AIIsConfident = pIsConfident;
+        }
+
         _workshopRepository.Update(workshop);
         await _workshopRepository.SaveChangesAsync();
 
@@ -339,6 +381,59 @@ public class WorkshopService : IWorkshopService
     {
         var schedules = await _scheduleRepository.GetUpcomingSchedulesForWorkshopAsync(workshopId);
         return _mapper.Map<IEnumerable<ScheduleResponse>>(schedules);
+    }
+
+    public async Task<IEnumerable<WorkshopListResponse>> GetRelatedWorkshopsAsync(int id, int count = 5)
+    {
+        var sourceWorkshop = await _workshopRepository.GetWorkshopWithDetailsAsync(id);
+        if (sourceWorkshop == null) return Enumerable.Empty<WorkshopListResponse>();
+
+        var sameProviderWorkshops = await _workshopRepository.FindAsync(w => 
+            w.ProviderId == sourceWorkshop.ProviderId && 
+            w.Id != id && 
+            w.Status == WorkshopStatus.Published && 
+            w.IsActive);
+        
+        var sameProviderList = _mapper.Map<List<WorkshopListResponse>>(sameProviderWorkshops);
+
+        var otherCandidates = await _workshopRepository.FindAsync(w => 
+            w.ProviderId != sourceWorkshop.ProviderId && 
+            w.Status == WorkshopStatus.Published && 
+            w.IsActive);
+
+        if (otherCandidates.Any())
+        {
+            var sourceText = $"{sourceWorkshop.Title}. {sourceWorkshop.Tagline}. {sourceWorkshop.Description}";
+            var candidatesData = otherCandidates.Select(c => (c.Id, $"{c.Title}. {c.Tagline}. {c.Description}")).ToList();
+
+            var rankedResults = await _mlService.PredictSimilaritiesWithScoresAsync(sourceText, candidatesData);
+
+            var highQualityIds = rankedResults
+                .Where(r => r.Score >= 0.45) 
+                .Select(r => r.Id)
+                .ToList();
+
+            var rankedCandidates = otherCandidates
+                .Where(c => highQualityIds.Contains(c.Id))
+                .OrderBy(c => {
+                    var index = highQualityIds.IndexOf(c.Id);
+                    return index == -1 ? int.MaxValue : index;
+                })
+                .Take(count);
+
+            var rankedList = _mapper.Map<List<WorkshopListResponse>>(rankedCandidates);
+            
+            foreach(var item in rankedList)
+            {
+                var match = rankedResults.FirstOrDefault(r => r.Id == item.Id);
+                item.RecommendationScore = match.Score;
+            }
+            
+            var combined = sameProviderList.Concat(rankedList).DistinctBy(w => w.Id).Take(count);
+            return combined;
+        }
+
+        return sameProviderList.Take(count);
     }
 
     private string GenerateSlug(string title, string address)

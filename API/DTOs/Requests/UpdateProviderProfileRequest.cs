@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace API.Dtos.Requests;
+namespace API.DTOs.Requests;
 
 public class UpdateProviderProfileRequest
 {
@@ -12,6 +12,9 @@ public class UpdateProviderProfileRequest
 
     public string Address { get; set; } = string.Empty;
     public string State { get; set; } = string.Empty;
+    public string? VenueName { get; set; }
+    public decimal? Latitude { get; set; }
+    public decimal? Longitude { get; set; }
 
     public string? Website { get; set; }
 

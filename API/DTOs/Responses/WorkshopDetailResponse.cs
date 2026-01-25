@@ -24,6 +24,8 @@ public class WorkshopDetailResponse
     public string? LocationDetails { get; set; }
     public string? VenueDescription { get; set; }
     
+    public VenueResponse? Venue { get; set; }
+    
     // Categories
     public List<CategoryResponse> Categories { get; set; } = new();
     

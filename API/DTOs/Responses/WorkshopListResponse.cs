@@ -39,4 +39,5 @@ public class WorkshopListResponse
     public DateTime? NextScheduleDate { get; set; }
     
     public DateTime CreatedAt { get; set; }
+    public double? RecommendationScore { get; set; }
 }

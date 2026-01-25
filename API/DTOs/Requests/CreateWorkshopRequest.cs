@@ -31,14 +31,14 @@ public class CreateWorkshopRequest
     [Range(0, 1000)]
     public int? MinCapacity { get; set; }
 
-    [Required(ErrorMessage = "At least one category is required")]
-    [MinLength(1, ErrorMessage = "Select at least one category")]
     [MaxLength(6, ErrorMessage = "You can select up to 6 categories")]
     public List<int> CategoryIds { get; set; } = new();
 
     [Required(ErrorMessage = "Location address is required")]
     [MaxLength(500)]
     public string LocationAddress { get; set; } = string.Empty;
+
+    public int? VenueId { get; set; }
 
     [MaxLength(200)]
     public string? LocationName { get; set; }

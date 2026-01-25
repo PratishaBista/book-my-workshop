@@ -23,7 +23,8 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => WorkshopStatus.Draft))
             .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true))
             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
-            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.VenueId, opt => opt.MapFrom(src => src.VenueId));
 
         CreateMap<UpdateWorkshopRequest, Workshop>()
             .ForMember(dest => dest.Id, opt => opt.Ignore())
@@ -37,7 +38,8 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Status, opt => opt.Ignore())
             .ForMember(dest => dest.IsActive, opt => opt.Ignore())
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
-            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.VenueId, opt => opt.MapFrom(src => src.VenueId));
 
         CreateMap<Workshop, WorkshopListResponse>()
             .ForMember(dest => dest.Categories, opt => opt.MapFrom(src => src.Categories))
@@ -58,7 +60,8 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.UpcomingSchedules, opt => opt.MapFrom(src => src.Schedules.Where(s => s.StartDateTime > DateTime.UtcNow && s.Status == ScheduleStatus.Upcoming).OrderBy(s => s.StartDateTime)))
             .ForMember(dest => dest.Reviews, opt => opt.MapFrom(src => src.Reviews.OrderByDescending(r => r.CreatedAt)))
             .ForMember(dest => dest.AverageRating, opt => opt.MapFrom(src => src.Reviews.Any() ? src.Reviews.Average(r => (double)r.Rating) : (double?)null))
-            .ForMember(dest => dest.ReviewCount, opt => opt.MapFrom(src => src.Reviews.Count));
+            .ForMember(dest => dest.ReviewCount, opt => opt.MapFrom(src => src.Reviews.Count))
+            .ForMember(dest => dest.Venue, opt => opt.MapFrom(src => src.Venue));
 
         // Category mappings
         CreateMap<WorkshopCategory, CategoryResponse>();
@@ -68,8 +71,19 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true))
             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
 
+        CreateMap<UpdateCategoryRequest, WorkshopCategory>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.Workshops, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore());
+
         // Provider mappings
         CreateMap<Provider, ProviderResponse>();
+        CreateMap<Venue, VenueResponse>();
+
+        CreateMap<Provider, ProviderProfileResponse>()
+            .ForMember(dest => dest.ContactPerson, opt => opt.MapFrom(src => src.User.FullName))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email))
+            .ForMember(dest => dest.Venues, opt => opt.MapFrom(src => src.Venues));
 
         // Pricing mappings
         CreateMap<CreateWorkshopRequest, WorkshopPricing>()

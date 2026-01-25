@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace API.DTOs.Requests;
 
-public class CreateCategoryRequest
+public class UpdateCategoryRequest
 {
     [Required]
     [MaxLength(100)]
@@ -14,4 +14,6 @@ public class CreateCategoryRequest
     public string? IconUrl { get; set; }
 
 
+
+    public bool IsActive { get; set; }
 }

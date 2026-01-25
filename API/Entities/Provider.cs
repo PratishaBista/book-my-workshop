@@ -17,6 +17,9 @@ public class Provider
 
     public string Address { get; set; } = string.Empty;
     public string State { get; set; } = string.Empty;
+    public string? VenueName { get; set; } 
+    public decimal? Latitude { get; set; }
+    public decimal? Longitude { get; set; }
 
     public string? Website { get; set; }
     public string? ReferralSource { get; set; }
@@ -36,6 +39,8 @@ public class Provider
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    public ICollection<Venue> Venues { get; set; } = new List<Venue>();
 
     // Foreign Key to ApplicationUser
     [Required]

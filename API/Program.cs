@@ -14,6 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddHttpClient();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -64,13 +65,14 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:5173",  // Public/Customer app
-                "http://localhost:5174",  // Host/Provider app
-                "http://localhost:5175"   // Admin app
-              )
+        policy.SetIsOriginAllowed(origin => 
+              {
+                  var host = new Uri(origin).Host;
+                  return host == "localhost" || host == "127.0.0.1";
+              })
               .AllowAnyHeader()
               .AllowAnyMethod()
+              .SetPreflightMaxAge(TimeSpan.FromMinutes(10))
               .AllowCredentials();
     });
 });
@@ -91,6 +93,7 @@ builder.Services.AddScoped<IMediaService, MediaService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IPaymentService, EsewaPaymentService>();
+builder.Services.AddScoped<IMLService, MLService>();
 
 var app = builder.Build();
 
@@ -106,10 +109,26 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
-
 // Enable CORS
 app.UseCors("AllowReactApp");
+
+// Global Exception Handler
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[GLOBAL ERROR]: {ex.Message}");
+        Console.WriteLine(ex.StackTrace);
+        context.Response.StatusCode = 500;
+        await context.Response.WriteAsJsonAsync(new { message = "Internal Server Error", detail = ex.Message });
+    }
+});
+
+app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -124,22 +143,29 @@ using (var scope = app.Services.CreateScope())
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
         var context = services.GetRequiredService<ApplicationDbContext>();
+        
+        // Apply migrations automatically
+        await context.Database.MigrateAsync();
+
         var approvedProviders = await context.Providers
             .Where(p => p.Status == ProviderStatus.Approved && !p.IsApproved)
             .ToListAsync();
-        
+    
         if (approvedProviders.Any())
         {
             foreach (var p in approvedProviders) p.IsApproved = true;
             await context.SaveChangesAsync();
+            Console.WriteLine($"[STARTUP]: Approved {approvedProviders.Count} providers.");
         }
 
         await DbInitializer.SeedAsync(userManager, roleManager, context);
+        Console.WriteLine("[STARTUP]: Database seeding completed.");
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "An error occurred while seeding the database.");
+        Console.WriteLine($"[STARTUP ERROR]: {ex.Message}");
     }
 }
 

@@ -1,11 +1,13 @@
 using System.Security.Claims;
-using API.Dtos.Requests;
-using API.Dtos.Responses;
+using API.DTOs.Requests;
+using API.DTOs.Responses;
 using API.Entities;
 using API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using API.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers;
@@ -17,11 +19,13 @@ public class ProfileController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IMediaService _mediaService;
+    private readonly ApplicationDbContext _context;
 
-    public ProfileController(UserManager<ApplicationUser> userManager, IMediaService mediaService)
+    public ProfileController(UserManager<ApplicationUser> userManager, IMediaService mediaService, ApplicationDbContext context)
     {
         _userManager = userManager;
         _mediaService = mediaService;
+        _context = context;
     }
 
     [HttpPost("upload-avatar")]
@@ -169,5 +173,100 @@ public class ProfileController : ControllerBase
             ProfileUsername = user.ProfileUsername,
             CreatedAt = user.CreatedAt
         };
+    }
+
+    [HttpDelete("delete")]
+    public async Task<ActionResult> DeleteAccount()
+    {
+        var email = User.FindFirstValue(ClaimTypes.Email);
+        if (email == null) return Unauthorized();
+
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user == null) return NotFound();
+
+        using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            var reviews = await _context.WorkshopReviews
+                .Where(r => r.UserId == user.Id)
+                .ToListAsync();
+            
+            if (reviews.Any())
+            {
+                _context.WorkshopReviews.RemoveRange(reviews);
+            }
+
+            var bookings = await _context.Bookings
+                .Where(b => b.UserId == user.Id)
+                .ToListAsync();
+
+            if (bookings.Any())
+            {
+                var bookingIds = bookings.Select(b => b.Id).ToList();
+                var reviewsOnBookings = await _context.WorkshopReviews
+                    .Where(r => bookingIds.Contains(r.BookingId))
+                    .ToListAsync();
+                
+                if (reviewsOnBookings.Any())
+                {
+                    _context.WorkshopReviews.RemoveRange(reviewsOnBookings);
+                }
+
+                _context.Bookings.RemoveRange(bookings);
+            }
+            
+            var provider = await _context.Providers.FirstOrDefaultAsync(p => p.UserId == user.Id);
+            if (provider != null)
+            {
+                var workshops = await _context.Workshops
+                    .Include(w => w.Schedules)
+                    .Where(w => w.ProviderId == provider.Id)
+                    .ToListAsync();
+
+                foreach (var workshop in workshops)
+                {
+                    foreach (var schedule in workshop.Schedules)
+                    {
+                        var scheduleBookings = await _context.Bookings
+                            .Where(b => b.WorkshopScheduleId == schedule.Id)
+                            .ToListAsync();
+
+                        if (scheduleBookings.Any())
+                        {
+                            var sBookingIds = scheduleBookings.Select(b => b.Id).ToList();
+                            var sReviews = await _context.WorkshopReviews
+                                .Where(r => sBookingIds.Contains(r.BookingId))
+                                .ToListAsync();
+
+                            if (sReviews.Any()) _context.WorkshopReviews.RemoveRange(sReviews);
+
+                            _context.Bookings.RemoveRange(scheduleBookings);
+                        }
+                    }
+                    
+                     _context.Workshops.Remove(workshop);
+                }
+
+                _context.Providers.Remove(provider);
+            }
+
+            await _context.SaveChangesAsync();
+
+            var result = await _userManager.DeleteAsync(user);
+            if (!result.Succeeded)
+            {
+                throw new Exception(string.Join(", ", result.Errors.Select(e => e.Description)));
+            }
+
+            await transaction.CommitAsync();
+
+            return Ok(new { message = "Account deleted successfully" });
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return BadRequest(new { message = "Failed to delete account", error = ex.Message });
+        }
     }
 }

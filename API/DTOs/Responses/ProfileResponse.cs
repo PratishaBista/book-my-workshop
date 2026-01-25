@@ -1,4 +1,4 @@
-namespace API.Dtos.Responses;
+namespace API.DTOs.Responses;
 
 public class ProfileResponse
 {

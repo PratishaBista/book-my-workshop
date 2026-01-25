@@ -8,7 +8,6 @@ namespace API.Repositories;
 /// <summary>
 /// Workshop repository implementation.
 /// Provides efficient database queries with proper eager loading.
-/// Follows Single Responsibility Principle - handles only workshop data access.
 /// </summary>
 public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopRepository
 {
@@ -22,6 +21,7 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
             .Include(w => w.Categories)
             .Include(w => w.Provider)
             .Include(w => w.Pricing)
+            .Include(w => w.Venue)
             .Include(w => w.Media.OrderBy(m => m.DisplayOrder))
             .Where(w => w.Status == WorkshopStatus.Published && w.IsActive)
             .OrderByDescending(w => w.CreatedAt)
@@ -34,6 +34,7 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
             .Include(w => w.Categories)
             .Include(w => w.Provider)
             .Include(w => w.Pricing)
+            .Include(w => w.Venue)
             .Include(w => w.Media.OrderBy(m => m.DisplayOrder))
             .Where(w => w.Categories.Any(c => c.Id == categoryId) 
                      && w.Status == WorkshopStatus.Published 
@@ -47,6 +48,7 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
         return await _dbSet
             .Include(w => w.Categories)
             .Include(w => w.Pricing)
+            .Include(w => w.Venue)
             .Include(w => w.Media.OrderBy(m => m.DisplayOrder))
             .Include(w => w.Schedules)
             .Where(w => w.ProviderId == providerId && w.IsActive)
@@ -61,6 +63,7 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
             .Include(w => w.Provider)
                 .ThenInclude(p => p.User)
             .Include(w => w.Pricing)
+            .Include(w => w.Venue)
             .Include(w => w.Media.OrderBy(m => m.DisplayOrder))
             .Include(w => w.Schedules.Where(s => s.Status != ScheduleStatus.Cancelled))
             .Include(w => w.Reviews)
@@ -77,6 +80,7 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
             .Include(w => w.Categories)
             .Include(w => w.Provider)
             .Include(w => w.Pricing)
+            .Include(w => w.Venue)
             .Include(w => w.Media.OrderBy(m => m.DisplayOrder))
             .Where(w => w.Status == WorkshopStatus.Published && w.IsActive);
 

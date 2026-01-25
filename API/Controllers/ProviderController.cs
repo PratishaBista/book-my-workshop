@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using API.Data;
-using API.Dtos.Requests;
-using API.Dtos.Responses;
+using API.DTOs.Requests;
+using API.DTOs.Responses;
 using API.Entities;
 using API.Enums;
 using API.Services;
@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using AutoMapper;
 
 namespace API.Controllers;
 
@@ -19,12 +20,14 @@ public class ProviderController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IMapper _mapper;
     private readonly IMediaService _mediaService;
 
-    public ProviderController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IMediaService mediaService)
+    public ProviderController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IMapper mapper, IMediaService mediaService)
     {
         _context = context;
         _userManager = userManager;
+        _mapper = mapper;
         _mediaService = mediaService;
     }
 
@@ -36,6 +39,7 @@ public class ProviderController : ControllerBase
 
         var provider = await _context.Providers
             .Include(p => p.User)
+            .Include(p => p.Venues)
             .FirstOrDefaultAsync(p => p.UserId == userId);
 
         if (provider == null) return NotFound("Provider profile not found");
@@ -46,24 +50,7 @@ public class ProviderController : ControllerBase
             await _context.SaveChangesAsync();
         }
 
-        return new ProviderProfileResponse
-        {
-            Id = provider.Id,
-            BusinessName = provider.BusinessName,
-            PhoneNumber = provider.PhoneNumber,
-            Address = provider.Address,
-            State = provider.State,
-            Website = provider.Website,
-            Tagline = provider.Tagline,
-            Description = provider.Description,
-            Slug = provider.Slug,
-            LogoUrl = provider.LogoUrl,
-            CoverImageUrl = provider.CoverImageUrl,
-            Status = provider.Status,
-            IsApproved = provider.IsApproved,
-            ContactPerson = provider.User.FullName,
-            Email = provider.User.Email!
-        };
+        return _mapper.Map<ProviderProfileResponse>(provider);
     }
 
     [HttpPut("profile")]
@@ -89,6 +76,9 @@ public class ProviderController : ControllerBase
         provider.PhoneNumber = request.PhoneNumber;
         provider.Address = request.Address;
         provider.State = request.State;
+        provider.VenueName = request.VenueName;
+        provider.Latitude = request.Latitude;
+        provider.Longitude = request.Longitude;
         provider.Website = request.Website;
         provider.Tagline = request.Tagline;
         provider.Description = request.Description;
@@ -107,24 +97,7 @@ public class ProviderController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(new ProviderProfileResponse
-        {
-            Id = provider.Id,
-            BusinessName = provider.BusinessName,
-            PhoneNumber = provider.PhoneNumber,
-            Address = provider.Address,
-            State = provider.State,
-            Website = provider.Website,
-            Tagline = provider.Tagline,
-            Description = provider.Description,
-            Slug = provider.Slug,
-            LogoUrl = provider.LogoUrl,
-            CoverImageUrl = provider.CoverImageUrl,
-            Status = provider.Status,
-            IsApproved = provider.IsApproved,
-            ContactPerson = provider.User.FullName,
-            Email = provider.User.Email!
-        });
+        return Ok(_mapper.Map<ProviderProfileResponse>(provider));
     }
 
     [HttpPost("upload-logo")]
