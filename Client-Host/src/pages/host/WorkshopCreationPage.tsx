@@ -1,8 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowUpRight, BookOpen, ChevronLeft, Clock, Info, MapPin, Plus, Save, Search, Trash2, Sparkles, Upload, DollarSign, Image as ImageIcon, Play } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import {
+    ArrowUpRight, BookOpen, ChevronLeft, Clock, Info, MapPin,
+    Plus, Save, Trash2, Sparkles, DollarSign,
+    Image as ImageIcon, Play, Building2, Star
+} from 'lucide-react';
+import { motion } from 'framer-motion';
 import { API_ENDPOINTS } from '../../config/api';
-import { WorkshopType, PricingType, MediaType, type WorkshopCategory } from '../../types/workshop';
+import { WorkshopType, PricingType, MediaType } from '../../types/workshop';
+import { type Venue } from '../../types/host';
 import Toast, { type ToastType } from '../../components/ui/Toast';
 
 const SECTIONS = [
@@ -43,6 +49,8 @@ interface FormData {
     locationDetails: string;
     venueDescription: string;
     pricingType: PricingType;
+    latitude?: number;
+    longitude?: number;
     basePrice: string;
     whatToBring: string;
     skillLevel: string;
@@ -58,7 +66,8 @@ export const WorkshopCreationPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const isEdit = !!id;
     const [activeSection, setActiveSection] = useState('overview');
-    const [categories, setCategories] = useState<WorkshopCategory[]>([]);
+    const [venues, setVenues] = useState<Venue[]>([]);
+    const [selectedVenueId, setSelectedVenueId] = useState<number | undefined>();
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState({ message: '', type: 'success' as ToastType, isVisible: false });
 
@@ -89,6 +98,8 @@ export const WorkshopCreationPage: React.FC = () => {
         locationDetails: '',
         venueDescription: '',
         pricingType: PricingType.PerPerson,
+        latitude: undefined,
+        longitude: undefined,
         basePrice: '',
         whatToBring: '',
         skillLevel: 'Beginner',
@@ -101,15 +112,31 @@ export const WorkshopCreationPage: React.FC = () => {
 
     useEffect(() => {
         const fetchInitialData = async () => {
-            // 1. Fetch Categories
+            // 1. Fetch Venues (These are the reusable location assets)
             try {
-                const res = await fetch(API_ENDPOINTS.category);
+                const token = localStorage.getItem('token');
+                const res = await fetch(API_ENDPOINTS.venues, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
                 if (res.ok) {
                     const data = await res.json();
-                    setCategories(data);
+                    setVenues(data);
+
+                    // Auto-select default venue if not editing
+                    if (!isEdit && data.length > 0) {
+                        const defaultVenue = data.find((v: any) => v.isDefault) || data[0];
+                        setSelectedVenueId(defaultVenue.id);
+                        setFormData(prev => ({
+                            ...prev,
+                            locationName: defaultVenue.name,
+                            locationAddress: defaultVenue.address,
+                            latitude: defaultVenue.latitude,
+                            longitude: defaultVenue.longitude
+                        }));
+                    }
                 }
             } catch (err) {
-                console.error('Failed to fetch categories:', err);
+                console.error('Failed to fetch venues:', err);
             }
 
             // 2. Fetch Workshop data if editing
@@ -137,6 +164,8 @@ export const WorkshopCreationPage: React.FC = () => {
                             locationDetails: data.locationDetails || '',
                             venueDescription: data.venueDescription || '',
                             pricingType: data.pricing?.pricingType ?? PricingType.PerPerson,
+                            latitude: data.latitude,
+                            longitude: data.longitude,
                             basePrice: data.pricing?.basePrice?.toString() || '',
                             whatToBring: data.whatToBring || '',
                             skillLevel: data.skillLevel || 'Beginner',
@@ -144,15 +173,7 @@ export const WorkshopCreationPage: React.FC = () => {
                             cancellationPolicy: data.cancellationPolicy || 'Moderate: Full refund up to 24 hours before.',
                             bookingCutoffHours: data.bookingCutoffHours?.toString() || '2',
                             outcomes: data.whatsIncluded?.split('\n') || [''],
-                            media: data.media?.map((m: {
-                                url: string;
-                                publicId: string;
-                                mediaType: MediaType;
-                                isPrimary: boolean;
-                                storyPodId?: number;
-                                displayOrder: number;
-                                aspectRatio?: string;
-                            }) => ({
+                            media: data.media?.map((m: any) => ({
                                 url: m.url,
                                 publicId: m.publicId,
                                 mediaType: m.mediaType,
@@ -206,7 +227,7 @@ export const WorkshopCreationPage: React.FC = () => {
 
     const validateForm = () => {
         if (!formData.title.trim()) return 'Title is required';
-        if (formData.categoryIds.length === 0) return 'Select at least one category';
+
         if (!formData.description.trim()) return 'Description is required';
         if (!formData.basePrice || parseFloat(formData.basePrice) <= 0) return 'A valid base price is required';
         if (!formData.locationAddress.trim()) return 'Location address is required';
@@ -253,9 +274,9 @@ export const WorkshopCreationPage: React.FC = () => {
 
             if (res.ok) {
                 const data = await res.json();
-                setFormData(prev => ({
+                setFormData((prev: any) => ({
                     ...prev,
-                    media: prev.media.map(m =>
+                    media: prev.media.map((m: any) =>
                         (m.url === previewUrl)
                             ? { ...m, url: data.url, publicId: data.publicId, isUploading: false }
                             : m
@@ -267,17 +288,17 @@ export const WorkshopCreationPage: React.FC = () => {
         } catch (err) {
             console.error('Media upload error:', err);
             setToast({ message: 'Failed to upload media', type: 'error', isVisible: true });
-            setFormData(prev => ({
+            setFormData((prev: any) => ({
                 ...prev,
-                media: prev.media.filter(m => m.url !== previewUrl)
+                media: prev.media.filter((m: any) => m.url !== previewUrl)
             }));
         }
     };
 
     const handleMediaDelete = (url: string) => {
-        setFormData(prev => ({
+        setFormData((prev: any) => ({
             ...prev,
-            media: prev.media.filter(m => m.url !== url)
+            media: prev.media.filter((m: any) => m.url !== url)
         }));
     };
 
@@ -289,7 +310,7 @@ export const WorkshopCreationPage: React.FC = () => {
         }
 
         // Check if all media are finished uploading
-        if (formData.media.some(m => m.isUploading)) {
+        if (formData.media.some((m: any) => m.isUploading)) {
             setToast({ message: 'Please wait for media uploads to finish', type: 'error', isVisible: true });
             return;
         }
@@ -307,19 +328,22 @@ export const WorkshopCreationPage: React.FC = () => {
                 maxCapacity: parseInt(formData.maxCapacity) || 1,
                 minCapacity: parseInt(formData.minCapacity) || 0,
                 categoryIds: formData.categoryIds,
+                venueId: selectedVenueId,
                 locationAddress: formData.locationAddress,
                 locationName: formData.locationName,
                 locationDetails: formData.locationDetails,
                 venueDescription: formData.venueDescription,
                 pricingType: formData.pricingType,
                 basePrice: parseFloat(formData.basePrice) || 0,
+                latitude: formData.latitude,
+                longitude: formData.longitude,
                 whatToBring: formData.whatToBring,
                 skillLevel: formData.skillLevel,
                 suitability: formData.suitability,
                 cancellationPolicy: formData.cancellationPolicy,
                 bookingCutoffHours: parseInt(formData.bookingCutoffHours) || 0,
-                whatsIncluded: formData.outcomes.filter(o => o.trim()).join('\n'),
-                media: formData.media.map(m => ({
+                whatsIncluded: formData.outcomes.filter((o: string) => o.trim()).join('\n'),
+                media: formData.media.map((m: any) => ({
                     url: m.url,
                     publicId: m.publicId,
                     mediaType: m.mediaType,
@@ -388,7 +412,7 @@ export const WorkshopCreationPage: React.FC = () => {
 
             if (response.ok) {
                 const data = await response.json();
-                setFormData(prev => ({ ...prev, description: data.enhanced_text }));
+                setFormData((prev: any) => ({ ...prev, description: data.enhanced_text }));
             } else {
                 const errorData = await response.json().catch(() => ({ detail: 'Failed to enhance description.' }));
                 setToast({
@@ -439,7 +463,7 @@ export const WorkshopCreationPage: React.FC = () => {
                         ) : (
                             <Save size={16} />
                         )}
-                        Publish Workshop
+                        Submit for Review
                     </button>
                 </div>
             </header>
@@ -545,31 +569,7 @@ export const WorkshopCreationPage: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="space-y-4">
-                                    <label className="block text-sm font-medium text-[#707070]">Categories (Max 6)</label>
-                                    <div className="flex flex-wrap gap-2 min-h-[150px] p-5 border border-[#EEE] rounded-2xl bg-white/50 backdrop-blur-sm">
-                                        {categories.map((cat) => (
-                                            <button
-                                                key={cat.id}
-                                                onClick={() => {
-                                                    const current = formData.categoryIds;
-                                                    if (current.includes(cat.id)) {
-                                                        setFormData({ ...formData, categoryIds: current.filter(id => id !== cat.id) });
-                                                    } else if (current.length < 6) {
-                                                        setFormData({ ...formData, categoryIds: [...current, cat.id] });
-                                                    }
-                                                }}
-                                                className={`px-4 py-2 rounded-full text-xs transition-all duration-300 ${formData.categoryIds.includes(cat.id)
-                                                    ? 'bg-[#2D2D2D] text-white shadow-md'
-                                                    : 'bg-[#F5F5F5] text-[#707070] hover:bg-[#EEE]'
-                                                    }`}
-                                            >
-                                                {cat.name}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <p className="text-[10px] text-[#AAA] font-light italic">Selected: {formData.categoryIds.length} of 6 categories</p>
-                                </div>
+
                             </div>
                         </div>
                     </section>
@@ -586,7 +586,6 @@ export const WorkshopCreationPage: React.FC = () => {
                         </p>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                            {/* Pod 1: The Vibe (Hero) */}
                             <div className="md:col-span-2 space-y-6">
                                 <div className="flex justify-between items-end">
                                     <div>
@@ -623,7 +622,7 @@ export const WorkshopCreationPage: React.FC = () => {
                                             )}
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                 <button
-                                                    onClick={(e) => { e.stopPropagation(); handleMediaDelete(formData.media.find(m => m.storyPodId === 1)!.url); }}
+                                                    onClick={(e: any) => { e.stopPropagation(); handleMediaDelete(formData.media.find((m: any) => m.storyPodId === 1)!.url); }}
                                                     className="p-4 bg-white rounded-full text-red-500 hover:scale-110 transition-transform"
                                                 >
                                                     <Trash2 size={24} />
@@ -652,7 +651,7 @@ export const WorkshopCreationPage: React.FC = () => {
                                 { id: 3, label: '3. Activity', desc: 'Close-ups of hands and tools.' },
                                 { id: 4, label: '4. People', desc: 'Smiles and focused faces.' },
                                 { id: 5, label: '5. Something to take home', desc: "What they'll take home." },
-                            ].map((pod) => (
+                            ].map((pod: any) => (
                                 <div key={pod.id} className="space-y-6">
                                     <div>
                                         <h3 className="text-xl font-medium">{pod.label}</h3>
@@ -668,21 +667,21 @@ export const WorkshopCreationPage: React.FC = () => {
                                             hidden
                                             multiple
                                             accept="image/*"
-                                            onChange={(e) => {
+                                            onChange={(e: any) => {
                                                 if (e.target.files) {
-                                                    Array.from(e.target.files).forEach(file => handleMediaUpload(pod.id, file, MediaType.Image, '4:3'));
+                                                    Array.from(e.target.files).forEach((file: any) => handleMediaUpload(pod.id, file, MediaType.Image, '4:3'));
                                                 }
                                             }}
                                         />
 
-                                        {formData.media.filter(m => m.storyPodId === pod.id).length > 0 ? (
+                                        {formData.media.filter((m: any) => m.storyPodId === pod.id).length > 0 ? (
                                             <div className="w-full h-full flex flex-wrap gap-1 p-2">
-                                                {formData.media.filter(m => m.storyPodId === pod.id).map((m, idx) => (
+                                                {formData.media.filter((m: any) => m.storyPodId === pod.id).map((m: any, idx: number) => (
                                                     <div key={idx} className="relative group/item flex-1 min-w-[45%] h-full">
                                                         <img src={m.url} className="w-full h-full object-cover rounded-xl" alt="Preview" />
                                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
                                                             <button
-                                                                onClick={(e) => { e.stopPropagation(); handleMediaDelete(m.url); }}
+                                                                onClick={(e: any) => { e.stopPropagation(); handleMediaDelete(m.url); }}
                                                                 className="p-2 bg-white rounded-full text-red-500"
                                                             >
                                                                 <Trash2 size={16} />
@@ -729,7 +728,7 @@ export const WorkshopCreationPage: React.FC = () => {
                                         {[
                                             { id: PricingType.PerPerson, label: 'Per Person', desc: 'Ideal for standard classes' },
                                             { id: PricingType.PerGroup, label: 'Per Group', desc: 'Flat fee for private sessions' }
-                                        ].map((p) => (
+                                        ].map((p: any) => (
                                             <button
                                                 key={p.id}
                                                 onClick={() => setFormData({ ...formData, pricingType: p.id })}
@@ -756,7 +755,7 @@ export const WorkshopCreationPage: React.FC = () => {
                                             placeholder="2500"
                                             className="w-full bg-transparent border-b border-[#E5E5E5] py-6 pl-16 text-5xl font-light focus:border-[#2D2D2D] outline-none transition-all duration-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                             value={formData.basePrice}
-                                            onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
+                                            onChange={(e: any) => setFormData({ ...formData, basePrice: e.target.value })}
                                         />
                                     </div>
                                     <p className="mt-4 text-xs text-[#AAA] font-light leading-relaxed">Set a competitive price that reflects your expertise and the value participants receive.</p>
@@ -770,7 +769,7 @@ export const WorkshopCreationPage: React.FC = () => {
                                         type="number"
                                         className="w-full bg-transparent border-b border-[#E5E5E5] py-4 text-2xl font-light focus:border-[#2D2D2D] outline-none transition-all"
                                         value={formData.minCapacity}
-                                        onChange={(e) => setFormData({ ...formData, minCapacity: e.target.value })}
+                                        onChange={(e: any) => setFormData({ ...formData, minCapacity: e.target.value })}
                                     />
                                     <p className="mt-3 text-[10px] text-[#AAA] font-light italic leading-relaxed">The workshop will proceed once this many people book.</p>
                                 </div>
@@ -780,7 +779,7 @@ export const WorkshopCreationPage: React.FC = () => {
                                         type="number"
                                         className="w-full bg-transparent border-b border-[#E5E5E5] py-4 text-2xl font-light focus:border-[#2D2D2D] outline-none transition-all"
                                         value={formData.maxCapacity}
-                                        onChange={(e) => setFormData({ ...formData, maxCapacity: e.target.value })}
+                                        onChange={(e: any) => setFormData({ ...formData, maxCapacity: e.target.value })}
                                     />
                                     <p className="mt-3 text-[10px] text-[#AAA] font-light italic leading-relaxed">Total spots available per session across all dates.</p>
                                 </div>
@@ -819,7 +818,7 @@ export const WorkshopCreationPage: React.FC = () => {
                                     placeholder="Tell the story of the session. How does it begin? What techniques will they learn? What's the atmosphere like?"
                                     className="w-full bg-white/50 backdrop-blur-sm border border-[#EEE] rounded-[2rem] p-8 text-xl font-light leading-relaxed focus:border-[#2D2D2D] focus:ring-1 focus:ring-[#2D2D2D]/5 shadow-sm outline-none transition-all"
                                     value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    onChange={(e: any) => setFormData({ ...formData, description: e.target.value })}
                                 />
                             </div>
 
@@ -833,7 +832,7 @@ export const WorkshopCreationPage: React.FC = () => {
                                                 placeholder="e.g. 2 hand-glazed ceramic bowls"
                                                 className="flex-1 bg-transparent border-b border-[#EEE] py-4 text-base font-light focus:border-[#2D2D2D] outline-none transition-all"
                                                 value={outcome}
-                                                onChange={(e) => {
+                                                onChange={(e: any) => {
                                                     const newOutcomes = [...formData.outcomes];
                                                     newOutcomes[idx] = e.target.value;
                                                     setFormData({ ...formData, outcomes: newOutcomes });
@@ -842,7 +841,7 @@ export const WorkshopCreationPage: React.FC = () => {
                                             {formData.outcomes.length > 1 && (
                                                 <button
                                                     onClick={() => {
-                                                        const newOutcomes = formData.outcomes.filter((_, i) => i !== idx);
+                                                        const newOutcomes = formData.outcomes.filter((_: any, i: number) => i !== idx);
                                                         setFormData({ ...formData, outcomes: newOutcomes });
                                                     }}
                                                     className="p-4 text-[#AAA] hover:text-red-500 transition-colors"
@@ -881,7 +880,7 @@ export const WorkshopCreationPage: React.FC = () => {
                                             className="w-full bg-transparent border-b border-[#EEE] py-4 text-center text-3xl font-light focus:border-[#2D2D2D] outline-none"
                                             placeholder="2"
                                             value={formData.durationHours}
-                                            onChange={(e) => setFormData({ ...formData, durationHours: e.target.value })}
+                                            onChange={(e: any) => setFormData({ ...formData, durationHours: e.target.value })}
                                         />
                                         <span className="block text-[10px] text-[#AAA] text-center mt-3 uppercase font-bold tracking-widest">Hours</span>
                                     </div>
@@ -891,7 +890,7 @@ export const WorkshopCreationPage: React.FC = () => {
                                             className="w-full bg-transparent border-b border-[#EEE] py-4 text-center text-3xl font-light focus:border-[#2D2D2D] outline-none"
                                             placeholder="30"
                                             value={formData.durationMinutes}
-                                            onChange={(e) => setFormData({ ...formData, durationMinutes: e.target.value })}
+                                            onChange={(e: any) => setFormData({ ...formData, durationMinutes: e.target.value })}
                                         />
                                         <span className="block text-[10px] text-[#AAA] text-center mt-3 uppercase font-bold tracking-widest">Minutes</span>
                                     </div>
@@ -907,7 +906,7 @@ export const WorkshopCreationPage: React.FC = () => {
                                             className="w-full bg-transparent border-b border-[#EEE] py-4 text-center text-3xl font-light focus:border-[#2D2D2D] outline-none"
                                             placeholder="24"
                                             value={formData.bookingCutoffHours}
-                                            onChange={(e) => setFormData({ ...formData, bookingCutoffHours: e.target.value })}
+                                            onChange={(e: any) => setFormData({ ...formData, bookingCutoffHours: e.target.value })}
                                         />
                                         <span className="block text-[10px] text-[#AAA] text-center mt-3 uppercase font-bold tracking-widest">Hours before</span>
                                     </div>
@@ -925,43 +924,55 @@ export const WorkshopCreationPage: React.FC = () => {
                         </div>
                         <h2 className="text-5xl font-semibold tracking-tight mb-12">The Neighborhood</h2>
 
-                        <div className="space-y-12">
-                            <div className="group">
-                                <label className="block text-sm font-medium text-[#707070] mb-2 uppercase tracking-widest">Venue Name</label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. The Clay Collective Studio"
-                                    className="w-full bg-transparent border-b border-[#E5E5E5] py-4 text-2xl font-light focus:border-[#2D2D2D] outline-none transition-all duration-300"
-                                    value={formData.locationName}
-                                    onChange={(e) => setFormData({ ...formData, locationName: e.target.value })}
-                                />
+                        <div className="space-y-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {venues.map((v: any) => (
+                                    <button
+                                        key={v.id}
+                                        onClick={() => {
+                                            setSelectedVenueId(v.id);
+                                            setFormData((prev: any) => ({
+                                                ...prev,
+                                                locationName: v.name,
+                                                locationAddress: v.address,
+                                                latitude: v.latitude,
+                                                longitude: v.longitude
+                                            }));
+                                        }}
+                                        className={`p-6 rounded-[2rem] border-2 text-left transition-all group ${selectedVenueId === v.id ? 'border-primary-orange bg-orange-50/30' : 'border-[#EEE] hover:border-deep-purple bg-white'}`}
+                                    >
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-4 transition-colors ${selectedVenueId === v.id ? 'bg-primary-orange text-white' : 'bg-[#F5F5F5] text-gray-400 group-hover:bg-deep-purple group-hover:text-white'}`}>
+                                            <Building2 size={20} />
+                                        </div>
+                                        <div className="font-bold text-deep-purple">{v.name}</div>
+                                        <div className="text-xs text-gray-400 mt-1 line-clamp-2">{v.address}</div>
+                                        {selectedVenueId === v.id && (
+                                            <div className="mt-4 flex items-center gap-1 text-[10px] font-bold text-primary-orange uppercase tracking-widest">
+                                                <Star size={10} fill="currentColor" /> Selected Location
+                                            </div>
+                                        )}
+                                    </button>
+                                ))}
                             </div>
 
-                            <div className="group">
-                                <label className="block text-sm font-medium text-[#707070] mb-2 uppercase tracking-widest">Street Address</label>
-                                <div className="relative">
-                                    <Search className="absolute left-0 top-1/2 -translate-y-1/2 text-[#CCC]" size={20} />
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. 12/4 Thamel, Kathmandu"
-                                        className="w-full bg-transparent border-b border-[#E5E5E5] py-4 pl-8 text-xl font-light focus:border-[#2D2D2D] outline-none transition-all duration-300"
-                                        value={formData.locationAddress}
-                                        onChange={(e) => setFormData({ ...formData, locationAddress: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="group">
-                                <label className="block text-sm font-medium text-[#707070] mb-4 uppercase tracking-widest">Venue Description (Human Touch)</label>
-                                <textarea
-                                    rows={4}
-                                    placeholder="e.g. A sun-drenched rooftop terrace overlooking the Swayambhu stupa. Look for the orange door."
-                                    className="w-full bg-white/30 backdrop-blur-sm border border-[#EEE] rounded-[2rem] p-6 text-lg font-light leading-relaxed focus:border-[#2D2D2D] outline-none transition-all"
-                                    value={formData.venueDescription}
-                                    onChange={(e) => setFormData({ ...formData, venueDescription: e.target.value })}
-                                />
-                                <p className="mt-3 text-[10px] text-[#AAA] font-light italic leading-relaxed">Help people find you and understand the atmosphere of the space.</p>
-                            </div>
+                            {selectedVenueId && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    className="pt-8 border-t border-[#F5F5F5]"
+                                >
+                                    <div className="group">
+                                        <label className="block text-sm font-medium text-[#707070] mb-4 uppercase tracking-widest">Specific Venue Details (Optional)</label>
+                                        <textarea
+                                            rows={3}
+                                            placeholder="e.g. Any specific last-mile instructions for this particular workshop?"
+                                            className="w-full bg-white/30 backdrop-blur-sm border border-[#EEE] rounded-[2rem] p-6 text-sm font-light leading-relaxed focus:border-[#2D2D2D] outline-none transition-all"
+                                            value={formData.locationDetails}
+                                            onChange={(e) => setFormData({ ...formData, locationDetails: e.target.value })}
+                                        />
+                                    </div>
+                                </motion.div>
+                            )}
                         </div>
                     </section>
 
