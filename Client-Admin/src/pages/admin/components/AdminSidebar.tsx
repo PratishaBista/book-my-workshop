@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     LayoutGrid, Users, BookOpen, Settings,
-    PanelLeftClose, PanelLeftOpen
+    PanelLeftClose, PanelLeftOpen, Activity
 } from 'lucide-react';
 import type { AdminTab } from '../../../types/admin';
 
@@ -19,7 +19,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activeTab, setActive
         { id: 'providers', label: 'Pending Hosts', icon: Users },
         { id: 'workshops', label: 'Pending Workshops', icon: BookOpen },
         { type: 'divider', label: 'Management' },
+        { id: 'live_workshops', label: 'Live Marketplace', icon: Activity },
         { id: 'users', label: 'Users', icon: Users },
+        { id: 'categories', label: 'Categories', icon: BookOpen },
         { type: 'divider', label: 'System' },
         { id: 'settings', label: 'Settings', icon: Settings },
     ];
