@@ -27,8 +27,11 @@ export interface PendingWorkshop {
     providerContact: string;
     providerEmail: string;
     submittedAt: string;
-    categoryName: string;
+    categoryNames: string[];
     price: number;
+    aiSuggestedCategory?: string;
+    aiConfidenceScore?: number;
+    aiIsConfident?: boolean;
 }
 
 export interface SimpleUser {
@@ -42,4 +45,4 @@ export interface SimpleUser {
     providerId?: number;
 }
 
-export type AdminTab = 'overview' | 'providers' | 'workshops' | 'active_hosts' | 'users' | 'settings' | 'notifications' | 'help';
+export type AdminTab = 'overview' | 'providers' | 'workshops' | 'live_workshops' | 'active_hosts' | 'users' | 'categories' | 'settings' | 'notifications' | 'help';

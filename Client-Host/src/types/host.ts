@@ -16,6 +16,9 @@ export interface ProviderProfile {
     phoneNumber: string;
     address: string;
     state: string;
+    venueName?: string;
+    latitude?: number;
+    longitude?: number;
     website?: string;
     tagline?: string;
     description?: string;
@@ -26,4 +29,14 @@ export interface ProviderProfile {
     isApproved: boolean;
     contactPerson: string;
     email: string;
+}
+
+export interface Venue {
+    id: number;
+    name: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+    description?: string;
+    isDefault: boolean;
 }

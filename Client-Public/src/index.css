@@ -4,6 +4,14 @@
 @tailwind components;
 @tailwind utilities;
 
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    position: relative;
+    -webkit-font-smoothing: antialiased;
+}
+
 .location-dropdown-scroll {
     scrollbar-width: thin;
     scrollbar-color: #4d3d55 transparent;

@@ -20,7 +20,11 @@ interface Workshop {
     primaryImageUrl?: string;
 }
 
-export const MyWorkshops: React.FC = () => {
+interface MyWorkshopsProps {
+    isApproved: boolean;
+}
+
+export const MyWorkshops: React.FC<MyWorkshopsProps> = ({ isApproved }) => {
     const navigate = useNavigate();
     const [workshops, setWorkshops] = useState<Workshop[]>([]);
     const [loading, setLoading] = useState(true);
@@ -92,8 +96,12 @@ export const MyWorkshops: React.FC = () => {
                     <p className="text-gray-500 mt-1">Manage, edit, and track your creative offerings.</p>
                 </div>
                 <button
-                    onClick={() => navigate('/host/workshop/create')}
-                    className="flex items-center gap-2 px-6 py-3 bg-primary-orange text-white rounded-2xl font-bold shadow-lg shadow-orange-200 hover:bg-primary-orange/90 transition-all active:scale-95"
+                    onClick={() => {
+                        if (isApproved) navigate('/host/workshop/create');
+                        else alert("You must be an approved provider to create a workshop.");
+                    }}
+                    disabled={!isApproved}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold shadow-lg transition-all active:scale-95 ${isApproved ? 'bg-primary-orange text-white shadow-orange-200 hover:bg-primary-orange/90' : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'}`}
                 >
                     <Plus size={20} />
                     <span>Create New Workshop</span>

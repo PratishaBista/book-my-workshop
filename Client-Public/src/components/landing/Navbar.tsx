@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown, Menu, ArrowRight } from 'lucide-react';
+import { ChevronDown, Menu, ArrowRight, Palette, ChefHat, Heart, Code, Camera, Music, Briefcase, Languages, Hammer, Baby, Compass, X } from 'lucide-react';
 import { API_ENDPOINTS } from '../../config/api';
 
 import { useAuth } from '../../context/AuthContext';
@@ -31,6 +31,10 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
     const [username, setUsername] = useState<string | null>(null);
     const [fullName, setFullName] = useState<string | null>(null);
 
+    const [exploreOpen, setExploreOpen] = useState(false);
+    const [categories, setCategories] = useState<any[]>([]);
+    const exploreRef = useRef<HTMLDivElement>(null);
+
     const fetchNavbarProfile = async () => {
         const token = localStorage.getItem('token');
         if (!token) return;
@@ -49,10 +53,23 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
         }
     };
 
+    const fetchCategories = async () => {
+        try {
+            const response = await fetch(API_ENDPOINTS.category);
+            if (response.ok) {
+                const data = await response.json();
+                setCategories(data);
+            }
+        } catch (e) {
+            console.error("error fetching categories", e);
+        }
+    };
+
     useEffect(() => {
         if (isAuthenticated) {
             fetchNavbarProfile();
         }
+        fetchCategories();
 
         const handleUpdate = () => fetchNavbarProfile();
         window.addEventListener('profile-updated', handleUpdate);
@@ -97,6 +114,23 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
         };
     }, [userMenuOpen]);
 
+    // Close explore dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (exploreRef.current && !exploreRef.current.contains(event.target as Node)) {
+                setExploreOpen(false);
+            }
+        };
+
+        if (exploreOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [exploreOpen]);
+
     // Close location dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -119,6 +153,23 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
         { label: 'Help Center', color: '#0E0E0C' },
         { label: 'Contact Us', color: '#AF82C5' }
     ];
+
+    const categoryIconMap: Record<string, any> = {
+        "Art & Craft": Palette,
+        "Cooking & Baking": ChefHat,
+        "Wellness & Fitness": Heart,
+        "Technology & Programming": Code,
+        "Photography & Videography": Camera,
+        "Music & Dance": Music,
+        "Business & Entrepreneurship": Briefcase,
+        "Language Learning": Languages,
+        "DIY & Home Improvement": Hammer,
+        "Kids & Family": Baby,
+    };
+
+    const getCategoryIcon = (name: string) => {
+        return categoryIconMap[name] || Compass;
+    };
 
 
     const getLogoLink = () => {
@@ -143,12 +194,69 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
 
                 {!minimal && (
                     <div className="hidden md:flex items-center gap-16">
-                        <Link
-                            to="/explore"
-                            className="font-sans text-base font-semibold text-[#0E0E0C] hover:text-primary-orange transition-colors"
-                        >
-                            Explore
-                        </Link>
+                        <div className="relative" ref={exploreRef}>
+                            <button
+                                onClick={() => setExploreOpen(!exploreOpen)}
+                                className={`flex items-center gap-2 font-sans text-base font-semibold transition-colors ${exploreOpen ? 'text-primary-orange' : 'text-[#0E0E0C] hover:text-primary-orange'}`}
+                            >
+                                Explore
+                                <motion.div animate={{ rotate: exploreOpen ? 180 : 0 }}>
+                                    <ChevronDown size={18} />
+                                </motion.div>
+                            </button>
+
+                            <AnimatePresence>
+                                {exploreOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        className="absolute top-full left-0 mt-4 w-[600px] bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-deep-purple/5 p-8 z-[60]"
+                                    >
+                                        <div className="flex items-center justify-between mb-6">
+                                            <button
+                                                onClick={() => setExploreOpen(false)}
+                                                className="p-2 rounded-full transition-colors"
+                                            >
+                                                <X size={20} className="text-deep-purple/40" />
+                                            </button>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {categories.length > 0 ? (
+                                                categories.map((category) => {
+                                                    const Icon = getCategoryIcon(category.name);
+                                                    return (
+                                                        <Link
+                                                            key={category.id}
+                                                            to={`/explore?category=${encodeURIComponent(category.name)}`}
+                                                            onClick={() => setExploreOpen(false)}
+                                                            className="flex items-center gap-4 p-4 rounded-2xl transition-all group"
+                                                        >
+                                                            <div className="w-12 h-12 rounded-xl bg-primary-orange/5 flex items-center justify-center text-primary-orange transition-all">
+                                                                <Icon size={24} />
+                                                            </div>
+                                                            <div>
+                                                                <h3 className="font-sans font-bold text-[#0E0E0C] text-sm">
+                                                                    {category.name}
+                                                                </h3>
+                                                                <p className="text-xs text-deep-purple/50 line-clamp-1">
+                                                                    {category.description}
+                                                                </p>
+                                                            </div>
+                                                        </Link>
+                                                    );
+                                                })
+                                            ) : (
+                                                <div className="col-span-2 py-8 text-center text-deep-purple/40 font-semibold">
+                                                    Loading categories...
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
 
                         <div
                             className="relative"
@@ -272,6 +380,42 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
                                         exit={{ opacity: 0, x: 20 }}
                                         className="absolute top-full right-0 mt-4 w-64 bg-cream-offwhite rounded-2xl shadow-xl border border-deep-purple/10 py-3 px-2"
                                     >
+                                        {/* Mobile Search/Explore Links */}
+                                        <div className="md:hidden border-b border-deep-purple/5 mb-2 pb-2">
+                                            <button
+                                                onClick={() => setExploreOpen(!exploreOpen)}
+                                                className="w-full flex items-center justify-between px-4 py-3 rounded-lg hover:bg-cream-base text-left font-semibold"
+                                            >
+                                                Explore Categories
+                                                <ChevronDown size={18} className={`transition-transform ${exploreOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+
+                                            <AnimatePresence>
+                                                {exploreOpen && (
+                                                    <motion.div
+                                                        initial={{ height: 0, opacity: 0 }}
+                                                        animate={{ height: 'auto', opacity: 1 }}
+                                                        exit={{ height: 0, opacity: 0 }}
+                                                        className="overflow-hidden px-4"
+                                                    >
+                                                        {categories.map((category) => (
+                                                            <Link
+                                                                key={category.id}
+                                                                to={`/explore?category=${encodeURIComponent(category.name)}`}
+                                                                onClick={() => {
+                                                                    setExploreOpen(false);
+                                                                    setUserMenuOpen(false);
+                                                                }}
+                                                                className="block py-2 text-sm font-medium text-deep-purple/70 hover:text-primary-orange"
+                                                            >
+                                                                {category.name}
+                                                            </Link>
+                                                        ))}
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+
                                         {isAuthenticated && isCustomer ? (
                                             <>
                                                 <Link to={username ? `/u/${username}` : '/settings/edit-profile'} onClick={() => setUserMenuOpen(false)} className="w-full block px-4 py-3 rounded-lg hover:bg-cream-base text-left font-semibold">
@@ -291,9 +435,7 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
                                                     to="/login"
                                                     onClick={() => {
                                                         setUserMenuOpen(false);
-                                                        // If a Host/Admin is viewing this (isAuthenticated=true but falls into this block),
-                                                        // force clear their session so they can actually access the login page
-                                                        // without being redirected back to their dashboard.
+                                                        
                                                         if (isAuthenticated) {
                                                             logout();
                                                         }

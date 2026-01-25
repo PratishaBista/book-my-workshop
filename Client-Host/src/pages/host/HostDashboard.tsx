@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { HostHeader } from './components/HostHeader';
 import { HostSidebar } from './components/HostSidebar';
 import { HostOverview } from './views/HostOverview';
@@ -14,7 +14,14 @@ import { API_ENDPOINTS } from '../../config/api';
 
 const HostDashboard: React.FC = () => {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<HostTab>('overview');
+    const location = useLocation();
+    const initialTab = new URLSearchParams(location.search).get('tab') as HostTab;
+    const [activeTab, setActiveTab] = useState<HostTab>(initialTab || 'overview');
+
+    useEffect(() => {
+        const tab = new URLSearchParams(location.search).get('tab') as HostTab;
+        if (tab) setActiveTab(tab);
+    }, [location.search]);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [profile, setProfile] = useState<ProviderProfile | null>(null);
     const [loading, setLoading] = useState(true);

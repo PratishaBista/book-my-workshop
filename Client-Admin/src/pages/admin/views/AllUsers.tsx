@@ -92,7 +92,6 @@ export const UsersView: React.FC = () => {
                                     </div>
 
                                     <div className="col-span-3 flex flex-col gap-2">
-                                        {/* Email Verification */}
                                         <div className="flex items-center gap-2">
                                             {u.emailConfirmed
                                                 ? <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-100 uppercase tracking-tight"><Check size={10} /> Email Verified</span>

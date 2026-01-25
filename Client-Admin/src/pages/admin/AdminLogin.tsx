@@ -32,7 +32,6 @@ const AdminLogin: React.FC = () => {
             const data = await response.json();
 
             if (response.ok) {
-                // Update AuthContext
                 login(data.token, data.expiration);
 
                 const payload = JSON.parse(atob(data.token.split('.')[1]));
@@ -41,13 +40,12 @@ const AdminLogin: React.FC = () => {
                 if (roles && (roles.includes('Admin') || roles === 'Admin')) {
                     navigate('/dashboard');
                 } else {
-                    // Reject non-Admin accounts
                     logout();
                     const isProvider = roles && (roles.includes('Provider') || roles === 'Provider');
                     if (isProvider) {
                         setError('Host accounts must log in at: http://localhost:5174');
                     } else {
-                        setError('Customer accounts must log in at: http://localhost:5173');
+                        setError('Customer accounts must log in at: http://localhost:4000');
                     }
                 }
             } else {

@@ -179,7 +179,6 @@ const Login: React.FC = () => {
     });
   };
 
-  // Handle field blur (validation on leave)
   const handleBlur = (field: keyof ValidationErrors, value: string) => {
     let error: string | undefined;
 
@@ -241,7 +240,8 @@ const Login: React.FC = () => {
           errorMessage = data.message;
         }
 
-        if (errorMessage.includes("Email not confirmed")) {
+        const lowerMsg = errorMessage.toLowerCase();
+        if (lowerMsg.includes("email not confirmed") || (response.status === 401 && lowerMsg.includes("email"))) {
           throw new Error("Please verify your email address before logging in. Check your inbox.");
         }
 
@@ -263,27 +263,22 @@ const Login: React.FC = () => {
           const isProvider = Array.isArray(role) ? role.includes('Provider') : role === 'Provider';
 
           if (isProvider) {
-            // RESTRICTED: Hosts must use the Host portal
-            logout();
-            setSuccessMessage('');
-            setApiError('Host accounts must log in at: http://localhost:5174');
-            setLoading(false);
+            setTimeout(() => {
+              window.location.href = 'http://localhost:5174/login';
+            }, 1000);
             return;
           } else if (isAdmin) {
-            // RESTRICTED: Admins must use the Admin portal
             logout();
             setSuccessMessage('');
             setApiError('Admin accounts must log in at: http://localhost:5175');
             setLoading(false);
             return;
           } else {
-            // Customer login successful
             setSuccessMessage('Login successful!');
             sessionStorage.setItem('introShown', 'true');
             setTimeout(() => navigate(from, { replace: true }), 500);
           }
         } else {
-          // Assume customer if can't decode
           setSuccessMessage('Login successful!');
           sessionStorage.setItem('introShown', 'true');
           setTimeout(() => navigate(from, { replace: true }), 500);

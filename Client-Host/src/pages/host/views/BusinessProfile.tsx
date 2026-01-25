@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
     Store,
     Type,
     FileText,
     Globe,
-    MapPin,
     Phone,
     Camera,
     CheckCircle2,
@@ -17,6 +17,7 @@ import Toast from '../../../components/ui/Toast';
 import type { ToastType } from '../../../components/ui/Toast';
 import type { ProviderProfile } from '../../../types/host';
 import { ProviderStatus } from '../../../types/host';
+import { VenueManager } from '../components/VenueManager';
 
 interface BusinessProfileProps {
     profile: ProviderProfile;
@@ -43,6 +44,18 @@ export const BusinessProfile: React.FC<BusinessProfileProps> = ({ profile, onUpd
         type: 'success' as ToastType,
         isVisible: false
     });
+
+    const location = useLocation();
+    const venuesRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        if (params.get('section') === 'venues' && venuesRef.current) {
+            setTimeout(() => {
+                venuesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 500); // Small delay to allow rendering
+        }
+    }, [location]);
 
     useEffect(() => {
         setFormData({
@@ -321,17 +334,8 @@ export const BusinessProfile: React.FC<BusinessProfileProps> = ({ profile, onUpd
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">
-                                <MapPin size={12} /> Studio Address
-                            </label>
-                            <input
-                                type="text"
-                                value={`${formData.address}, ${formData.state}`}
-                                disabled
-                                className="w-full px-6 py-4 bg-gray-50/50 rounded-2xl border border-gray-100 text-gray-400 outline-none cursor-not-allowed"
-                            />
-                            <p className="text-[10px] text-gray-400 ml-2">Location details are synced with your registration documents.</p>
+                        <div ref={venuesRef} className="space-y-4 pt-8 border-t border-gray-50">
+                            <VenueManager />
                         </div>
                     </div>
                 </div>

@@ -17,7 +17,7 @@ export const HostHeader: React.FC = () => {
         <header className="h-20 bg-white border-b border-deep-purple/5 flex items-center justify-between px-8 shadow-sm z-40 relative">
             <div className="flex items-center gap-4">
                 <img src="/Badge.png" alt="Logo" className="h-10 w-auto cursor-pointer" onClick={() => navigate('/')} />
-                <span className="font-bold text-xl text-deep-purple tracking-tight">Host Hub</span>
+                <span className="font-bold text-xl text-deep-purple tracking-tight">BookMyWorkshop</span>
             </div>
 
             <div className="flex items-center gap-6">

@@ -9,11 +9,11 @@ const BecomeHost: React.FC = () => {
                 <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
                     <defs>
                         <pattern id="terrazzo" x="0" y="0" width="200" height="200" patternUnits="userSpaceOnUse">
-                            <circle cx="20" cy="20" r="12" fill="#E8D4C5" /> 
-                            <path d="M50 50 L70 80 L30 80 Z" fill="#D4E2D4" transform="rotate(20 50 65)" /> 
-                            <rect x="120" y="40" width="20" height="30" fill="#E6D2D2" transform="rotate(-15 130 55)" /> 
-                            <circle cx="160" cy="140" r="8" fill="#F0E6D2" /> 
-                            <path d="M80 150 Q100 120 120 150 T160 150" stroke="#C8D6C9" strokeWidth="4" fill="none" /> 
+                            <circle cx="20" cy="20" r="12" fill="#E8D4C5" />
+                            <path d="M50 50 L70 80 L30 80 Z" fill="#D4E2D4" transform="rotate(20 50 65)" />
+                            <rect x="120" y="40" width="20" height="30" fill="#E6D2D2" transform="rotate(-15 130 55)" />
+                            <circle cx="160" cy="140" r="8" fill="#F0E6D2" />
+                            <path d="M80 150 Q100 120 120 150 T160 150" stroke="#C8D6C9" strokeWidth="4" fill="none" />
                             <circle cx="100" cy="100" r="4" fill="#6B4C3E" fillOpacity="0.1" />
                             <rect x="10" y="160" width="40" height="40" rx="10" fill="#D6C8D6" transform="rotate(45 30 180)" />
                         </pattern>

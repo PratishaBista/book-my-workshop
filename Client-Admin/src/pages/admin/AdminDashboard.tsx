@@ -6,6 +6,8 @@ import { Overview } from './views/Overview';
 import { PendingProviders } from './views/PendingProviders';
 import { PendingWorkshops } from './views/PendingWorkshops';
 import { UsersView } from './views/AllUsers';
+import { CategoriesView } from './views/CategoriesView';
+import { LiveWorkshops } from './views/LiveWorkshops';
 import type { AdminTab } from '../../types/admin';
 
 const AdminDashboard: React.FC = () => {
@@ -15,12 +17,12 @@ const AdminDashboard: React.FC = () => {
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-        if (!token) { navigate('/admin/pxvywv'); return; }
+        if (!token) { navigate('/login'); return; }
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
             const roles = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role;
             if (roles !== 'Admin') navigate('/');
-        } catch { navigate('/admin/pxvywv'); }
+        } catch { navigate('/login'); }
     }, [navigate]);
 
     const renderContent = () => {
@@ -28,7 +30,9 @@ const AdminDashboard: React.FC = () => {
             case 'overview': return <Overview />;
             case 'providers': return <PendingProviders />;
             case 'workshops': return <PendingWorkshops />;
+            case 'live_workshops': return <LiveWorkshops />;
             case 'users': return <UsersView />;
+            case 'categories': return <CategoriesView />;
             default: return (
                 <div className="flex flex-col items-center justify-center h-full text-slate-400">
                     <p>Module under development</p>

@@ -36,7 +36,6 @@ export const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({ user, onClos
 
     useEffect(() => {
         if (user) {
-            // Future: Fetch specific booking/workshop stats here
         }
     }, [user]);
 

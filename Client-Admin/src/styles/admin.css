@@ -8,7 +8,6 @@
     overflow: hidden;
 }
 
-/* Background */
 .admin-login-background {
     position: absolute;
     inset: 0;
@@ -16,7 +15,6 @@
     z-index: 0;
 }
 
-/* Content Wrapper */
 .admin-login-content {
     position: relative;
     z-index: 1;
@@ -24,7 +22,6 @@
     max-width: 440px;
 }
 
-/* Logo */
 .admin-logo-container {
     text-align: center;
     margin-bottom: 32px;
@@ -36,7 +33,6 @@
     filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.06));
 }
 
-/* Card */
 .admin-login-card {
     background: white;
     border-radius: 16px;
@@ -51,7 +47,6 @@
         0 0 0 1px rgba(0, 0, 0, 0.03);
 }
 
-/* Header */
 .admin-login-header {
     text-align: center;
     margin-bottom: 32px;
@@ -74,7 +69,6 @@
     letter-spacing: 0;
 }
 
-/* Error Message */
 .admin-error-message {
     display: flex;
     align-items: center;
@@ -105,14 +99,12 @@
     flex-shrink: 0;
 }
 
-/* Form */
 .admin-login-form {
     display: flex;
     flex-direction: column;
     gap: 24px;
 }
 
-/* Input Group */
 .admin-input-group {
     display: flex;
     flex-direction: column;
@@ -146,7 +138,6 @@
 .admin-input:focus {
     background: white;
     border-color: #B9AEC4;
-    /* Dusty lavender */
     box-shadow: 0 0 0 3px rgba(185, 174, 196, 0.1);
     transform: scale(1.01);
 }
@@ -155,7 +146,6 @@
     border-color: #D1D5DB;
 }
 
-/* Forgot Password */
 .admin-forgot-password {
     text-align: right;
     margin-top: -8px;
@@ -164,7 +154,6 @@
 .admin-link {
     font-size: 13px;
     color: #A69FA2;
-    /* Warm taupe */
     text-decoration: none;
     font-weight: 500;
     transition: color 0.2s;
@@ -172,10 +161,8 @@
 
 .admin-link:hover {
     color: #AF82C5;
-    /* Purple */
 }
 
-/* Login Button */
 .admin-login-button {
     background: linear-gradient(135deg, #AF82C5 0%, #9B6FB0 100%);
     color: white;
@@ -205,7 +192,6 @@
     cursor: not-allowed;
 }
 
-/* Loading State */
 .admin-loading {
     display: flex;
     align-items: center;
@@ -229,7 +215,6 @@
     }
 }
 
-/* Footer */
 .admin-login-footer {
     margin-top: 32px;
     padding-top: 24px;
@@ -244,7 +229,6 @@
     letter-spacing: 0.2px;
 }
 
-/* Responsive */
 @media (max-width: 480px) {
     .admin-login-card {
         padding: 32px 24px;
@@ -269,7 +253,6 @@
     }
 }
 
-/* Focus visible for accessibility */
 .admin-login-button:focus-visible,
 .admin-input:focus-visible,
 .admin-link:focus-visible {
