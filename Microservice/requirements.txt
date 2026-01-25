@@ -1,5 +1,20 @@
+# FastAPI and Server
 fastapi
-uvicorn
-requests
+uvicorn[standard]
+pydantic
+pydantic-settings
+
+# Machine Learning
+scikit-learn
+joblib
+numpy
+sentence-transformers
+torch
+datasets
+accelerate
+
+# Data Processing
+pandas
+
+# Development
 python-dotenv
-huggingface_hub
