@@ -1,17 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft, Share2, Heart, Clock,
     Users, Star, MapPin, ArrowUpRight,
-    Calendar, Check, ChevronDown, MessageSquare,
-    ShieldCheck, CheckCircle2, MessageCircle,
-    Info, Maximize2, ArrowRight, ExternalLink
+    Check, ChevronDown,
+    ShieldCheck, CheckCircle2,
+    Maximize2
 } from 'lucide-react';
 import { API_ENDPOINTS } from '../../config/api';
 import Navbar from '../../components/landing/Navbar';
 import Footer from '../../components/landing/Footer';
 import { type WorkshopDetail as IWorkshopDetail, WorkshopType, PricingType } from '../../types/workshop';
+import WorkshopMap from '../../components/workshop/WorkshopMap';
 
 const WorkshopDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -22,10 +23,10 @@ const WorkshopDetail: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null);
     const [showLoginToast, setShowLoginToast] = useState(false);
-    const [activeMediaIdx, setActiveMediaIdx] = useState(0);
     const [expandedSections, setExpandedSections] = useState<string[]>([]);
+    const [hostWorkshops, setHostWorkshops] = useState<any[]>([]);
+    const [similarWorkshops, setSimilarWorkshops] = useState<any[]>([]);
 
-    // For "read more" functionality if description is huge
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
     const token = localStorage.getItem('token');
@@ -41,8 +42,6 @@ const WorkshopDetail: React.FC = () => {
             }
         } catch (e) { console.error(e); }
     }
-
-    const bookingCardRef = useRef<HTMLDivElement>(null);
 
     const toggleSection = (section: string) => {
         setExpandedSections(prev =>
@@ -97,7 +96,6 @@ const WorkshopDetail: React.FC = () => {
 
         if (!scheduleId) {
             if (workshop?.upcomingSchedules.length === 0) {
-                // Testing/Demo purpose only - ideally block this in prod
                 if (!confirm("No live schedules available. Attempt to use Test ID 1?")) return;
                 scheduleId = 1;
             } else {
@@ -142,11 +140,43 @@ const WorkshopDetail: React.FC = () => {
                 if (response.ok) {
                     const data = await response.json();
                     setWorkshop(data);
+                    // Fetch related as well
+                    fetchRelatedProducts(data);
                 }
             } catch (error) {
                 console.error('Error fetching workshop details:', error);
             } finally {
                 setLoading(false);
+            }
+        };
+
+        const fetchRelatedProducts = async (currentWorkshop: IWorkshopDetail) => {
+            try {
+                const hostRes = await fetch(API_ENDPOINTS.workshop.byProvider(currentWorkshop.provider.id));
+                if (hostRes.ok) {
+                    const otherHostWorkshops = await hostRes.json();
+                    setHostWorkshops(otherHostWorkshops.filter((w: any) => w.id !== currentWorkshop.id));
+                }
+
+                const similarRes = await fetch(API_ENDPOINTS.workshop.recommendations(currentWorkshop.id));
+                if (similarRes.ok) {
+                    const simWorkshops = await similarRes.json();
+
+                    console.group('Similar workshops found');
+                    console.log('Source Workshop:', currentWorkshop.title);
+                    console.log('Resulting Recommendations:');
+                    console.table(simWorkshops.map((w: any) => ({
+                        id: w.id,
+                        title: w.title,
+                        category: w.categories?.[0]?.name || 'N/A',
+                        score: w.recommendationScore?.toFixed(4) || 'N/A'
+                    })));
+                    console.groupEnd();
+
+                    setSimilarWorkshops(simWorkshops);
+                }
+            } catch (error) {
+                console.error('Error fetching related workshops:', error);
             }
         };
 
@@ -164,7 +194,6 @@ const WorkshopDetail: React.FC = () => {
 
     if (!workshop) return null;
 
-    // Filter and sort media
     const allMedia = [...workshop.media].sort((a, b) => {
         if (a.isPrimary) return -1;
         if (b.isPrimary) return 1;
@@ -188,7 +217,6 @@ const WorkshopDetail: React.FC = () => {
         <div className="min-h-screen bg-white text-deep-purple font-sans selection:bg-orange-100 selection:text-deep-purple">
             <Navbar />
 
-            {/* 1. Header & Navigation (Minimal) */}
             <div className="pt-32 pb-8 px-6 md:px-12 max-w-[1400px] mx-auto">
                 <div className="flex justify-between items-start mb-6">
                     <button
@@ -231,7 +259,6 @@ const WorkshopDetail: React.FC = () => {
                 </div>
             </div>
 
-            {/* 2. Dynamic Hero Media Grid */}
             <div className="px-6 md:px-12 max-w-[1400px] mx-auto mb-20">
                 {allMedia.length === 0 ? (
                     <div className="w-full aspect-[2/1] rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -242,7 +269,6 @@ const WorkshopDetail: React.FC = () => {
                         allMedia.length === 2 ? 'grid-cols-2' :
                             'grid-cols-1 md:grid-cols-3 md:grid-rows-2'
                         }`}>
-                        {/* Primary Item */}
                         <div className={`${allMedia.length > 2 ? 'md:col-span-2 md:row-span-2' : ''} relative group`}>
                             {allMedia[0].mediaType === 0 ? (
                                 <img src={allMedia[0].url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Primary visual" />
@@ -251,7 +277,6 @@ const WorkshopDetail: React.FC = () => {
                             )}
                         </div>
 
-                        {/* Secondary Items */}
                         {allMedia.slice(1, 3).map((media, idx) => (
                             <div key={media.id} className="relative group hidden md:block">
                                 {media.mediaType === 0 ? (
@@ -267,10 +292,8 @@ const WorkshopDetail: React.FC = () => {
 
             <main className="px-6 md:px-12 max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-24 pb-32">
 
-                {/* LEFT COLUMN: Narrative Content */}
                 <div className="lg:col-span-7 space-y-24">
 
-                    {/* Meta Snapshot (Scannable, Clean) */}
                     <div className="flex border-t border-b border-gray-100 py-8">
                         <div className="flex-1 pr-8 border-r border-gray-100">
                             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Time</p>
@@ -295,7 +318,6 @@ const WorkshopDetail: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* About the Experience */}
                     <section>
                         <h2 className="text-3xl font-serif font-medium mb-8">The Experience</h2>
                         <div className={`prose prose-lg prose-headings:font-serif prose-p:text-gray-600 prose-p:font-light prose-p:leading-relaxed prose-li:text-gray-600 ${!isDescriptionExpanded ? 'line-clamp-[10]' : ''}`}>
@@ -311,7 +333,6 @@ const WorkshopDetail: React.FC = () => {
                         )}
                     </section>
 
-                    {/* What You'll Get (Clean Integration) */}
                     {workshop.whatsIncluded && (
                         <section>
                             <h2 className="text-3xl font-serif font-medium mb-8">What's Included</h2>
@@ -330,7 +351,6 @@ const WorkshopDetail: React.FC = () => {
                         </section>
                     )}
 
-                    {/* The Host (Subtle Connection) */}
                     <section className="flex items-start gap-6 border-t border-gray-100 pt-16">
                         <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                             {workshop.provider.logoUrl ? (
@@ -353,32 +373,37 @@ const WorkshopDetail: React.FC = () => {
                         </div>
                     </section>
 
-                    {/* Location (Clean Embedded) */}
                     <section>
                         <h2 className="text-3xl font-serif font-medium mb-6">Location</h2>
-                        <div className="mb-4 flex items-center gap-2 text-gray-500">
-                            <MapPin size={20} strokeWidth={1.5} />
-                            <span>{workshop.locationName || workshop.locationAddress}</span>
+                        <div className="mb-8 flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-gray-500">
+                                <MapPin size={20} strokeWidth={1.5} />
+                                <span>{workshop.locationName || workshop.locationAddress}</span>
+                            </div>
+                            <a
+                                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(workshop.locationAddress)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm font-bold text-primary-orange hover:underline flex items-center gap-1"
+                            >
+                                Get Directions <ArrowUpRight size={14} />
+                            </a>
                         </div>
                         {workshop.venueDescription && (
                             <p className="text-gray-600 italic mb-8 border-l-2 border-primary-orange pl-4">
                                 {workshop.venueDescription}
                             </p>
                         )}
-                        <div className="w-full h-[400px] bg-gray-100 rounded-2xl overflow-hidden grayscale hover:grayscale-0 transition-all duration-700">
-                            {/* Placeholder for real map integration */}
-                            <iframe
-                                width="100%"
-                                height="100%"
-                                frameBorder="0"
-                                style={{ border: 0 }}
-                                src={`https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=${encodeURIComponent(workshop.locationAddress)}`}
-                                title="Workshop Location"
+                        <div className="w-full h-[400px] bg-gray-100 rounded-2xl overflow-hidden grayscale hover:grayscale-0 transition-all duration-700 shadow-sm border border-gray-100">
+                            <WorkshopMap
+                                latitude={workshop.latitude}
+                                longitude={workshop.longitude}
+                                address={workshop.locationAddress}
+                                locationName={workshop.locationName}
                             />
                         </div>
                     </section>
 
-                    {/* Expandable Details */}
                     <section className="space-y-4">
                         {[
                             { id: 'whatToBring', label: 'What to bring', content: workshop.whatToBring },
@@ -417,12 +442,10 @@ const WorkshopDetail: React.FC = () => {
                 </div>
 
 
-                {/* RIGHT COLUMN: Sticky Booking Interface */}
                 <div className="lg:col-span-5 relative">
                     <div className="sticky top-24">
                         <div className="bg-white rounded-3xl p-8 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.06)] ring-1 ring-gray-100">
 
-                            {/* Price Header */}
                             <div className="flex justify-between items-baseline mb-8">
                                 <div>
                                     <span className="text-4xl font-serif font-medium">
@@ -434,7 +457,6 @@ const WorkshopDetail: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Date Selector */}
                             <div className="mb-8">
                                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
                                     Select Date
@@ -495,9 +517,7 @@ const WorkshopDetail: React.FC = () => {
                             )}
                         </div>
 
-                        {/* Trust Module */}
                         <div className="mt-8 flex items-center justify-center gap-6 text-gray-400 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all duration-500">
-                            {/* Placeholders for payment icons or trust badges */}
                             <span className="text-xs font-medium border border-gray-200 px-3 py-1 rounded-full flex items-center gap-1">
                                 <ShieldCheck size={12} /> Secure Payment
                             </span>
@@ -509,7 +529,6 @@ const WorkshopDetail: React.FC = () => {
                 </div>
             </main>
 
-            {/* Login Toast */}
             <AnimatePresence>
                 {showLoginToast && (
                     <motion.div
@@ -524,38 +543,68 @@ const WorkshopDetail: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* Recommendations Placeholders */}
-            <div className="bg-gray-50 py-24 border-t border-gray-200">
-                <div className="px-6 md:px-12 max-w-[1400px] mx-auto space-y-16">
-                    <div className="flex justify-between items-end">
-                        <div className="space-y-4">
-                            <h2 className="text-4xl font-serif font-bold">More from {workshop.provider.businessName}</h2>
-                            <p className="text-gray-500 italic max-w-lg">Discover other carefully crafted experiences from this artisan.</p>
-                        </div>
-                        <button className="p-4 rounded-full border border-gray-200 hover:border-primary-orange transition-colors bg-white">
-                            <ArrowRight size={24} />
-                        </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="group cursor-pointer">
-                                <div className="aspect-[4/5] bg-white rounded-[2.5rem] overflow-hidden mb-6 shadow-sm border border-gray-100 group-hover:shadow-lg transition-all">
-                                    <div className="w-full h-full bg-deep-purple/5 flex items-center justify-center text-deep-purple/20">
-                                        <Maximize2 size={48} strokeWidth={1} />
-                                    </div>
-                                </div>
-                                <h4 className="text-xl font-serif font-bold group-hover:text-primary-orange transition-colors">Upcoming Workshop Title</h4>
-                                <p className="text-sm text-gray-400 mt-1">Starting from NPR 2,500</p>
+            {hostWorkshops.length > 0 && (
+                <div className="bg-gray-50 py-24 border-t border-gray-200">
+                    <div className="px-6 md:px-12 max-w-[1400px] mx-auto space-y-16">
+                        <div className="flex justify-between items-end">
+                            <div className="space-y-4">
+                                <h2 className="text-4xl font-serif font-bold">More from {workshop.provider.businessName}</h2>
                             </div>
-                        ))}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                            {hostWorkshops.slice(0, 3).map(w => (
+                                <RelatedWorkshopCard key={w.id} workshop={w} navigate={navigate} />
+                            ))}
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
+
+            {similarWorkshops.length > 0 && (
+                <div className="bg-white py-24 border-t border-gray-100">
+                    <div className="px-6 md:px-12 max-w-[1400px] mx-auto space-y-16">
+                        <div className="flex justify-between items-end">
+                            <div className="space-y-4">
+                                <h2 className="text-4xl font-serif font-bold">You Might Also Enjoy</h2>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                            {similarWorkshops.slice(0, 3).map(w => (
+                                <RelatedWorkshopCard key={w.id} workshop={w} navigate={navigate} />
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <Footer />
         </div>
     );
 };
 
+const RelatedWorkshopCard = ({ workshop, navigate }: { workshop: any, navigate: any }) => (
+    <div
+        onClick={() => {
+            navigate(`/workshop/${workshop.slug || workshop.id}`);
+            window.scrollTo(0, 0);
+        }}
+        className="group cursor-pointer"
+    >
+        <div className="aspect-[4/5] bg-white rounded-[2.5rem] overflow-hidden mb-6 shadow-sm border border-gray-100 group-hover:shadow-lg transition-all relative">
+            {workshop.primaryImageUrl ? (
+                <img src={workshop.primaryImageUrl} alt={workshop.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+            ) : (
+                <div className="w-full h-full bg-deep-purple/5 flex items-center justify-center text-deep-purple/20">
+                    <Maximize2 size={48} strokeWidth={1} />
+                </div>
+            )}
+        </div>
+        <h4 className="text-xl font-serif font-bold group-hover:text-primary-orange transition-colors">{workshop.title}</h4>
+        <p className="text-sm text-gray-400 mt-1">Starting from {workshop.currency} {workshop.basePrice.toLocaleString()}</p>
+    </div>
+);
+
 export default WorkshopDetail;
+
