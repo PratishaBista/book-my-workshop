@@ -41,7 +41,8 @@ export const API_ENDPOINTS = {
     payment: {
         initiate: `${API_URL}/api/payment/initiate`,
         verify: `${API_URL}/api/payment/verify`,
-    }
+    },
+    venues: `${API_URL}/api/venues`
 };
 
 export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';

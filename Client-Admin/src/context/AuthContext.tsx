@@ -33,7 +33,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         const name = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || payload.name;
                         const email = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || payload.email;
 
-                        // Handle array roles (e.g. if user matches multiple policies, though rare in this simple app)
                         const finalRole = Array.isArray(role) ? role[0] : role;
 
                         setUser({
@@ -59,7 +58,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('token', token);
         localStorage.setItem('tokenExpiry', expiry);
 
-        // Immediate decode to update state
         try {
             const parts = token.split('.');
             const payload = JSON.parse(atob(parts[1]));

@@ -33,6 +33,8 @@ export const API_ENDPOINTS = {
     workshop: {
         base: `${API_URL}/api/workshop`,
         public: `${API_URL}/api/workshops/public`,
+        byProvider: (id: number) => `${API_URL}/api/workshops/public/provider/${id}`,
+        recommendations: (id: number) => `${API_URL}/api/workshop/${id}/recommendations`,
     },
     media: {
         base: `${API_URL}/api/media`,

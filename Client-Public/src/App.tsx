@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import LandingPage from './pages/home/LandingPage'
+import HostWorkshopPage from './pages/home/HostWorkshopPage';
 import WorkshopDetail from './pages/home/WorkshopDetail'
 import Login from './pages/auth/Login'
 import VerifyEmail from './pages/auth/VerifyEmail'
@@ -19,6 +20,7 @@ function App() {
         <Routes>
           {/* Public Routes - Anyone can access */}
           <Route path="/" element={<LandingPage />} />
+          <Route path="/host-workshop" element={<HostWorkshopPage />} />
           <Route path="/workshop/:id" element={<WorkshopDetail />} />
           <Route path="/verify" element={<VerifyEmail />} />
 

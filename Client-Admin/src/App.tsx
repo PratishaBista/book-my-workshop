@@ -10,15 +10,13 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
-          {/* Redirect root to dashboard */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/admin/dashboard" element={<Navigate to="/dashboard" replace />} />
 
-          {/* Guest Only Routes */}
           <Route element={<PublicRoute />}>
             <Route path="/login" element={<AdminLogin />} />
           </Route>
 
-          {/* Admin Routes - Only Admins */}
           <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
             <Route path="/dashboard" element={<AdminDashboard />} />
           </Route>

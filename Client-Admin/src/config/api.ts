@@ -41,6 +41,9 @@ export const API_ENDPOINTS = {
     payment: {
         initiate: `${API_URL}/api/payment/initiate`,
         verify: `${API_URL}/api/payment/verify`,
+    },
+    ml: {
+        suggestCategory: `${API_URL}/api/ml/suggest-category`,
     }
 };
 

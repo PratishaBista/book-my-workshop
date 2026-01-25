@@ -10,8 +10,8 @@ const PublicRoute: React.FC = () => {
     }
 
     if (isAuthenticated && user) {
-        if (user.role === 'Admin') return <Navigate to="/admin/dashboard" replace />;
-        if (user.role === 'Provider') return <Navigate to="/host/dashboard" replace />;
+        if (user.role === 'Admin') return <Navigate to="/dashboard" replace />;
+        if (user.role === 'Provider') return <Navigate to="/dashboard" replace />;
         return <Navigate to="/" replace />;
     }
 
