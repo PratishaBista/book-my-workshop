@@ -104,24 +104,87 @@ public class AdminController : ControllerBase
                 ProviderEmail = w.Provider.User.Email,
                 SubmittedAt = w.UpdatedAt,
                 CategoryNames = w.Categories.Select(c => c.Name).ToList(),
-                Price = w.Pricing != null ? w.Pricing.BasePrice : 0
+                Price = w.Pricing != null ? w.Pricing.BasePrice : 0,
+                // AI Fields
+                w.AISuggestedCategory,
+                w.AIConfidenceScore,
+                w.AIIsConfident
             })
             .ToListAsync();
 
         return Ok(pendingWorkshops);
     }
 
+    // GET: api/admin/workshops/live
+    [HttpGet("workshops/live")]
+    public async Task<IActionResult> GetLiveWorkshops()
+    {
+        var liveWorkshops = await _context.Workshops
+            .Include(w => w.Provider)
+            .ThenInclude(p => p.User)
+            .Include(w => w.Categories)
+            .Include(w => w.Pricing)
+            .Where(w => w.Status == WorkshopStatus.Published)
+            .Select(w => new
+            {
+                w.Id,
+                w.Title,
+                w.Description,
+                w.Tagline,
+                w.Duration,
+                w.MaxCapacity,
+                w.LocationAddress,
+                w.LocationName,
+                ProviderName = w.Provider.BusinessName,
+                ProviderContact = w.Provider.User.FullName,
+                ProviderEmail = w.Provider.User.Email,
+                PublishedAt = w.UpdatedAt,
+                CategoryNames = w.Categories.Select(c => c.Name).ToList(),
+                Price = w.Pricing != null ? w.Pricing.BasePrice : 0,
+                // AI Fields
+                w.AISuggestedCategory,
+                w.AIConfidenceScore
+            })
+            .ToListAsync();
+
+        return Ok(liveWorkshops);
+    }
+
+    public class ApproveWorkshopRequest
+    {
+        public int? CategoryId { get; set; }
+    }
+
     // PUT: api/admin/approve-workshop/{id}
     [HttpPut("approve-workshop/{id}")]
-    public async Task<IActionResult> ApproveWorkshop(int id)
+    public async Task<IActionResult> ApproveWorkshop(int id, [FromBody] ApproveWorkshopRequest request)
     {
-        var workshop = await _context.Workshops.FindAsync(id);
+        var workshop = await _context.Workshops.Include(w => w.Categories).FirstOrDefaultAsync(w => w.Id == id);
         if (workshop == null) return NotFound("Workshop not found");
 
         if (workshop.Status == WorkshopStatus.Published) return BadRequest("Workshop is already published");
 
+        if (request.CategoryId.HasValue)
+        {
+            var category = await _context.WorkshopCategories.FindAsync(request.CategoryId.Value);
+            if (category != null)
+            {
+                workshop.Categories.Clear();
+                workshop.Categories.Add(category);
+                
+                workshop.IsManuallyCategorized = true;
+                
+                _context.Workshops.Update(workshop);
+            }
+        }
+
+        if (!workshop.Categories.Any())
+        {
+             return BadRequest("Cannot approve a workshop without a category. Please select one.");
+        }
+
         workshop.Status = WorkshopStatus.Published;
-        // workshop.PublishedAt = DateTime.UtcNow; 
+        workshop.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
         return Ok(new { Message = $"Workshop '{workshop.Title}' approved and published." });

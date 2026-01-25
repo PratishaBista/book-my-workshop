@@ -198,6 +198,22 @@ public class WorkshopController : ControllerBase
         }
     }
 
+    [AllowAnonymous]
+    [HttpGet("{id}/recommendations")]
+    public async Task<IActionResult> GetRelatedWorkshops(int id)
+    {
+        try
+        {
+            var recommendations = await _workshopService.GetRelatedWorkshopsAsync(id);
+            return Ok(recommendations);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error getting recommendations for workshop {id}");
+            return StatusCode(500, new { message = "An error occurred while fetching recommendations." });
+        }
+    }
+
     // POST: api/workshop/{id}/publish
     [HttpPost("{id}/publish")]
     public async Task<IActionResult> PublishWorkshop(int id)

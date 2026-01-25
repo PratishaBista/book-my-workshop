@@ -1,29 +1,28 @@
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace API.Migrations
 {
     /// <inheritdoc />
-    public partial class AddSlugToWorkshop : Migration
+    public partial class AddManualCategorizationFlag : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "Slug",
+            migrationBuilder.AddColumn<bool>(
+                name: "IsManuallyCategorized",
                 table: "Workshops",
-                type: "nvarchar(500)",
-                maxLength: 500,
+                type: "bit",
                 nullable: false,
-                defaultValue: "");
+                defaultValue: false);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "Slug",
+                name: "IsManuallyCategorized",
                 table: "Workshops");
         }
     }

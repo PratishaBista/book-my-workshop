@@ -16,6 +16,11 @@ public class Workshop
     [ForeignKey(nameof(ProviderId))]
     public Provider Provider { get; set; } = null!;
 
+    public int? VenueId { get; set; }
+
+    [ForeignKey(nameof(VenueId))]
+    public Venue? Venue { get; set; }
+
     // Basic Info
     [Required]
     [MaxLength(200)]
@@ -65,9 +70,9 @@ public class Workshop
     public decimal? Longitude { get; set; }
 
     [MaxLength(1000)]
-    public string? LocationDetails { get; set; } // "2nd floor, red building"
+    public string? LocationDetails { get; set; } 
 
-    public string? VenueDescription { get; set; } // Human description of the place
+    public string? VenueDescription { get; set; } 
 
     // Status
     public WorkshopStatus Status { get; set; } = WorkshopStatus.Draft;
@@ -77,19 +82,23 @@ public class Workshop
     // Additional Details
     public string? WhatToBring { get; set; } // Structured list or detailed string
     public string? SkillLevel { get; set; } // "Beginner", "Advanced", etc.
-    public string? Suitability { get; set; } // "Age 18+", "Suitable for kids", etc.
+    public string? Suitability { get; set; } 
     public string? CancellationPolicy { get; set; }
     public int BookingCutoffHours { get; set; } = 2; // Default: Book at least 2 hours in advance
 
-    // Legacy fields (keeping for compatibility or migration if needed, but moving to new structure)
     public string? SafetyRequirements { get; set; } 
     public string? WhatsIncluded { get; set; } 
+    
+    [MaxLength(100)]
+    public string? AISuggestedCategory { get; set; }
+    public double? AIConfidenceScore { get; set; }
+    public bool? AIIsConfident { get; set; }
+    
+    public bool IsManuallyCategorized { get; set; } = false;  
 
-    // Audit Fields
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation Properties
     public WorkshopPricing? Pricing { get; set; }
     public ICollection<WorkshopMedia> Media { get; set; } = new List<WorkshopMedia>();
     public ICollection<WorkshopSchedule> Schedules { get; set; } = new List<WorkshopSchedule>();

@@ -12,6 +12,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     // Existing DbSets
     public DbSet<Provider> Providers { get; set; }
+    public DbSet<Venue> Venues { get; set; }
 
     // Workshop-related DbSets
     public DbSet<WorkshopCategory> WorkshopCategories { get; set; }
@@ -44,6 +45,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .WithMany()
             .HasForeignKey(w => w.ProviderId)
             .OnDelete(DeleteBehavior.Restrict); 
+
+        // Workshop - Venue relationship
+        builder.Entity<Workshop>()
+            .HasOne(w => w.Venue)
+            .WithMany(v => v.Workshops)
+            .HasForeignKey(w => w.VenueId)
+            .OnDelete(DeleteBehavior.SetNull); 
 
 
         // Workshop - Pricing (1:1)
@@ -124,5 +132,26 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<Booking>()
             .HasIndex(b => new { b.BookingStatus, b.PaymentStatus });
+
+        builder.Entity<Provider>()
+            .Property(p => p.Latitude)
+            .HasPrecision(18, 10);
+        builder.Entity<Provider>()
+            .Property(p => p.Longitude)
+            .HasPrecision(18, 10);
+
+        builder.Entity<Venue>()
+            .Property(v => v.Latitude)
+            .HasPrecision(18, 10);
+        builder.Entity<Venue>()
+            .Property(v => v.Longitude)
+            .HasPrecision(18, 10);
+
+        builder.Entity<Workshop>()
+            .Property(w => w.Latitude)
+            .HasPrecision(18, 10);
+        builder.Entity<Workshop>()
+            .Property(w => w.Longitude)
+            .HasPrecision(18, 10);
     }
 }
