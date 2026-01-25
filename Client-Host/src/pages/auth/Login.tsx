@@ -131,7 +131,7 @@ const Login: React.FC = () => {
             // RESTRICTED: Customers must use the Public portal
             logout();
             setSuccessMessage('');
-            setApiError('Customer accounts must log in at: http://localhost:5173');
+            setApiError('Customer accounts must log in at: http://localhost:4000');
             setLoading(false);
             return;
           }
@@ -248,12 +248,12 @@ const Login: React.FC = () => {
               </button>
 
               <div className="mt-6 text-center text-sm text-deep-purple/70">
-                Not a host?{' '}
+                New Host?{' '}
                 <a
-                  href="http://localhost:5173"
+                  href="http://localhost:4000/host-workshop"
                   className="text-primary-orange font-semibold hover:underline"
                 >
-                  Go to Customer Portal
+                  Register Here
                 </a>
               </div>
             </form>
