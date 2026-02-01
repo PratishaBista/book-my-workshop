@@ -54,7 +54,6 @@ public class AuthController : ControllerBase
         }
         else
         {
-            // 1. Create New User
             user = new ApplicationUser
             {
                 UserName = request.Email,
@@ -66,11 +65,9 @@ public class AuthController : ControllerBase
             var result = await _userManager.CreateAsync(user, request.Password);
             if (!result.Succeeded) return BadRequest(result.Errors);
 
-            // 2. Assign Host Role Only
             await _userManager.AddToRoleAsync(user, API.Enums.UserRoles.Provider);
         }
 
-        // 3. Create Provider Profile
         var existingProfile = await _context.Providers.AnyAsync(p => p.UserId == user!.Id);
         if (existingProfile) return BadRequest(new { message = "Provider profile already exists for this account." });
 
@@ -91,7 +88,6 @@ public class AuthController : ControllerBase
         _context.Providers.Add(provider);
         await _context.SaveChangesAsync();
 
-        // 4. Handle Verification for NO-AUTH users
         if (isNewUser || !user!.EmailConfirmed)
         {
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user!);
@@ -129,10 +125,8 @@ public class AuthController : ControllerBase
             return BadRequest(result.Errors);
         }
 
-        // Assign default User role
         await _userManager.AddToRoleAsync(user, API.Enums.UserRoles.User);
 
-        // Generate email confirmation token
         var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
         // Encode token to be URL safe
@@ -177,7 +171,6 @@ public class AuthController : ControllerBase
 
         var roles = await _userManager.GetRolesAsync(user);
         
-        // Prioritize the role for the response DTO
         string primaryRole = API.Enums.UserRoles.User;
         if (roles.Contains(API.Enums.UserRoles.Admin)) primaryRole = API.Enums.UserRoles.Admin;
         else if (roles.Contains(API.Enums.UserRoles.Provider)) primaryRole = API.Enums.UserRoles.Provider;
@@ -203,7 +196,14 @@ public class AuthController : ControllerBase
 
         var (token, expiry) = _tokenService.CreateToken(user, primaryRole);
 
-        return Ok(new LoginResponse { Token = token, Expiry = expiry, IsApproved = isApproved, Status = status });
+        return Ok(new LoginResponse 
+        { 
+            Token = token, 
+            Expiry = expiry, 
+            IsApproved = isApproved, 
+            Status = status,
+            HasCompletedOnboarding = user.HasCompletedOnboarding
+        });
     }
 
     [HttpPost("forgot-password")]
@@ -313,7 +313,14 @@ public class AuthController : ControllerBase
             }
 
             var (token, expiry) = _tokenService.CreateToken(user, primaryRole);
-            return Ok(new LoginResponse { Token = token, Expiry = expiry, IsApproved = isApproved, Status = status });
+            return Ok(new LoginResponse 
+            { 
+                Token = token, 
+                Expiry = expiry, 
+                IsApproved = isApproved, 
+                Status = status,
+                HasCompletedOnboarding = user.HasCompletedOnboarding
+            });
 
         }
         catch (Exception ex)

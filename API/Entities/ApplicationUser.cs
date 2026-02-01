@@ -14,5 +14,8 @@ public class ApplicationUser : IdentityUser
     public string? Website { get; set; }
     public string? FunFact { get; set; }
     public string? ProfileUsername { get; set; }
+    public bool HasCompletedOnboarding { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public ICollection<UserPreference> Preferences { get; set; } = new List<UserPreference>();
 }
