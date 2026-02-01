@@ -3,11 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
     ArrowUpRight, BookOpen, ChevronLeft, Clock, Info, MapPin,
     Plus, Save, Trash2, Sparkles, DollarSign,
-    Image as ImageIcon, Play, Building2, Star
+    Image as ImageIcon, Play, Building2, Star, AlertCircle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { API_ENDPOINTS } from '../../config/api';
-import { WorkshopType, PricingType, MediaType } from '../../types/workshop';
+import { PricingType, MediaType } from '../../types/workshop';
 import { type Venue } from '../../types/host';
 import Toast, { type ToastType } from '../../components/ui/Toast';
 
@@ -38,7 +38,6 @@ interface FormData {
     subtitle: string;
     tagline: string;
     description: string;
-    workshopType: WorkshopType;
     durationHours: string;
     durationMinutes: string;
     maxCapacity: string;
@@ -71,6 +70,12 @@ export const WorkshopCreationPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState({ message: '', type: 'success' as ToastType, isVisible: false });
 
+    // Workshop status tracking
+    const [workshopStatus, setWorkshopStatus] = useState<number>(0); // 0=Draft, 1=PendingReview, 2=Published, 3=Rejected
+    const [rejectionReason, setRejectionReason] = useState<string | undefined>();
+    const [hasPendingModifications, setHasPendingModifications] = useState(false);
+    const [showModificationWarning, setShowModificationWarning] = useState(false);
+
     // Refs for scrolling
     const sectionRefs: Record<string, React.RefObject<HTMLDivElement | null>> = {
         overview: useRef<HTMLDivElement>(null),
@@ -87,7 +92,6 @@ export const WorkshopCreationPage: React.FC = () => {
         subtitle: '',
         tagline: '',
         description: '',
-        workshopType: WorkshopType.PublicClass,
         durationHours: '2',
         durationMinutes: '0',
         maxCapacity: '10',
@@ -112,7 +116,6 @@ export const WorkshopCreationPage: React.FC = () => {
 
     useEffect(() => {
         const fetchInitialData = async () => {
-            // 1. Fetch Venues (These are the reusable location assets)
             try {
                 const token = localStorage.getItem('token');
                 const res = await fetch(API_ENDPOINTS.venues, {
@@ -122,7 +125,6 @@ export const WorkshopCreationPage: React.FC = () => {
                     const data = await res.json();
                     setVenues(data);
 
-                    // Auto-select default venue if not editing
                     if (!isEdit && data.length > 0) {
                         const defaultVenue = data.find((v: any) => v.isDefault) || data[0];
                         setSelectedVenueId(defaultVenue.id);
@@ -139,7 +141,6 @@ export const WorkshopCreationPage: React.FC = () => {
                 console.error('Failed to fetch venues:', err);
             }
 
-            // 2. Fetch Workshop data if editing
             if (isEdit) {
                 try {
                     setLoading(true);
@@ -148,12 +149,19 @@ export const WorkshopCreationPage: React.FC = () => {
                         const data = await res.json();
                         const durationParts = (data.duration || "02:00:00").split(':');
 
+                        setWorkshopStatus(data.status);
+                        setRejectionReason(data.rejectionReason);
+                        setHasPendingModifications(data.hasPendingModifications || false);
+
+                        if (data.status === 2) { // Published
+                            setShowModificationWarning(true);
+                        }
+
                         setFormData({
                             title: data.title || '',
                             subtitle: data.subtitle || '',
                             tagline: data.tagline || '',
                             description: data.description || '',
-                            workshopType: data.workshopType,
                             durationHours: parseInt(durationParts[0]).toString(),
                             durationMinutes: parseInt(durationParts[1]).toString(),
                             maxCapacity: data.maxCapacity?.toString() || '10',
@@ -240,24 +248,29 @@ export const WorkshopCreationPage: React.FC = () => {
         return `${h}:${m}:00`;
     };
 
-    const handleMediaUpload = async (podId: number, file: File, mediaType: MediaType, aspectRatio: string) => {
-        // Create preview
+    const handleMediaUpload = async (file: File, mediaType: MediaType, aspectRatio: string) => {
         const previewUrl = URL.createObjectURL(file);
         const tempMedia = {
             url: previewUrl,
             publicId: '',
             mediaType,
-            isPrimary: podId === 1,
-            storyPodId: podId,
-            displayOrder: formData.media.filter(m => m.storyPodId === podId).length,
+            isPrimary: false, 
+            storyPodId: 0,    
+            displayOrder: formData.media.filter((m: any) => m.mediaType === mediaType).length,
             aspectRatio,
             isUploading: true
         };
 
-        setFormData(prev => ({
-            ...prev,
-            media: [...prev.media, tempMedia]
-        }));
+        setFormData(prev => {
+            let nextMedia = [...prev.media];
+            if (mediaType === MediaType.Video) {
+                nextMedia = nextMedia.filter(m => m.mediaType !== MediaType.Video);
+            }
+            return {
+                ...prev,
+                media: [...nextMedia, tempMedia]
+            };
+        });
 
         try {
             const formDataUpload = new FormData();
@@ -323,7 +336,6 @@ export const WorkshopCreationPage: React.FC = () => {
                 subtitle: formData.subtitle,
                 tagline: formData.tagline,
                 description: formData.description,
-                workshopType: formData.workshopType,
                 duration: formatDuration(formData.durationHours || '0', formData.durationMinutes || '0'),
                 maxCapacity: parseInt(formData.maxCapacity) || 1,
                 minCapacity: parseInt(formData.minCapacity) || 0,
@@ -545,36 +557,9 @@ export const WorkshopCreationPage: React.FC = () => {
                                 <p className="mt-3 text-xs text-[#AAA] font-light">A brief, punchy hook to grab attention.</p>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                                <div className="space-y-4">
-                                    <label className="block text-sm font-medium text-[#707070]">Workshop Type</label>
-                                    <div className="flex flex-col gap-3">
-                                        {[
-                                            { id: WorkshopType.PublicClass, label: 'Public Class', desc: 'Open to everyone' },
-                                            { id: WorkshopType.Experience, label: 'Experience', desc: 'Unique social activities' },
-                                            { id: WorkshopType.Private, label: 'Private Booking', desc: 'One-on-one or groups' }
-                                        ].map((type) => (
-                                            <button
-                                                key={type.id}
-                                                onClick={() => setFormData({ ...formData, workshopType: type.id })}
-                                                className={`p-5 rounded-2xl border text-left transition-all duration-300 ${formData.workshopType === type.id
-                                                    ? 'border-[#2D2D2D] bg-white shadow-xl shadow-black/5'
-                                                    : 'border-[#EEE] hover:border-[#CCC] bg-transparent'
-                                                    }`}
-                                            >
-                                                <div className="font-medium text-sm">{type.label}</div>
-                                                <div className="text-xs text-[#707070] font-light mt-1">{type.desc}</div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-
-                            </div>
                         </div>
                     </section>
 
-                    {/* Section: Media */}
                     <section ref={sectionRefs.media} className="scroll-mt-32">
                         <div className="flex items-center gap-2 text-[#FF6B35] mb-4">
                             <ImageIcon size={16} />
@@ -582,53 +567,108 @@ export const WorkshopCreationPage: React.FC = () => {
                         </div>
                         <h2 className="text-5xl font-semibold tracking-tight mb-4">Visual Narrative</h2>
                         <p className="text-[#707070] font-light mb-16 max-w-lg leading-relaxed">
-                            Think of this as a story in 5 chapters. Vertical videos and high-quality "human" shots perform best in our modern editorial layout.
+                            Capture defining workshop moments. Upload portrait photos and a landscape video to best describe the workshop experience.
                         </p>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                            <div className="md:col-span-2 space-y-6">
-                                <div className="flex justify-between items-end">
-                                    <div>
-                                        <h3 className="text-xl font-medium">1. The Vibe</h3>
-                                        <p className="text-sm text-[#AAA] font-light mt-1">The hook. A vertical video of you in motion works best.</p>
-                                    </div>
-                                    <span className="text-[10px] font-bold text-[#FF6B35] uppercase tracking-widest bg-[#FF6B35]/10 px-3 py-1.5 rounded-full">Primary Slot</span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+                            <div className="space-y-6">
+                                <div>
+                                    <h3 className="text-xl font-medium mb-2">Workshop Moments</h3>
+                                    <p className="text-sm text-[#AAA] font-light">
+                                        Upload at least 5 defining moments (Portrait mode recommended)
+                                    </p>
                                 </div>
+
                                 <div
-                                    onClick={() => document.getElementById('pod-1-input')?.click()}
-                                    className="aspect-[16/9] md:aspect-[21/9] bg-[#F5F5F5] rounded-[2rem] border-2 border-dashed border-[#DDD] flex flex-col items-center justify-center group hover:border-[#2D2D2D] transition-all cursor-pointer relative overflow-hidden"
+                                    onClick={() => document.getElementById('portrait-images-input')?.click()}
+                                    className="w-full py-4 px-6 bg-white border-2 border-[#DDD] rounded-2xl hover:border-[#2D2D2D] transition-all cursor-pointer flex items-center justify-center gap-3 group"
                                 >
                                     <input
                                         type="file"
-                                        id="pod-1-input"
+                                        id="portrait-images-input"
+                                        hidden
+                                        multiple
+                                        accept="image/*"
+                                        onChange={(e: any) => {
+                                            if (e.target.files) {
+                                                Array.from(e.target.files).forEach((file: any) => handleMediaUpload(file, MediaType.Image, '9:16'));
+                                            }
+                                        }}
+                                    />
+                                    <ImageIcon size={20} className="text-[#707070] group-hover:text-[#2D2D2D] transition-colors" />
+                                    <span className="text-sm font-medium text-[#707070] group-hover:text-[#2D2D2D] transition-colors">
+                                        Upload Photos (Portrait)
+                                    </span>
+                                </div>
+
+                                {formData.media.filter((m: any) => m.mediaType === MediaType.Image).length > 0 && (
+                                    <div className="grid grid-cols-3 gap-3">
+                                        {formData.media.filter((m: any) => m.mediaType === MediaType.Image).map((m: any, idx: number) => (
+                                            <div key={idx} className="relative aspect-[9/16] group/item rounded-xl overflow-hidden bg-[#F5F5F5]">
+                                                <img src={m.url} className="w-full h-full object-cover" alt={`Moment ${idx + 1}`} />
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <button
+                                                        onClick={(e: any) => { e.stopPropagation(); handleMediaDelete(m.url); }}
+                                                        className="p-2 bg-white rounded-full text-red-500 hover:scale-110 transition-transform"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                                {m.isUploading && (
+                                                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                                                        <div className="w-6 h-6 border-3 border-[#FF6B35] border-t-transparent rounded-full animate-spin" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-6">
+                                <div>
+                                    <h3 className="text-xl font-medium mb-2">Workshop Video</h3>
+                                    <p className="text-sm text-[#AAA] font-light">
+                                        Upload a video showcasing your workshop (Landscape mode recommended)
+                                    </p>
+                                </div>
+
+                                <div
+                                    onClick={() => document.getElementById('landscape-video-input')?.click()}
+                                    className="aspect-video bg-[#F5F5F5] rounded-2xl border-2 border-dashed border-[#DDD] flex flex-col items-center justify-center group hover:border-[#2D2D2D] transition-all cursor-pointer relative overflow-hidden"
+                                >
+                                    <input
+                                        type="file"
+                                        id="landscape-video-input"
                                         hidden
                                         accept="video/*"
-                                        onChange={(e) => e.target.files?.[0] && handleMediaUpload(1, e.target.files[0], MediaType.Video, '21:9')}
+                                        onChange={(e) => e.target.files?.[0] && handleMediaUpload(e.target.files[0], MediaType.Video, '16:9')}
                                     />
-                                    {formData.media.find(m => m.storyPodId === 1) ? (
+                                    {formData.media.find((m: any) => m.mediaType === MediaType.Video) ? (
                                         <div className="absolute inset-0 group">
-                                            {formData.media.find(m => m.storyPodId === 1)?.mediaType === MediaType.Video ? (
+                                            {formData.media.find((m: any) => m.mediaType === MediaType.Video)?.mediaType === MediaType.Video ? (
                                                 <video
-                                                    src={formData.media.find(m => m.storyPodId === 1)?.url}
+                                                    src={formData.media.find((m: any) => m.mediaType === MediaType.Video)?.url}
                                                     className="w-full h-full object-cover"
                                                     autoPlay muted loop
                                                 />
                                             ) : (
                                                 <img
-                                                    src={formData.media.find(m => m.storyPodId === 1)?.url}
+                                                    src={formData.media.find((m: any) => m.mediaType === MediaType.Video)?.url}
                                                     className="w-full h-full object-cover"
-                                                    alt="Vibe"
+                                                    alt="Workshop video"
                                                 />
                                             )}
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                 <button
-                                                    onClick={(e: any) => { e.stopPropagation(); handleMediaDelete(formData.media.find((m: any) => m.storyPodId === 1)!.url); }}
+                                                    onClick={(e: any) => { e.stopPropagation(); handleMediaDelete(formData.media.find((m: any) => m.mediaType === MediaType.Video)!.url); }}
                                                     className="p-4 bg-white rounded-full text-red-500 hover:scale-110 transition-transform"
                                                 >
                                                     <Trash2 size={24} />
                                                 </button>
                                             </div>
-                                            {formData.media.find(m => m.storyPodId === 1)?.isUploading && (
+                                            {formData.media.find((m: any) => m.mediaType === MediaType.Video)?.isUploading && (
                                                 <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
                                                     <div className="w-8 h-8 border-4 border-[#FF6B35] border-t-transparent rounded-full animate-spin" />
                                                 </div>
@@ -639,76 +679,11 @@ export const WorkshopCreationPage: React.FC = () => {
                                             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg group-hover:bg-[#2D2D2D] group-hover:text-white transition-colors duration-300">
                                                 <Play size={24} />
                                             </div>
-                                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#707070] group-hover:text-[#2D2D2D]">Upload Vertical Video</p>
+                                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#707070] group-hover:text-[#2D2D2D]">Upload Video (Landscape)</p>
                                         </div>
                                     )}
                                 </div>
                             </div>
-
-                            {/* Pods 2-5 Helper Component for Rendering */}
-                            {[
-                                { id: 2, label: '2. The Space', desc: '3-4 studio shots.' },
-                                { id: 3, label: '3. Activity', desc: 'Close-ups of hands and tools.' },
-                                { id: 4, label: '4. People', desc: 'Smiles and focused faces.' },
-                                { id: 5, label: '5. Something to take home', desc: "What they'll take home." },
-                            ].map((pod: any) => (
-                                <div key={pod.id} className="space-y-6">
-                                    <div>
-                                        <h3 className="text-xl font-medium">{pod.label}</h3>
-                                        <p className="text-sm text-[#AAA] font-light mt-1">{pod.desc}</p>
-                                    </div>
-                                    <div
-                                        onClick={() => document.getElementById(`pod-${pod.id}-input`)?.click()}
-                                        className="aspect-[4/3] bg-[#F5F5F5] rounded-[2rem] border-2 border-dashed border-[#DDD] flex flex-col items-center justify-center hover:border-[#2D2D2D] transition-all cursor-pointer group relative overflow-hidden"
-                                    >
-                                        <input
-                                            type="file"
-                                            id={`pod-${pod.id}-input`}
-                                            hidden
-                                            multiple
-                                            accept="image/*"
-                                            onChange={(e: any) => {
-                                                if (e.target.files) {
-                                                    Array.from(e.target.files).forEach((file: any) => handleMediaUpload(pod.id, file, MediaType.Image, '4:3'));
-                                                }
-                                            }}
-                                        />
-
-                                        {formData.media.filter((m: any) => m.storyPodId === pod.id).length > 0 ? (
-                                            <div className="w-full h-full flex flex-wrap gap-1 p-2">
-                                                {formData.media.filter((m: any) => m.storyPodId === pod.id).map((m: any, idx: number) => (
-                                                    <div key={idx} className="relative group/item flex-1 min-w-[45%] h-full">
-                                                        <img src={m.url} className="w-full h-full object-cover rounded-xl" alt="Preview" />
-                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
-                                                            <button
-                                                                onClick={(e: any) => { e.stopPropagation(); handleMediaDelete(m.url); }}
-                                                                className="p-2 bg-white rounded-full text-red-500"
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </div>
-                                                        {m.isUploading && (
-                                                            <div className="absolute inset-0 bg-white/60 flex items-center justify-center rounded-xl">
-                                                                <div className="w-4 h-4 border-2 border-[#FF6B35] border-t-transparent rounded-full animate-spin" />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                                {formData.media.filter(m => m.storyPodId === pod.id).length < 4 && (
-                                                    <div className="flex-1 min-w-[45%] border-2 border-dashed border-[#DDD] rounded-xl flex items-center justify-center text-[#AAA] hover:border-[#2D2D2D] hover:text-[#2D2D2D]">
-                                                        <Plus size={20} />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <ImageIcon size={40} className="text-[#CCC] mb-4 group-hover:text-[#2D2D2D] transition-colors" />
-                                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#707070]">Upload Photos</p>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
                         </div>
                     </section>
 
@@ -1024,8 +999,98 @@ export const WorkshopCreationPage: React.FC = () => {
                         </div>
                     </section>
 
-                </main>
-            </div>
+                </main >
+            </div >
+
+            {/* Modification Warning Modal */}
+            {
+                showModificationWarning && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl"
+                        >
+                            <div className="text-center mb-6">
+                                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <AlertCircle className="text-orange-600" size={32} />
+                                </div>
+                                <h3 className="text-2xl font-bold text-deep-purple mb-2">Editing Live Workshop</h3>
+                                <p className="text-gray-600 text-sm leading-relaxed">
+                                    Your workshop is currently live and accepting bookings.
+                                </p>
+                            </div>
+
+                            <div className="space-y-4 mb-6 text-left">
+                                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                                    <p className="text-xs font-semibold text-blue-900 mb-2">Changes requiring admin re-approval:</p>
+                                    <ul className="text-xs text-blue-700 space-y-1 ml-4">
+                                        <li className="list-disc">Title, Subtitle, or Tagline</li>
+                                        <li className="list-disc">Price or Pricing Type</li>
+                                        <li className="list-disc">Duration</li>
+                                        <li className="list-disc">Capacity (Min/Max)</li>
+                                        <li className="list-disc">Location or Venue</li>
+                                        <li className="list-disc">Workshop Type or Categories</li>
+                                    </ul>
+                                    <p className="text-xs text-blue-600 mt-2 italic">Your workshop stays live with the current version until approved.</p>
+                                </div>
+
+                                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                                    <p className="text-xs font-semibold text-gray-900 mb-2">Changes that update immediately:</p>
+                                    <ul className="text-xs text-gray-700 space-y-1 ml-4">
+                                        <li className="list-disc">Description and details</li>
+                                        <li className="list-disc">Photos and videos</li>
+                                        <li className="list-disc">What to bring, skill level, suitability</li>
+                                        <li className="list-disc">Cancellation policy and additional info</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        setShowModificationWarning(false);
+                                        navigate('/host/dashboard');
+                                    }}
+                                    className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-gray-600 font-semibold hover:bg-gray-50 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => setShowModificationWarning(false)}
+                                    className="flex-1 px-4 py-3 bg-deep-purple text-white rounded-xl font-semibold hover:bg-deep-purple/90 transition-all"
+                                >
+                                    Continue Editing
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )
+            }
+
+            {/* Rejection Reason Display */}
+            {
+                workshopStatus === 3 && rejectionReason && (
+                    <div className="fixed top-24 left-1/2 -translate-x-1/2 z-40 max-w-2xl w-full px-4">
+                        <motion.div
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-red-50 border-2 border-red-200 rounded-2xl p-6 shadow-lg"
+                        >
+                            <div className="flex items-start gap-4">
+                                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <AlertCircle className="text-red-600" size={20} />
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="text-lg font-bold text-red-900 mb-1">Workshop Rejected</h4>
+                                    <p className="text-sm text-red-700 mb-2">Please address the following issues and resubmit:</p>
+                                    <p className="text-sm text-red-800 bg-white/50 rounded-lg p-3 border border-red-200">{rejectionReason}</p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )
+            }
 
             <Toast
                 message={toast.message}
@@ -1033,6 +1098,6 @@ export const WorkshopCreationPage: React.FC = () => {
                 isVisible={toast.isVisible}
                 onClose={() => setToast({ ...toast, isVisible: false })}
             />
-        </div>
+        </div >
     );
 };

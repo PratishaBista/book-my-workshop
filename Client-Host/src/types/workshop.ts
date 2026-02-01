@@ -13,9 +13,7 @@ export type PricingType = typeof PricingType[keyof typeof PricingType];
 
 export const MediaType = {
     Image: 0,
-    Video: 1,
-    CarouselImage: 2,
-    CarouselVideo: 3
+    Video: 1
 } as const;
 export type MediaType = typeof MediaType[keyof typeof MediaType];
 
@@ -97,7 +95,6 @@ export interface WorkshopDetail {
     tagline?: string;
     slug: string;
     description: string;
-    workshopType: WorkshopType;
     duration: string; // "HH:mm:ss"
     maxCapacity: number;
     minCapacity?: number;
@@ -132,7 +129,6 @@ export interface WorkshopCreateRequest {
     subtitle?: string;
     tagline?: string;
     description: string;
-    workshopType: WorkshopType;
     duration: string; // "HH:mm:ss"
     maxCapacity: number;
     minCapacity?: number;

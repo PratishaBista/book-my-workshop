@@ -18,6 +18,7 @@ export const HostSidebar: React.FC<HostSidebarProps> = ({ activeTab, setActiveTa
         { id: 'overview', label: 'Dashboard', icon: LayoutGrid },
         { type: 'divider', label: 'My Business' },
         { id: 'workshops', label: 'My Workshops', icon: BookOpen },
+        { id: 'schedules', label: 'Schedules', icon: Calendar },
         { id: 'bookings', label: 'Bookings', icon: Calendar },
         { id: 'earnings', label: 'Earnings', icon: DollarSign },
         { type: 'divider', label: 'Community' },

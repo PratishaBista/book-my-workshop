@@ -1,4 +1,4 @@
-export type HostTab = 'overview' | 'workshops' | 'bookings' | 'earnings' | 'reviews' | 'profile' | 'support' | 'settings';
+export type HostTab = 'overview' | 'workshops' | 'schedules' | 'bookings' | 'earnings' | 'reviews' | 'profile' | 'support' | 'settings';
 
 export const ProviderStatus = {
     Incomplete: 0,

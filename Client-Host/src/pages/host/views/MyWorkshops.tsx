@@ -18,6 +18,10 @@ interface Workshop {
     categories: { id: number; name: string }[];
     maxCapacity: number;
     primaryImageUrl?: string;
+    rejectionReason?: string;
+    rejectedAt?: string;
+    hasPendingModifications: boolean;
+    basePrice: number;
 }
 
 interface MyWorkshopsProps {
@@ -201,14 +205,30 @@ export const MyWorkshops: React.FC<MyWorkshopsProps> = ({ isApproved }) => {
                                         </button>
                                     </div>
 
+                                    {/* Rejection Reason Display */}
+                                    {workshop.status === 3 && workshop.rejectionReason && (
+                                        <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                                            <p className="text-[10px] font-bold text-red-600 uppercase tracking-widest mb-1">Rejection Reason</p>
+                                            <p className="text-xs text-red-700">{workshop.rejectionReason}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Pending Modifications Indicator */}
+                                    {workshop.status === 1 && workshop.hasPendingModifications && (
+                                        <div className="bg-orange-50 border border-orange-200 rounded-xl p-3">
+                                            <p className="text-[10px] font-bold text-orange-600 uppercase tracking-widest mb-1">Pending Re-Approval</p>
+                                            <p className="text-xs text-orange-700">Major changes submitted for admin review. Your workshop remains live with the previous version.</p>
+                                        </div>
+                                    )}
+
                                     <div className="flex items-center gap-4 border-t border-gray-50 pt-4">
                                         <div className="flex-1">
                                             <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Bookings</p>
                                             <p className="text-lg font-bold text-deep-purple">0 / {workshop.maxCapacity}</p>
                                         </div>
                                         <div className="flex-1 border-l border-gray-50 pl-4">
-                                            <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Revenue</p>
-                                            <p className="text-lg font-bold text-deep-purple">Rs. 0</p>
+                                            <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Price</p>
+                                            <p className="text-lg font-bold text-deep-purple">Rs. {workshop.basePrice}</p>
                                         </div>
                                     </div>
 
@@ -225,7 +245,6 @@ export const MyWorkshops: React.FC<MyWorkshopsProps> = ({ isApproved }) => {
                                                         });
                                                         if (res.ok) {
                                                             fetchWorkshops();
-                                                            // Optional: show local notification
                                                         }
                                                     } catch (err) {
                                                         console.error('Error submitting workshop:', err);
@@ -236,13 +255,21 @@ export const MyWorkshops: React.FC<MyWorkshopsProps> = ({ isApproved }) => {
                                                 <Globe size={14} />
                                                 Submit for Review
                                             </button>
+                                        ) : workshop.status === 3 ? (
+                                            <button
+                                                onClick={() => navigate(`/host/workshop/edit/${workshop.id}`)}
+                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-600 text-white rounded-xl text-xs font-bold hover:bg-red-700 transition-all"
+                                            >
+                                                <Edit size={14} />
+                                                Fix & Resubmit
+                                            </button>
                                         ) : (
                                             <button
                                                 onClick={() => navigate(`/host/workshop/edit/${workshop.id}`)}
                                                 className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-deep-purple text-white rounded-xl text-xs font-bold hover:bg-deep-purple/90 transition-all"
                                             >
                                                 <Edit size={14} />
-                                                Manage
+                                                {workshop.hasPendingModifications ? 'View Changes' : 'Manage'}
                                             </button>
                                         )}
                                         <button className="px-3 py-2.5 bg-gray-50 text-gray-400 rounded-xl hover:bg-deep-purple/5 hover:text-deep-purple transition-all">

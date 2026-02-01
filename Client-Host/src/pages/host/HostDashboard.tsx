@@ -4,6 +4,7 @@ import { HostHeader } from './components/HostHeader';
 import { HostSidebar } from './components/HostSidebar';
 import { HostOverview } from './views/HostOverview';
 import { MyWorkshops } from './views/MyWorkshops';
+import { ScheduleManagement } from './views/ScheduleManagement';
 import { BusinessProfile } from './views/BusinessProfile';
 import { PlaceholderView } from './views/PlaceholderView';
 import type { HostTab, ProviderProfile } from '../../types/host';
@@ -47,7 +48,6 @@ const HostDashboard: React.FC = () => {
                     return;
                 }
 
-                // Fetch full provider profile - Cache busting added
                 const response = await fetch(`${API_ENDPOINTS.provider.profile}?_t=${Date.now()}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -66,9 +66,8 @@ const HostDashboard: React.FC = () => {
                     localStorage.removeItem('token');
                     navigate('/login?error=session_outdated');
                 } else if (response.status === 404) {
-                    // This happens if an Admin tries to visit the Host Dashboard but isn't a host
                     console.error("Provider profile not found.");
-                    navigate('/'); // Send back to home
+                    navigate('/');
                 } else {
                     console.error("Dashboard fetch failed:", response.status);
                     navigate('/login');
@@ -87,7 +86,6 @@ const HostDashboard: React.FC = () => {
     const renderContent = () => {
         if (!profile) return null;
 
-        // Logic fallback: You are approved if the flag is true OR if your current status is Approved.
         const isApproved = profile.isApproved || profile.status === ProviderStatus.Approved;
         console.log("DEBUG: Final isApproved for render:", isApproved);
 
@@ -99,6 +97,7 @@ const HostDashboard: React.FC = () => {
                 />
             );
             case 'workshops': return <MyWorkshops isApproved={isApproved} />;
+            case 'schedules': return <ScheduleManagement />;
             case 'bookings':
                 return <PlaceholderView
                     title="Participant Bookings"
@@ -145,12 +144,9 @@ const HostDashboard: React.FC = () => {
 
     return (
         <div className="flex flex-col h-screen bg-cream-base font-sans text-deep-purple overflow-hidden">
-            {/* 1. Full Width Header */}
             <HostHeader />
 
-            {/* 2. Main Layout (Sidebar + Content) */}
             <div className="flex flex-1 overflow-hidden">
-                {/* Sidebar (Below Header) */}
                 <HostSidebar
                     activeTab={activeTab}
                     setActiveTab={setActiveTab}
@@ -158,7 +154,6 @@ const HostDashboard: React.FC = () => {
                     setIsOpen={setIsSidebarOpen}
                 />
 
-                {/* Main Content Area */}
                 <main className="flex-1 overflow-y-auto p-8 relative scrollbar-hide">
                     <div className="absolute top-0 right-0 w-96 h-96 bg-primary-orange/5 rounded-full blur-3xl -z-10 -mr-48 -mt-48" />
                     <div className="absolute bottom-0 left-0 w-96 h-96 bg-deep-purple/5 rounded-full blur-3xl -z-10 -ml-48 -mb-48" />
