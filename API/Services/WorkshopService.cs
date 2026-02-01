@@ -6,6 +6,7 @@ using API.Repositories;
 using AutoMapper;
 using Ganss.Xss;
 using System.Text.RegularExpressions;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Services;
@@ -23,6 +24,8 @@ public class WorkshopService : IWorkshopService
     private readonly IMapper _mapper;
     private readonly HtmlSanitizer _htmlSanitizer;
     private readonly IMLService _mlService;
+    private readonly WorkshopChangeDetector _changeDetector;
+    private readonly IGenericRepository<WorkshopModification> _modificationRepository;
 
     public WorkshopService(
         IWorkshopRepository workshopRepository,
@@ -30,7 +33,9 @@ public class WorkshopService : IWorkshopService
         IScheduleRepository scheduleRepository,
         IGenericRepository<Provider> providerRepository,
         IMapper mapper,
-        IMLService mlService)
+        IMLService mlService,
+        WorkshopChangeDetector changeDetector,
+        IGenericRepository<WorkshopModification> modificationRepository)
     {
         _workshopRepository = workshopRepository;
         _categoryRepository = categoryRepository;
@@ -38,6 +43,8 @@ public class WorkshopService : IWorkshopService
         _providerRepository = providerRepository;
         _mapper = mapper;
         _mlService = mlService;
+        _changeDetector = changeDetector;
+        _modificationRepository = modificationRepository;
         _htmlSanitizer = new HtmlSanitizer();
     }
 
@@ -74,6 +81,7 @@ public class WorkshopService : IWorkshopService
         // Map to workshop entity
         var workshop = _mapper.Map<Workshop>(request);
         workshop.ProviderId = providerId;
+        workshop.WorkshopType = WorkshopType.PublicClass;
         workshop.Categories = categories.ToList();
         workshop.Slug = GenerateSlug(request.Title, request.LocationAddress);
 
@@ -109,8 +117,8 @@ public class WorkshopService : IWorkshopService
 
     public async Task<WorkshopDetailResponse> UpdateWorkshopAsync(int workshopId, int providerId, UpdateWorkshopRequest request)
     {
-        // Get workshop and verify ownership
-        var workshop = await _workshopRepository.GetByIdAsync(workshopId);
+        // Get workshop and verify ownership (eager load media)
+        var workshop = await _workshopRepository.GetWorkshopWithDetailsAsync(workshopId);
         if (workshop == null)
         {
             throw new KeyNotFoundException("Workshop not found.");
@@ -137,16 +145,83 @@ public class WorkshopService : IWorkshopService
             throw new ArgumentException("Duration must be greater than zero.");
         }
 
-        // Map updates
-        _mapper.Map(request, workshop);
-        workshop.Categories = categories.ToList();
-        workshop.UpdatedAt = DateTime.UtcNow;
-        workshop.Slug = GenerateSlug(request.Title, request.LocationAddress);
+        // Store original major fields in case they need to be reverted
+        var originalTitle = workshop.Title;
+        var originalTagline = workshop.Tagline;
+        var originalSubtitle = workshop.Subtitle;
+        var originalDuration = workshop.Duration;
+        var originalMaxCapacity = workshop.MaxCapacity;
+        var originalMinCapacity = workshop.MinCapacity;
+        var originalAddress = workshop.LocationAddress;
+        var originalLocName = workshop.LocationName;
+        var originalVenueId = workshop.VenueId;
+        var originalType = workshop.WorkshopType;
+        var originalCategories = workshop.Categories.ToList();
+        var originalPrice = workshop.Pricing?.BasePrice ?? 0;
 
-        // Perform ML Classification on Update
+        // Detect changes before mapping
+        var (hasMajor, hasMinor, changedFields) = _changeDetector.DetectChanges(workshop, request, request.CategoryIds);
+
+        // Map updates (Media is ignored in mapper)
+        _mapper.Map(request, workshop);
+
+        // Apply Approval Logic: Major changes to a Published workshop should NOT be visible immediately
+        if (workshop.Status == WorkshopStatus.Published && hasMajor)
+        {
+            // 1. Create a modification record to store the "New" data
+            var modification = new WorkshopModification
+            {
+                WorkshopId = workshop.Id,
+                ModifiedFields = JsonSerializer.Serialize(changedFields),
+                PendingData = JsonSerializer.Serialize(request),
+                PreviousStatus = WorkshopStatus.Published,
+                NewStatus = WorkshopStatus.Published,
+                HasMajorChanges = true,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _modificationRepository.AddAsync(modification);
+
+            // 2. REVERT the major fields on the main entity so the public page stays the same
+            workshop.Title = originalTitle;
+            workshop.Tagline = originalTagline;
+            workshop.Subtitle = originalSubtitle;
+            workshop.Duration = originalDuration;
+            workshop.MaxCapacity = originalMaxCapacity;
+            workshop.MinCapacity = originalMinCapacity;
+            workshop.LocationAddress = originalAddress;
+            workshop.LocationName = originalLocName;
+            workshop.VenueId = originalVenueId;
+            workshop.WorkshopType = originalType;
+            workshop.Categories = originalCategories;
+            if (workshop.Pricing != null) workshop.Pricing.BasePrice = originalPrice;
+
+            // 3. Set flags
+            workshop.HasPendingModifications = true;
+        }
+        
+        // Handle Media updates manually 
+        workshop.Media.Clear();
+        foreach (var m in request.Media)
+        {
+            var mediaEntity = _mapper.Map<WorkshopMedia>(m);
+            mediaEntity.WorkshopId = workshop.Id;
+            workshop.Media.Add(mediaEntity);
+        }
+
+        if (workshop.Status != WorkshopStatus.Published || !hasMajor)
+        {
+            workshop.Categories = categories.ToList();
+            workshop.Slug = GenerateSlug(request.Title, request.LocationAddress);
+        }
+        workshop.UpdatedAt = DateTime.UtcNow;
+
+        // Perform ML Classification
         try 
         {
-            var (category, confidence, isConfident) = await _mlService.PredictCategoryAsync(workshop.Title, workshop.Description);
+            var (category, confidence, isConfident) = await _mlService.PredictCategoryAsync(
+                hasMajor && workshop.Status == WorkshopStatus.Published ? originalTitle : workshop.Title, 
+                workshop.Description);
+
             if (category != null)
             {
                 workshop.AISuggestedCategory = category;
@@ -318,11 +393,33 @@ public class WorkshopService : IWorkshopService
 
         var schedule = _mapper.Map<WorkshopSchedule>(request);
         schedule.WorkshopId = workshopId;
+        schedule.MaxCapacity = request.AvailableSeats; // Set initial max capacity
+        schedule.AvailableSeats = request.AvailableSeats; // Set starting availability
 
         await _scheduleRepository.AddAsync(schedule);
         await _scheduleRepository.SaveChangesAsync();
 
         return _mapper.Map<ScheduleResponse>(schedule);
+    }
+
+    public async Task<IEnumerable<ScheduleResponse>> AddSchedulesBulkAsync(int workshopId, int providerId, IEnumerable<AddScheduleRequest> requests)
+    {
+        var isOwner = await _workshopRepository.IsWorkshopOwnedByProviderAsync(workshopId, providerId);
+        if (!isOwner) throw new UnauthorizedAccessException("Not authorized to add schedules to this workshop.");
+
+        var schedules = new List<WorkshopSchedule>();
+        foreach (var request in requests)
+        {
+            var schedule = _mapper.Map<WorkshopSchedule>(request);
+            schedule.WorkshopId = workshopId;
+            schedule.MaxCapacity = request.AvailableSeats;
+            schedule.AvailableSeats = request.AvailableSeats;
+            schedules.Add(schedule);
+        }
+
+        await _scheduleRepository.AddRangeAsync(schedules);
+        await _scheduleRepository.SaveChangesAsync();
+        return _mapper.Map<IEnumerable<ScheduleResponse>>(schedules);
     }
 
     public async Task<ScheduleResponse> UpdateScheduleAsync(int workshopId, int scheduleId, int providerId, AddScheduleRequest request)
@@ -347,7 +444,11 @@ public class WorkshopService : IWorkshopService
 
         schedule.StartDateTime = request.StartDateTime;
         schedule.EndDateTime = request.EndDateTime;
-        schedule.AvailableSeats = request.AvailableSeats;
+        
+        // Calculate the difference if capacity is being updated
+        int bookedSeats = schedule.MaxCapacity - schedule.AvailableSeats;
+        schedule.MaxCapacity = request.AvailableSeats;
+        schedule.AvailableSeats = Math.Max(0, request.AvailableSeats - bookedSeats);
 
         _scheduleRepository.Update(schedule);
         await _scheduleRepository.SaveChangesAsync();

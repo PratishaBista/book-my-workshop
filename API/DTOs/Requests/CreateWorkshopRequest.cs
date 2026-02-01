@@ -18,7 +18,7 @@ public class CreateWorkshopRequest
     [Required(ErrorMessage = "Description is required")]
     public string Description { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Workshop type is required")]
+    [Required]
     public WorkshopType WorkshopType { get; set; } = WorkshopType.PublicClass;
 
     [Required(ErrorMessage = "Duration is required")]

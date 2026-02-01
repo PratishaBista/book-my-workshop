@@ -10,7 +10,6 @@ public class WorkshopDetailResponse
     public string? Tagline { get; set; }
     public string? Subtitle { get; set; }
     public string Description { get; set; } = string.Empty;
-    public WorkshopType WorkshopType { get; set; }
     public TimeSpan Duration { get; set; }
     public int MaxCapacity { get; set; }
     public int? MinCapacity { get; set; }
@@ -53,9 +52,13 @@ public class WorkshopDetailResponse
     public string? CancellationPolicy { get; set; }
     public int BookingCutoffHours { get; set; }
 
-    // Legacy fields
     public string? SafetyRequirements { get; set; }
     public string? WhatsIncluded { get; set; }
+    
+    // Rejection and modification tracking
+    public string? RejectionReason { get; set; }
+    public DateTime? RejectedAt { get; set; }
+    public bool HasPendingModifications { get; set; }
     
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -105,6 +108,7 @@ public class ScheduleResponse
     public int Id { get; set; }
     public DateTime StartDateTime { get; set; }
     public DateTime EndDateTime { get; set; }
+    public int MaxCapacity { get; set; }
     public int AvailableSeats { get; set; }
     public bool IsSoldOut { get; set; }
     public ScheduleStatus Status { get; set; }

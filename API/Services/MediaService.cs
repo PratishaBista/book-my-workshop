@@ -12,7 +12,8 @@ public class MediaService : IMediaService
 {
     private readonly Cloudinary _cloudinary;
     private readonly ILogger<MediaService> _logger;
-    private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10MB
+    private const long MaxImageSizeBytes = 10 * 1024 * 1024; // 10MB
+    private const long MaxVideoSizeBytes = 100 * 1024 * 1024; // 100MB
 
     private static readonly string[] AllowedImageTypes = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
     private static readonly string[] AllowedVideoTypes = { ".mp4", ".mov", ".avi", ".webm" };
@@ -30,7 +31,7 @@ public class MediaService : IMediaService
 
     public async Task<string> UploadImageAsync(IFormFile file, string folder = "workshops")
     {
-        ValidateFile(file, AllowedImageTypes);
+        ValidateFile(file, AllowedImageTypes, MaxImageSizeBytes);
 
         var uploadParams = new ImageUploadParams
         {
@@ -52,7 +53,7 @@ public class MediaService : IMediaService
 
     public async Task<string> UploadVideoAsync(IFormFile file, string folder = "workshops")
     {
-        ValidateFile(file, AllowedVideoTypes);
+        ValidateFile(file, AllowedVideoTypes, MaxVideoSizeBytes);
 
         var uploadParams = new VideoUploadParams
         {
@@ -77,7 +78,7 @@ public class MediaService : IMediaService
         
         if (AllowedImageTypes.Contains(extension))
         {
-            ValidateFile(file, AllowedImageTypes);
+            ValidateFile(file, AllowedImageTypes, MaxImageSizeBytes);
             
             var uploadParams = new ImageUploadParams
             {
@@ -98,7 +99,7 @@ public class MediaService : IMediaService
         }
         else if (AllowedVideoTypes.Contains(extension))
         {
-            ValidateFile(file, AllowedVideoTypes);
+            ValidateFile(file, AllowedVideoTypes, MaxVideoSizeBytes);
             
             var uploadParams = new VideoUploadParams
             {
@@ -135,16 +136,16 @@ public class MediaService : IMediaService
         return result.Result == "ok";
     }
 
-    private void ValidateFile(IFormFile file, string[] allowedExtensions)
+    private void ValidateFile(IFormFile file, string[] allowedExtensions, long maxSizeBytes)
     {
         if (file == null || file.Length == 0)
         {
             throw new ArgumentException("File is empty or null.");
         }
 
-        if (file.Length > MaxFileSizeBytes)
+        if (file.Length > maxSizeBytes)
         {
-            throw new ArgumentException($"File size exceeds maximum allowed size of {MaxFileSizeBytes / (1024 * 1024)}MB.");
+            throw new ArgumentException($"File size exceeds maximum allowed size of {maxSizeBytes / (1024 * 1024)}MB.");
         }
 
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();

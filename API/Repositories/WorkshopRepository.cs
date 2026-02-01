@@ -23,7 +23,7 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
             .Include(w => w.Pricing)
             .Include(w => w.Venue)
             .Include(w => w.Media.OrderBy(m => m.DisplayOrder))
-            .Where(w => w.Status == WorkshopStatus.Published && w.IsActive)
+            .Where(w => (w.Status == WorkshopStatus.Published || (w.Status == WorkshopStatus.PendingReview && w.HasPendingModifications)) && w.IsActive)
             .OrderByDescending(w => w.CreatedAt)
             .ToListAsync();
     }
@@ -37,7 +37,7 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
             .Include(w => w.Venue)
             .Include(w => w.Media.OrderBy(m => m.DisplayOrder))
             .Where(w => w.Categories.Any(c => c.Id == categoryId) 
-                     && w.Status == WorkshopStatus.Published 
+                     && (w.Status == WorkshopStatus.Published || (w.Status == WorkshopStatus.PendingReview && w.HasPendingModifications)) 
                      && w.IsActive)
             .OrderByDescending(w => w.CreatedAt)
             .ToListAsync();
@@ -82,7 +82,7 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
             .Include(w => w.Pricing)
             .Include(w => w.Venue)
             .Include(w => w.Media.OrderBy(m => m.DisplayOrder))
-            .Where(w => w.Status == WorkshopStatus.Published && w.IsActive);
+            .Where(w => (w.Status == WorkshopStatus.Published || (w.Status == WorkshopStatus.PendingReview && w.HasPendingModifications)) && w.IsActive);
 
         // Search in title, tagline, subtitle, and description
         if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -123,7 +123,7 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
             .Include(w => w.Media.OrderBy(m => m.DisplayOrder))
             .Include(w => w.Reviews)
             .Include(w => w.Schedules)
-            .Where(w => w.Status == WorkshopStatus.Published 
+            .Where(w => (w.Status == WorkshopStatus.Published || (w.Status == WorkshopStatus.PendingReview && w.HasPendingModifications)) 
                      && w.IsActive
                      && w.Schedules.Any(s => s.StartDateTime > DateTime.UtcNow 
                                           && s.Status == ScheduleStatus.Upcoming

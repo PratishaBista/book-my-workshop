@@ -79,6 +79,14 @@ public class Workshop
 
     public bool IsActive { get; set; } = true;
 
+    // Rejection tracking
+    [MaxLength(500)]
+    public string? RejectionReason { get; set; }
+    public DateTime? RejectedAt { get; set; }
+    
+    // Modification tracking
+    public bool HasPendingModifications { get; set; } = false;
+
     // Additional Details
     public string? WhatToBring { get; set; } // Structured list or detailed string
     public string? SkillLevel { get; set; } // "Beginner", "Advanced", etc.

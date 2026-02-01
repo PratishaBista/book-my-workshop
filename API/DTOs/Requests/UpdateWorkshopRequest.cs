@@ -73,4 +73,6 @@ public class UpdateWorkshopRequest
     public string? ExtraCharges { get; set; }
     [MaxLength(1000)]
     public string? PriceExplanation { get; set; }
+
+    public List<WorkshopMediaRequest> Media { get; set; } = new();
 }

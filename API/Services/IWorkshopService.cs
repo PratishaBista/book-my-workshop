@@ -29,6 +29,7 @@ public interface IWorkshopService
     
     // Schedule Management
     Task<ScheduleResponse> AddScheduleAsync(int workshopId, int providerId, AddScheduleRequest request);
+    Task<IEnumerable<ScheduleResponse>> AddSchedulesBulkAsync(int workshopId, int providerId, IEnumerable<AddScheduleRequest> requests);
     Task<ScheduleResponse> UpdateScheduleAsync(int workshopId, int scheduleId, int providerId, AddScheduleRequest request);
     Task<bool> DeleteScheduleAsync(int workshopId, int scheduleId, int providerId);
     Task<IEnumerable<ScheduleResponse>> GetWorkshopSchedulesAsync(int workshopId);

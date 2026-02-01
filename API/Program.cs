@@ -94,6 +94,7 @@ builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IPaymentService, EsewaPaymentService>();
 builder.Services.AddScoped<IMLService, MLService>();
+builder.Services.AddScoped<WorkshopChangeDetector>();
 
 var app = builder.Build();
 

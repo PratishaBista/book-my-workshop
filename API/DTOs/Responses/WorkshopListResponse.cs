@@ -9,7 +9,6 @@ public class WorkshopListResponse
     public string Slug { get; set; } = string.Empty;
     public string? Tagline { get; set; }
     public string? Subtitle { get; set; }
-    public WorkshopType WorkshopType { get; set; }
     public TimeSpan Duration { get; set; }
     public int MaxCapacity { get; set; }
     public string LocationAddress { get; set; } = string.Empty;
@@ -37,6 +36,11 @@ public class WorkshopListResponse
     // Availability
     public bool HasUpcomingSchedules { get; set; }
     public DateTime? NextScheduleDate { get; set; }
+    
+    // Rejection and modification tracking
+    public string? RejectionReason { get; set; }
+    public DateTime? RejectedAt { get; set; }
+    public bool HasPendingModifications { get; set; }
     
     public DateTime CreatedAt { get; set; }
     public double? RecommendationScore { get; set; }

@@ -46,7 +46,12 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.ProviderBusinessName, opt => opt.MapFrom(src => src.Provider.BusinessName))
             .ForMember(dest => dest.BasePrice, opt => opt.MapFrom(src => src.Pricing != null ? src.Pricing.BasePrice : 0))
             .ForMember(dest => dest.Currency, opt => opt.MapFrom(src => src.Pricing != null ? src.Pricing.Currency : "NPR"))
-            .ForMember(dest => dest.PrimaryImageUrl, opt => opt.MapFrom(src => src.Media.FirstOrDefault(m => m.IsPrimary) != null ? src.Media.FirstOrDefault(m => m.IsPrimary)!.Url : src.Media.OrderBy(m => m.DisplayOrder).FirstOrDefault() != null ? src.Media.OrderBy(m => m.DisplayOrder).FirstOrDefault()!.Url : null))
+            .ForMember(dest => dest.PrimaryImageUrl, opt => opt.MapFrom(src => 
+                src.Media
+                    .Where(m => m.MediaType == MediaType.Image)
+                    .OrderBy(m => m.DisplayOrder)
+                    .Select(m => m.Url)
+                    .FirstOrDefault()))
             .ForMember(dest => dest.AverageRating, opt => opt.MapFrom(src => src.Reviews.Any() ? src.Reviews.Average(r => (double)r.Rating) : (double?)null))
             .ForMember(dest => dest.ReviewCount, opt => opt.MapFrom(src => src.Reviews.Count))
             .ForMember(dest => dest.HasUpcomingSchedules, opt => opt.MapFrom(src => src.Schedules.Any(s => s.StartDateTime > DateTime.UtcNow && s.Status == ScheduleStatus.Upcoming)))
@@ -148,7 +153,12 @@ public class MappingProfile : Profile
 
         CreateMap<Workshop, WorkshopInfoResponse>()
             .ForMember(dest => dest.Categories, opt => opt.MapFrom(src => src.Categories))
-            .ForMember(dest => dest.PrimaryImageUrl, opt => opt.MapFrom(src => src.Media.FirstOrDefault(m => m.IsPrimary) != null ? src.Media.FirstOrDefault(m => m.IsPrimary)!.Url : src.Media.OrderBy(m => m.DisplayOrder).FirstOrDefault() != null ? src.Media.OrderBy(m => m.DisplayOrder).FirstOrDefault()!.Url : null));
+            .ForMember(dest => dest.PrimaryImageUrl, opt => opt.MapFrom(src => 
+                src.Media
+                    .Where(m => m.MediaType == MediaType.Image)
+                    .OrderBy(m => m.DisplayOrder)
+                    .Select(m => m.Url)
+                    .FirstOrDefault()));
 
         // Review mappings
         CreateMap<AddReviewRequest, WorkshopReview>()

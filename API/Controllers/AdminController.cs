@@ -1,3 +1,5 @@
+using System.Text.Json;
+using API.DTOs.Requests;
 using API.Data;
 using API.Entities;
 using API.Enums;
@@ -88,7 +90,7 @@ public class AdminController : ControllerBase
             .ThenInclude(p => p.User)
             .Include(w => w.Categories)
             .Include(w => w.Pricing)
-            .Where(w => w.Status == WorkshopStatus.PendingReview)
+            .Where(w => w.Status == WorkshopStatus.PendingReview || w.HasPendingModifications)
             .Select(w => new
             {
                 w.Id,
@@ -105,6 +107,8 @@ public class AdminController : ControllerBase
                 SubmittedAt = w.UpdatedAt,
                 CategoryNames = w.Categories.Select(c => c.Name).ToList(),
                 Price = w.Pricing != null ? w.Pricing.BasePrice : 0,
+                w.HasPendingModifications,
+                PendingChanges = _context.WorkshopMedia.Where(m => false).ToList(), // Placeholder, we'll fetch actual modifications below
                 // AI Fields
                 w.AISuggestedCategory,
                 w.AIConfidenceScore,
@@ -112,7 +116,35 @@ public class AdminController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(pendingWorkshops);
+        // Add pending data if exists
+        var result = new List<object>();
+        foreach (var w in pendingWorkshops)
+        {
+            object? pendingData = null;
+            if (w.HasPendingModifications)
+            {
+                var mod = await _context.WorkshopModifications
+                    .Where(m => m.WorkshopId == w.Id && m.ReviewedAt == null)
+                    .OrderByDescending(m => m.CreatedAt)
+                    .FirstOrDefaultAsync();
+                
+                if (mod?.PendingData != null)
+                {
+                    pendingData = JsonSerializer.Deserialize<UpdateWorkshopRequest>(mod.PendingData);
+                }
+            }
+            
+            result.Add(new {
+                w.Id, w.Title, w.Description, w.Tagline, w.Duration, w.MaxCapacity,
+                w.LocationAddress, w.LocationName, w.ProviderName, w.ProviderContact,
+                w.ProviderEmail, w.SubmittedAt, w.CategoryNames, w.Price,
+                w.HasPendingModifications,
+                PendingData = pendingData,
+                w.AISuggestedCategory, w.AIConfidenceScore, w.AIIsConfident
+            });
+        }
+
+        return Ok(result);
     }
 
     // GET: api/admin/workshops/live
@@ -124,7 +156,7 @@ public class AdminController : ControllerBase
             .ThenInclude(p => p.User)
             .Include(w => w.Categories)
             .Include(w => w.Pricing)
-            .Where(w => w.Status == WorkshopStatus.Published)
+            .Where(w => w.Status == WorkshopStatus.Published || (w.Status == WorkshopStatus.PendingReview && w.HasPendingModifications))
             .Select(w => new
             {
                 w.Id,
@@ -159,10 +191,72 @@ public class AdminController : ControllerBase
     [HttpPut("approve-workshop/{id}")]
     public async Task<IActionResult> ApproveWorkshop(int id, [FromBody] ApproveWorkshopRequest request)
     {
-        var workshop = await _context.Workshops.Include(w => w.Categories).FirstOrDefaultAsync(w => w.Id == id);
+        var workshop = await _context.Workshops
+            .Include(w => w.Categories)
+            .Include(w => w.Pricing)
+            .Include(w => w.Media)
+            .FirstOrDefaultAsync(w => w.Id == id);
         if (workshop == null) return NotFound("Workshop not found");
 
-        if (workshop.Status == WorkshopStatus.Published) return BadRequest("Workshop is already published");
+        // Handle Pending Modifications if it's already Published
+        if (workshop.Status == WorkshopStatus.Published && workshop.HasPendingModifications)
+        {
+            var mod = await _context.WorkshopModifications
+                .Where(m => m.WorkshopId == id && m.ReviewedAt == null)
+                .OrderByDescending(m => m.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (mod?.PendingData != null)
+            {
+                var pendingRequest = JsonSerializer.Deserialize<UpdateWorkshopRequest>(mod.PendingData);
+                if (pendingRequest != null)
+                {
+                    // Apply pending data to workshop entity
+                    workshop.Title = pendingRequest.Title;
+                    workshop.Tagline = pendingRequest.Tagline;
+                    workshop.Subtitle = pendingRequest.Subtitle;
+                    workshop.Description = pendingRequest.Description;
+                    workshop.Duration = pendingRequest.Duration;
+                    workshop.MaxCapacity = pendingRequest.MaxCapacity;
+                    workshop.MinCapacity = pendingRequest.MinCapacity;
+                    workshop.LocationAddress = pendingRequest.LocationAddress;
+                    workshop.LocationName = pendingRequest.LocationName;
+                    workshop.LocationDetails = pendingRequest.LocationDetails;
+                    workshop.VenueId = pendingRequest.VenueId;
+                    workshop.VenueDescription = pendingRequest.VenueDescription;
+                    workshop.WorkshopType = pendingRequest.WorkshopType;
+                    workshop.WhatToBring = pendingRequest.WhatToBring;
+                    workshop.SkillLevel = pendingRequest.SkillLevel;
+                    workshop.Suitability = pendingRequest.Suitability;
+                    workshop.CancellationPolicy = pendingRequest.CancellationPolicy;
+                    workshop.BookingCutoffHours = pendingRequest.BookingCutoffHours;
+                    workshop.SafetyRequirements = pendingRequest.SafetyRequirements;
+                    workshop.WhatsIncluded = pendingRequest.WhatsIncluded;
+
+                    if (workshop.Pricing != null)
+                    {
+                        workshop.Pricing.BasePrice = pendingRequest.BasePrice;
+                        workshop.Pricing.PricingType = pendingRequest.PricingType;
+                        workshop.Pricing.UpdatedAt = DateTime.UtcNow;
+                    }
+
+                    // Update Categories
+                    var newCategories = await _context.WorkshopCategories
+                        .Where(c => pendingRequest.CategoryIds.Contains(c.Id))
+                        .ToListAsync();
+                    workshop.Categories.Clear();
+                    foreach (var cat in newCategories) workshop.Categories.Add(cat);
+
+                    // Mark modification as reviewed
+                    mod.ReviewedAt = DateTime.UtcNow;
+                    mod.NewStatus = WorkshopStatus.Published;
+                }
+            }
+        }
+        else if (workshop.Status == WorkshopStatus.Published) 
+        {
+            return BadRequest("Workshop is already published");
+        }
 
         if (request.CategoryId.HasValue)
         {
@@ -184,23 +278,36 @@ public class AdminController : ControllerBase
         }
 
         workshop.Status = WorkshopStatus.Published;
+        workshop.HasPendingModifications = false;
+        workshop.RejectionReason = null;
+        workshop.RejectedAt = null;
         workshop.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
         return Ok(new { Message = $"Workshop '{workshop.Title}' approved and published." });
     }
 
+    public class RejectWorkshopRequest
+    {
+        public string Reason { get; set; } = string.Empty;
+    }
+
     // PUT: api/admin/reject-workshop/{id}
     [HttpPut("reject-workshop/{id}")]
-    public async Task<IActionResult> RejectWorkshop(int id)
+    public async Task<IActionResult> RejectWorkshop(int id, [FromBody] RejectWorkshopRequest request)
     {
         var workshop = await _context.Workshops.FindAsync(id);
         if (workshop == null) return NotFound("Workshop not found");
 
         workshop.Status = WorkshopStatus.Rejected;
+        workshop.RejectionReason = request.Reason;
+        workshop.RejectedAt = DateTime.UtcNow;
+        workshop.UpdatedAt = DateTime.UtcNow;
+        workshop.HasPendingModifications = false;
+        
         await _context.SaveChangesAsync();
 
-        return Ok(new { Message = $"Workshop '{workshop.Title}' has been rejected." });
+        return Ok(new { Message = $"Workshop '{workshop.Title}' has been rejected.", Reason = request.Reason });
     }
 
     // GET: api/admin/users

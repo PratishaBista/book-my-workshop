@@ -62,6 +62,30 @@ public class ScheduleController : ControllerBase
         }
     }
 
+    // POST: api/workshop/{workshopId}/schedule/bulk
+    [HttpPost("bulk")]
+    public async Task<IActionResult> BulkAddSchedules(int workshopId, [FromBody] IEnumerable<AddScheduleRequest> requests)
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var providerId = await GetProviderIdAsync(userId);
+            if (providerId == null) return BadRequest(new { message = "Provider profile not found." });
+
+            var result = await _workshopService.AddSchedulesBulkAsync(workshopId, providerId.Value, requests);
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException ex) { return Forbid(ex.Message); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error bulk adding schedules to workshop {workshopId}");
+            return StatusCode(500, new { message = "An error occurred while adding schedules." });
+        }
+    }
+
     // PUT: api/workshop/{workshopId}/schedule/{scheduleId}
     [HttpPut("{scheduleId}")]
     public async Task<IActionResult> UpdateSchedule(int workshopId, int scheduleId, [FromBody] AddScheduleRequest request)

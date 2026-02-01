@@ -22,6 +22,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<WorkshopSchedule> WorkshopSchedules { get; set; }
     public DbSet<Booking> Bookings { get; set; }
     public DbSet<WorkshopReview> WorkshopReviews { get; set; }
+    public DbSet<WorkshopModification> WorkshopModifications { get; set; }
+    public DbSet<UserPreference> UserPreferences { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -119,6 +121,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             .HasIndex(r => r.BookingId)
             .IsUnique();
 
+        // Workshop - Modification (1:Many)
+        builder.Entity<WorkshopModification>()
+            .HasOne(m => m.Workshop)
+            .WithMany()
+            .HasForeignKey(m => m.WorkshopId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         // Indexes for performance
         builder.Entity<Workshop>()
             .HasIndex(w => w.Status);
@@ -153,5 +162,22 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<Workshop>()
             .Property(w => w.Longitude)
             .HasPrecision(18, 10);
+
+        // User Preference
+        builder.Entity<UserPreference>()
+            .HasOne(up => up.User)
+            .WithMany(u => u.Preferences)
+            .HasForeignKey(up => up.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<UserPreference>()
+            .HasOne(up => up.Category)
+            .WithMany()
+            .HasForeignKey(up => up.CategoryId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<UserPreference>()
+            .HasIndex(up => new { up.UserId, up.CategoryId })
+            .IsUnique();
     }
 }

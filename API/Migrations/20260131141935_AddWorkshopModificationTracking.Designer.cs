@@ -4,6 +4,7 @@ using API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260131141935_AddWorkshopModificationTracking")]
+    partial class AddWorkshopModificationTracking
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -59,9 +62,6 @@ namespace API.Migrations
 
                     b.Property<string>("GoogleId")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("HasCompletedOnboarding")
-                        .HasColumnType("bit");
 
                     b.Property<string>("Location")
                         .HasColumnType("nvarchar(max)");
@@ -276,34 +276,6 @@ namespace API.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Providers");
-                });
-
-            modelBuilder.Entity("API.Entities.UserPreference", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CategoryId");
-
-                    b.HasIndex("UserId", "CategoryId")
-                        .IsUnique();
-
-                    b.ToTable("UserPreferences");
                 });
 
             modelBuilder.Entity("API.Entities.Venue", b =>
@@ -603,9 +575,6 @@ namespace API.Migrations
                     b.Property<int>("NewStatus")
                         .HasColumnType("int");
 
-                    b.Property<string>("PendingData")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("PreviousStatus")
                         .HasColumnType("int");
 
@@ -734,9 +703,6 @@ namespace API.Migrations
 
                     b.Property<DateTime>("EndDateTime")
                         .HasColumnType("datetime2");
-
-                    b.Property<int>("MaxCapacity")
-                        .HasColumnType("int");
 
                     b.Property<DateTime>("StartDateTime")
                         .HasColumnType("datetime2");
@@ -934,25 +900,6 @@ namespace API.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("API.Entities.UserPreference", b =>
-                {
-                    b.HasOne("API.Entities.WorkshopCategory", "Category")
-                        .WithMany()
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("API.Entities.ApplicationUser", "User")
-                        .WithMany("Preferences")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Category");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("API.Entities.Venue", b =>
                 {
                     b.HasOne("API.Entities.Provider", "Provider")
@@ -1117,11 +1064,6 @@ namespace API.Migrations
                         .HasForeignKey("WorkshopsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("API.Entities.ApplicationUser", b =>
-                {
-                    b.Navigation("Preferences");
                 });
 
             modelBuilder.Entity("API.Entities.Booking", b =>

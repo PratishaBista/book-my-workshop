@@ -22,6 +22,10 @@ public class WorkshopSchedule
     public DateTime EndDateTime { get; set; }
 
     [Required]
+    [Range(1, 1000)]
+    public int MaxCapacity { get; set; } // Total capacity at creation
+
+    [Required]
     [Range(0, 1000)]
     public int AvailableSeats { get; set; } // Decrements with each booking
 
