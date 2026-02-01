@@ -5,12 +5,14 @@ interface User {
     email: string;
     role: string;
     id?: string;
+    hasCompletedOnboarding: boolean;
 }
 
 interface AuthContextType {
     user: User | null;
     loading: boolean;
-    login: (token: string, expiry: string) => void;
+    login: (token: string, expiry: string, hasCompletedOnboarding: boolean) => void;
+    updateOnboardingStatus: (status: boolean) => void;
     logout: () => void;
     isAuthenticated: boolean;
 }
@@ -33,13 +35,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         const name = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || payload.name;
                         const email = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || payload.email;
 
-                        // Handle array roles (e.g. if user matches multiple policies, though rare in this simple app)
                         const finalRole = Array.isArray(role) ? role[0] : role;
 
                         setUser({
                             name,
                             email,
-                            role: finalRole
+                            role: finalRole,
+                            hasCompletedOnboarding: localStorage.getItem('onboarded') === 'true'
                         });
                     } else {
                         localStorage.removeItem('token');
@@ -55,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         initAuth();
     }, []);
 
-    const login = (token: string, expiry: string) => {
+    const login = (token: string, expiry: string, hasCompletedOnboarding: boolean) => {
         localStorage.setItem('token', token);
         localStorage.setItem('tokenExpiry', expiry);
 
@@ -70,21 +72,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser({
                 name,
                 email,
-                role: Array.isArray(role) ? role[0] : role
+                role: Array.isArray(role) ? role[0] : role,
+                hasCompletedOnboarding
             });
+            localStorage.setItem('onboarded', hasCompletedOnboarding.toString());
         } catch (e) {
             console.error(e);
+        }
+    };
+
+    const updateOnboardingStatus = (status: boolean) => {
+        if (user) {
+            setUser({ ...user, hasCompletedOnboarding: status });
+            localStorage.setItem('onboarded', status.toString());
         }
     };
 
     const logout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('tokenExpiry');
+        localStorage.removeItem('onboarded');
         setUser(null);
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout, isAuthenticated: !!user }}>
+        <AuthContext.Provider value={{ user, loading, login, logout, updateOnboardingStatus, isAuthenticated: !!user }}>
             {children}
         </AuthContext.Provider>
     );
