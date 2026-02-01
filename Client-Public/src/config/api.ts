@@ -43,6 +43,11 @@ export const API_ENDPOINTS = {
     payment: {
         initiate: `${API_URL}/api/payment/initiate`,
         verify: `${API_URL}/api/payment/verify`,
+    },
+    preferences: {
+        categories: `${API_URL}/api/preferences/categories`,
+        my: `${API_URL}/api/preferences/my`,
+        save: `${API_URL}/api/preferences/save`,
     }
 };
 
