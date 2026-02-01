@@ -11,7 +11,8 @@ import {
 import { API_ENDPOINTS } from '../../config/api';
 import Navbar from '../../components/landing/Navbar';
 import Footer from '../../components/landing/Footer';
-import { type WorkshopDetail as IWorkshopDetail, WorkshopType, PricingType } from '../../types/workshop';
+import { type WorkshopDetail as IWorkshopDetail, PricingType } from '../../types/workshop';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import WorkshopMap from '../../components/workshop/WorkshopMap';
 
 const WorkshopDetail: React.FC = () => {
@@ -95,13 +96,8 @@ const WorkshopDetail: React.FC = () => {
         let scheduleId = selectedScheduleId;
 
         if (!scheduleId) {
-            if (workshop?.upcomingSchedules.length === 0) {
-                if (!confirm("No live schedules available. Attempt to use Test ID 1?")) return;
-                scheduleId = 1;
-            } else {
-                alert("Please select a date from the calendar.");
-                return;
-            }
+            alert("Please select a date from the calendar.");
+            return;
         }
 
         try {
@@ -200,15 +196,6 @@ const WorkshopDetail: React.FC = () => {
         return a.displayOrder - b.displayOrder;
     });
 
-    const getWorkshopTypeName = (type: WorkshopType) => {
-        switch (type) {
-            case WorkshopType.PublicClass: return 'Public Workshop';
-            case WorkshopType.Experience: return 'Immersive Experience';
-            case WorkshopType.Private: return 'Private Session';
-            default: return 'Workshop';
-        }
-    };
-
     const getPricingLabel = (type: PricingType) => {
         return type === PricingType.PerGroup ? 'per group' : 'per guest';
     };
@@ -217,7 +204,7 @@ const WorkshopDetail: React.FC = () => {
         <div className="min-h-screen bg-white text-deep-purple font-sans selection:bg-orange-100 selection:text-deep-purple">
             <Navbar />
 
-            <div className="pt-32 pb-8 px-6 md:px-12 max-w-[1400px] mx-auto">
+            <div className="pt-24 pb-4 px-6 md:px-12 max-w-[1400px] mx-auto">
                 <div className="flex justify-between items-start mb-6">
                     <button
                         onClick={() => navigate(-1)}
@@ -236,19 +223,38 @@ const WorkshopDetail: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="max-w-4xl">
-                    <div className="flex items-center gap-3 mb-4">
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-6 mb-8"
+                >
+                    <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-50 ring-1 ring-gray-100 shadow-sm transition-all duration-700 hover:shadow-lg">
+                        <img
+                            src={workshop.provider.logoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(workshop.provider.businessName)}&background=random`}
+                            alt={workshop.provider.businessName}
+                            className="w-full h-full object-cover"
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <h3 className="text-2xl font-serif text-deep-purple leading-tight group-hover:text-primary-orange transition-colors">
+                            {workshop.provider.businessName}
+                        </h3>
+                    </div>
+                </motion.div>
+
+                <div className="max-w-4xl mb-8">
+                    <div className="flex items-center gap-3 mb-3">
                         {workshop.categories.map(cat => (
-                            <span key={cat.id} className="text-xs font-bold tracking-widest uppercase text-primary-orange">
+                            <span key={cat.id} className="text-[10px] font-bold tracking-[0.2em] uppercase text-primary-orange bg-primary-orange/5 px-3 py-1 rounded-full">
                                 {cat.name}
                             </span>
                         ))}
-                        <span className="w-1 h-1 bg-gray-300 rounded-full" />
-                        <span className="text-xs font-medium text-gray-400 uppercase tracking-widest">
-                            {getWorkshopTypeName(workshop.workshopType)}
+                        <span className="w-1 h-1 bg-gray-200 rounded-full" />
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                            {workshop.duration} Session
                         </span>
                     </div>
-                    <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-medium leading-[1.1] mb-6">
+                    <h1 className="text-5xl md:text-7xl font-serif font-medium leading-none mb-4 text-deep-purple">
                         {workshop.title}
                     </h1>
                     {workshop.subtitle && (
@@ -259,34 +265,13 @@ const WorkshopDetail: React.FC = () => {
                 </div>
             </div>
 
-            <div className="px-6 md:px-12 max-w-[1400px] mx-auto mb-20">
+            <div className="px-6 md:px-12 max-w-6xl mx-auto mb-20">
                 {allMedia.length === 0 ? (
                     <div className="w-full aspect-[2/1] rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
                         <p className="text-gray-400 font-serif italic">No visuals available for this experience yet.</p>
                     </div>
                 ) : (
-                    <div className={`grid gap-4 w-full aspect-[4/3] md:aspect-[2/1] rounded-2xl overflow-hidden ${allMedia.length === 1 ? 'grid-cols-1' :
-                        allMedia.length === 2 ? 'grid-cols-2' :
-                            'grid-cols-1 md:grid-cols-3 md:grid-rows-2'
-                        }`}>
-                        <div className={`${allMedia.length > 2 ? 'md:col-span-2 md:row-span-2' : ''} relative group`}>
-                            {allMedia[0].mediaType === 0 ? (
-                                <img src={allMedia[0].url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Primary visual" />
-                            ) : (
-                                <video src={allMedia[0].url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
-                            )}
-                        </div>
-
-                        {allMedia.slice(1, 3).map((media, idx) => (
-                            <div key={media.id} className="relative group hidden md:block">
-                                {media.mediaType === 0 ? (
-                                    <img src={media.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt={`Visual ${idx + 2}`} />
-                                ) : (
-                                    <video src={media.url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
-                                )}
-                            </div>
-                        ))}
-                    </div>
+                    <VisualNarrativeDisplay media={allMedia} />
                 )}
             </div>
 
@@ -459,36 +444,61 @@ const WorkshopDetail: React.FC = () => {
 
                             <div className="mb-8">
                                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
-                                    Select Date
+                                    Select Session
                                 </label>
-                                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                <div className="space-y-6">
                                     {workshop.upcomingSchedules.length > 0 ? (
-                                        workshop.upcomingSchedules.map(schedule => (
-                                            <button
-                                                key={schedule.id}
-                                                disabled={schedule.isSoldOut}
-                                                onClick={() => setSelectedScheduleId(schedule.id)}
-                                                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${selectedScheduleId === schedule.id
-                                                    ? 'border-deep-purple bg-deep-purple text-white shadow-lg'
-                                                    : 'border-gray-100 hover:border-gray-300 bg-white text-deep-purple'
-                                                    } ${schedule.isSoldOut ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                            >
-                                                <div className="text-left">
-                                                    <span className="block font-bold text-sm">
-                                                        {new Date(schedule.startDateTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                                                    </span>
-                                                    <span className={`text-xs ${selectedScheduleId === schedule.id ? 'text-white/80' : 'text-gray-400'}`}>
-                                                        {new Date(schedule.startDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    </span>
+                                        // Grouping by Date
+                                        Array.from(new Set(workshop.upcomingSchedules.map(s => s.startDateTime.split('T')[0]))).map(dateStr => {
+                                            const daySchedules = workshop.upcomingSchedules.filter(s => s.startDateTime.startsWith(dateStr));
+                                            return (
+                                                <div key={dateStr} className="space-y-3">
+                                                    <p className="text-sm font-bold text-deep-purple flex items-center gap-2">
+                                                        <CalendarIcon size={14} className="text-primary-orange" />
+                                                        {new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                                                    </p>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        {daySchedules.map(schedule => {
+                                                            const startTime = new Date(schedule.startDateTime).getTime();
+                                                            const cutoffMs = (workshop.bookingCutoffHours || 0) * 3600000;
+                                                            const isStarted = Date.now() >= startTime;
+                                                            const isLocked = (Date.now() >= (startTime - cutoffMs)) || schedule.isSoldOut;
+
+                                                            return (
+                                                                <button
+                                                                    key={schedule.id}
+                                                                    disabled={isLocked}
+                                                                    onClick={() => setSelectedScheduleId(schedule.id)}
+                                                                    className={`relative flex flex-col items-center justify-center p-4 rounded-2xl border transition-all ${selectedScheduleId === schedule.id
+                                                                        ? 'border-deep-purple bg-deep-purple text-white shadow-lg'
+                                                                        : isLocked
+                                                                            ? 'border-gray-50 bg-gray-50 text-gray-300 cursor-not-allowed'
+                                                                            : 'border-gray-100 hover:border-primary-orange bg-white text-deep-purple'
+                                                                        }`}
+                                                                >
+                                                                    <span className="font-bold text-lg leading-tight">
+                                                                        {new Date(schedule.startDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                    </span>
+                                                                    <span className={`text-[9px] font-black uppercase tracking-widest mt-1 ${selectedScheduleId === schedule.id ? 'text-white/60' : 'text-gray-400'
+                                                                        }`}>
+                                                                        {schedule.isSoldOut ? 'Sold Out' : isStarted ? 'Started' : (Date.now() >= (startTime - cutoffMs)) ? 'Closed' : `${schedule.availableSeats} Seats`}
+                                                                    </span>
+
+                                                                    {selectedScheduleId === schedule.id && (
+                                                                        <div className="absolute top-2 right-2">
+                                                                            <CheckCircle2 size={12} className="text-primary-orange" />
+                                                                        </div>
+                                                                    )}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
-                                                {selectedScheduleId === schedule.id && (
-                                                    <Check size={16} strokeWidth={3} />
-                                                )}
-                                            </button>
-                                        ))
+                                            );
+                                        })
                                     ) : (
-                                        <div className="p-4 border border-dashed border-gray-200 rounded-xl text-center text-sm text-gray-400">
-                                            No dates currently available.
+                                        <div className="p-8 border-2 border-dashed border-gray-100 rounded-3xl text-center">
+                                            <p className="text-gray-400 text-sm italic">No open sessions at the moment.</p>
                                         </div>
                                     )}
                                 </div>
@@ -580,6 +590,74 @@ const WorkshopDetail: React.FC = () => {
             )}
 
             <Footer />
+        </div>
+    );
+};
+
+const VisualNarrativeDisplay = ({ media }: { media: any[] }) => {
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    const images = media.filter(m => m.mediaType === 0); 
+    const video = media.find(m => m.mediaType === 1); 
+
+    useEffect(() => {
+        if (images.length <= 1) return;
+
+        const interval = setInterval(() => {
+            setCurrentImageIndex((prev) => (prev + 1) % images.length);
+        }, 4000); // 4 seconds
+
+        return () => clearInterval(interval);
+    }, [images.length]);
+
+    if (images.length === 0 && !video) {
+        const allVisuals = media.filter(m => m.mediaType === 0 || m.mediaType === 1);
+        if (allVisuals.length === 0) return null;
+
+        return (
+            <div className="grid gap-4 w-full aspect-[4/3] md:aspect-[2/1] rounded-2xl overflow-hidden">
+                <div className="relative group">
+                    {allVisuals[0].mediaType === 0 ? (
+                        <img src={allVisuals[0].url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Workshop visual" />
+                    ) : (
+                        <video src={allVisuals[0].url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full md:h-[500px]">
+            {images.length > 0 && (
+                <div className="relative h-[500px] md:h-full w-full rounded-2xl overflow-hidden bg-gray-100 group">
+                    <AnimatePresence mode="wait">
+                        <motion.img
+                            key={currentImageIndex}
+                            src={images[currentImageIndex].url}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.5 }}
+                            className="w-full h-full object-cover"
+                            alt={`Workshop moment ${currentImageIndex + 1}`}
+                        />
+                    </AnimatePresence>
+                </div>
+            )}
+
+            {video && (
+                <div className="relative h-[300px] md:h-full w-full rounded-2xl overflow-hidden bg-gray-100">
+                    <video
+                        src={video.url}
+                        className="w-full h-full object-cover"
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                    />
+                </div>
+            )}
         </div>
     );
 };

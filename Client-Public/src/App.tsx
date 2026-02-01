@@ -3,6 +3,7 @@ import LandingPage from './pages/home/LandingPage'
 import HostWorkshopPage from './pages/home/HostWorkshopPage';
 import WorkshopDetail from './pages/home/WorkshopDetail'
 import Login from './pages/auth/Login'
+import Onboarding from './pages/auth/Onboarding';
 import VerifyEmail from './pages/auth/VerifyEmail'
 import Settings from './pages/settings/Settings'
 import Profile from './pages/profile/Profile';
@@ -23,6 +24,7 @@ function App() {
           <Route path="/host-workshop" element={<HostWorkshopPage />} />
           <Route path="/workshop/:id" element={<WorkshopDetail />} />
           <Route path="/verify" element={<VerifyEmail />} />
+          <Route path="/onboarding" element={<Onboarding />} />
 
           {/* Guest Only Routes - Logged in users are redirected to home */}
           <Route element={<PublicRoute />}>

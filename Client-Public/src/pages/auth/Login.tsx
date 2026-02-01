@@ -62,13 +62,17 @@ const Login: React.FC = () => {
       }
 
       // Store token via context to update state
-      login(data.token, data.expiry);
+      login(data.token, data.expiry, data.hasCompletedOnboarding);
 
       setSuccessMessage('Google login successful!');
 
       setTimeout(() => {
         sessionStorage.setItem('introShown', 'true');
-        navigate('/');
+        if (!data.hasCompletedOnboarding) {
+          navigate('/onboarding');
+        } else {
+          navigate('/');
+        }
       }, 1500);
 
     } catch (error: any) {
@@ -249,7 +253,7 @@ const Login: React.FC = () => {
       }
 
       // Update AuthContext
-      login(data.token, data.expiry);
+      login(data.token, data.expiry, data.hasCompletedOnboarding);
       localStorage.setItem('isApproved', data.isApproved);
 
       // Decode token to check role - ONLY allow Customer logins
@@ -276,12 +280,22 @@ const Login: React.FC = () => {
           } else {
             setSuccessMessage('Login successful!');
             sessionStorage.setItem('introShown', 'true');
-            setTimeout(() => navigate(from, { replace: true }), 500);
+
+            if (!data.hasCompletedOnboarding) {
+              setTimeout(() => navigate('/onboarding', { replace: true }), 500);
+            } else {
+              setTimeout(() => navigate(from, { replace: true }), 500);
+            }
           }
         } else {
           setSuccessMessage('Login successful!');
           sessionStorage.setItem('introShown', 'true');
-          setTimeout(() => navigate(from, { replace: true }), 500);
+
+          if (!data.hasCompletedOnboarding) {
+            setTimeout(() => navigate('/onboarding', { replace: true }), 500);
+          } else {
+            setTimeout(() => navigate(from, { replace: true }), 500);
+          }
         }
       } catch (e) {
         console.error("Token decode error:", e);

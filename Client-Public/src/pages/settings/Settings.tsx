@@ -7,6 +7,7 @@ import {
 import Navbar from '../../components/landing/Navbar';
 
 import EditProfile from './EditProfile';
+import InterestsSettings from './InterestsSettings';
 import PlaceholderSection from './PlaceholderSection';
 
 const Settings: React.FC = () => {
@@ -14,6 +15,7 @@ const Settings: React.FC = () => {
 
     const navItems = [
         { label: 'Edit profile', path: '/settings/edit-profile' },
+        { label: 'Your interests', path: '/settings/interests' },
         { label: 'Account management', path: '/settings/account' },
         { label: 'Profile visibility', path: '/settings/visibility' },
         { label: 'Notifications', path: '/settings/notifications' },
@@ -70,6 +72,7 @@ const Settings: React.FC = () => {
                             <Routes location={location} key={location.pathname}>
                                 <Route path="/" element={<Navigate to="edit-profile" replace />} />
                                 <Route path="edit-profile" element={<EditProfile />} />
+                                <Route path="interests" element={<InterestsSettings />} />
                                 <Route path="account" element={<PlaceholderSection title="Account Management" desc="Manage your account settings, password, and linked social accounts." />} />
                                 <Route path="visibility" element={<PlaceholderSection title="Profile Visibility" desc="Control who can see your profile and workshops." />} />
                                 <Route path="notifications" element={<PlaceholderSection title="Notifications" desc="Choose which notifications you want to receive." />} />

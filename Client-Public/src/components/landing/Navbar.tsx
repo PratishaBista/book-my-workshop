@@ -179,7 +179,7 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
     };
 
     return (
-        <nav className="fixed top-0 left-0 right-0 z-50 bg-cream-base/95 backdrop-blur-sm border-b border-deep-purple/5">
+        <nav className="absolute top-0 left-0 right-0 z-50 bg-cream-base/95 backdrop-blur-sm border-b border-deep-purple/5">
             <div className="px-8 py-4 flex items-center justify-between">
 
                 {/* Logo */}
@@ -435,7 +435,7 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
                                                     to="/login"
                                                     onClick={() => {
                                                         setUserMenuOpen(false);
-                                                        
+
                                                         if (isAuthenticated) {
                                                             logout();
                                                         }
