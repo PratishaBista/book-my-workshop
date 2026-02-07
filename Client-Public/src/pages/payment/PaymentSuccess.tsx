@@ -1,15 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { API_ENDPOINTS } from '../../config/api';
 import Navbar from '../../components/landing/Navbar';
 import Footer from '../../components/landing/Footer';
-import { CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { Check, Loader2, ArrowRight, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const PaymentSuccess = () => {
     const [searchParams] = useSearchParams();
-    const navigate = useNavigate();
+
     const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
     const [message, setMessage] = useState('Verifying your payment...');
+    const [bookingDetails, setBookingDetails] = useState<{
+        workshopTitle?: string;
+        workshopSlug?: string;
+        startDateTime?: string;
+        customerName?: string;
+    } | null>(null);
 
     useEffect(() => {
         const data = searchParams.get('data');
@@ -18,7 +25,6 @@ const PaymentSuccess = () => {
             setMessage('No payment data received.');
             return;
         }
-
         verifyPayment(data);
     }, [searchParams]);
 
@@ -34,13 +40,18 @@ const PaymentSuccess = () => {
                 body: JSON.stringify({ data })
             });
 
-            const result = await response.json();
-
             if (response.ok) {
+                const result = await response.json();
                 setStatus('success');
-                setMessage('Payment confirmed! Your spot is reserved. Redirecting...');
-                setTimeout(() => navigate('/profile/bookings'), 3000);
+                setBookingDetails({
+                    workshopTitle: result.workshopTitle,
+                    workshopSlug: result.workshopSlug,
+                    startDateTime: result.startDateTime,
+                    customerName: result.customerName
+                });
+                setMessage('Your spot is officially reserved. We\'ve sent the details to your email.');
             } else {
+                const result = await response.json();
                 setStatus('error');
                 setMessage(result.message || 'Payment verification failed.');
             }
@@ -52,54 +63,128 @@ const PaymentSuccess = () => {
     };
 
     return (
-        <div className="min-h-screen bg-cream-base flex flex-col">
+        <div className="min-h-screen bg-[#FDFBF7] text-deep-purple font-sans flex flex-col selection:bg-orange-100">
             <Navbar />
-            <div className="flex-1 flex items-center justify-center p-6">
-                <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-xl text-center space-y-6">
 
+            <main className="flex-grow flex items-center justify-center pt-20 pb-32 px-6">
+                <div className="max-w-xl w-full text-center">
                     {status === 'verifying' && (
-                        <>
-                            <div className="w-20 h-20 mx-auto rounded-full bg-primary-orange/10 flex items-center justify-center">
-                                <Loader2 className="animate-spin text-primary-orange" size={40} />
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="space-y-8"
+                        >
+                            <div className="relative inline-block">
+                                <Loader2 className="animate-spin text-primary-orange" size={48} />
+                                <div className="absolute inset-0 animate-ping bg-primary-orange/20 rounded-full"></div>
                             </div>
-                            <h2 className="text-2xl font-bold text-deep-purple">Processing...</h2>
-                            <p className="text-gray-500">Please wait while we confirm your payment securely.</p>
-                        </>
+                            <h1 className="text-3xl font-serif font-bold italic">Confirming your spot...</h1>
+                            <p className="text-gray-500">Please don't close this window while we secure your reservation.</p>
+                        </motion.div>
                     )}
 
                     {status === 'success' && (
-                        <>
-                            <div className="w-20 h-20 mx-auto rounded-full bg-green-100 flex items-center justify-center">
-                                <CheckCircle2 className="text-green-600" size={40} />
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="space-y-10"
+                        >
+                            <div className="relative">
+                                <motion.div
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                                    className="w-24 h-24 bg-green-500 rounded-full mx-auto flex items-center justify-center text-white"
+                                >
+                                    <Check size={48} strokeWidth={3} />
+                                </motion.div>
+                                <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                                    className="absolute -top-4 -right-4 text-primary-orange"
+                                >
+                                    <Sparkles size={32} />
+                                </motion.div>
                             </div>
-                            <h2 className="text-2xl font-bold text-deep-purple">Booking Confirmed!</h2>
-                            <p className="text-gray-500">{message}</p>
-                            <Link
-                                to="/"
-                                className="inline-block mt-4 px-8 py-3 bg-deep-purple text-white rounded-xl font-bold hover:bg-deep-purple/90 transition-all"
-                            >
-                                Continue Exploring
-                            </Link>
-                        </>
+
+                            <div className="space-y-4">
+                                <h1 className="text-5xl md:text-6xl font-serif font-bold tracking-tight">Success!</h1>
+                                <p className="text-xl text-gray-500 leading-relaxed max-w-md mx-auto">
+                                    {message}
+                                </p>
+                            </div>
+
+                            {bookingDetails && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.5 }}
+                                    className="bg-white border border-gray-100 rounded-3xl p-8 max-w-md mx-auto space-y-4"
+                                >
+                                    <div className="text-left">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary-orange mb-1">Confirmed Experience</p>
+                                        <h3 className="text-2xl font-serif font-bold text-deep-purple">{bookingDetails.workshopTitle}</h3>
+                                        <p className="text-gray-500 mt-2">
+                                            {bookingDetails.startDateTime ? (
+                                                <>
+                                                    {new Date(bookingDetails.startDateTime).toLocaleDateString('en-US', {
+                                                        weekday: 'long', month: 'long', day: 'numeric'
+                                                    })} at {new Date(bookingDetails.startDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </>
+                                            ) : 'Date & Time loading...'}
+                                        </p>
+                                    </div>
+                                    <div className="pt-4 border-t border-gray-50 flex items-center justify-between text-sm">
+                                        <Link to="/profile/bookings" className="text-deep-purple font-bold hover:underline">
+                                            View Ticket Details
+                                        </Link>
+                                        <Link to={`/workshop/${bookingDetails.workshopSlug}`} className="text-primary-orange font-bold hover:underline flex items-center gap-1">
+                                            Back to Workshop <ArrowRight size={14} />
+                                        </Link>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+                                <Link
+                                    to="/"
+                                    className="w-full sm:w-auto px-8 py-4 bg-deep-purple text-white rounded-2xl font-bold hover:bg-deep-purple/90 transition-all flex items-center justify-center gap-2 group"
+                                >
+                                    Explore More
+                                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                </Link>
+                                <Link
+                                    to="/profile/bookings"
+                                    className="w-full sm:w-auto px-8 py-4 border border-gray-200 text-deep-purple rounded-2xl font-bold hover:bg-white transition-all"
+                                >
+                                    View Tickets
+                                </Link>
+                            </div>
+                        </motion.div>
                     )}
 
                     {status === 'error' && (
-                        <>
-                            <div className="w-20 h-20 mx-auto rounded-full bg-red-100 flex items-center justify-center">
-                                <AlertCircle className="text-red-600" size={40} />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="space-y-8"
+                        >
+                            <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full mx-auto flex items-center justify-center">
+                                <span className="text-4xl">!</span>
                             </div>
-                            <h2 className="text-2xl font-bold text-deep-purple">Verification Failed</h2>
-                            <p className="text-gray-500">{message}</p>
+                            <h2 className="text-3xl font-serif font-bold">Something went wrong</h2>
+                            <p className="text-gray-500 max-w-sm mx-auto">{message}</p>
                             <Link
                                 to="/"
-                                className="inline-block mt-4 px-8 py-3 border border-deep-purple/20 text-deep-purple rounded-xl font-bold hover:bg-gray-50 transition-all"
+                                className="inline-block px-8 py-4 bg-deep-purple text-white rounded-2xl font-bold hover:bg-deep-purple/90 transition-all"
                             >
                                 Return Home
                             </Link>
-                        </>
+                        </motion.div>
                     )}
                 </div>
-            </div>
+            </main>
+
             <Footer />
         </div>
     );

@@ -14,8 +14,8 @@ public interface IWorkshopService
     Task<WorkshopDetailResponse> CreateWorkshopAsync(int providerId, CreateWorkshopRequest request);
     Task<WorkshopDetailResponse> UpdateWorkshopAsync(int workshopId, int providerId, UpdateWorkshopRequest request);
     Task<bool> DeleteWorkshopAsync(int workshopId, int providerId);
-    Task<WorkshopDetailResponse?> GetWorkshopBySlugAsync(string slug);
-    Task<WorkshopDetailResponse?> GetWorkshopByIdAsync(int id);
+    Task<WorkshopDetailResponse?> GetWorkshopBySlugAsync(string slug, string? userId = null);
+    Task<WorkshopDetailResponse?> GetWorkshopByIdAsync(int id, string? userId = null);
     Task<IEnumerable<WorkshopListResponse>> GetAllPublishedWorkshopsAsync();
     Task<IEnumerable<WorkshopListResponse>> GetWorkshopsByCategoryAsync(int categoryId);
     Task<IEnumerable<WorkshopListResponse>> GetProviderWorkshopsAsync(int providerId);
@@ -33,4 +33,5 @@ public interface IWorkshopService
     Task<ScheduleResponse> UpdateScheduleAsync(int workshopId, int scheduleId, int providerId, AddScheduleRequest request);
     Task<bool> DeleteScheduleAsync(int workshopId, int scheduleId, int providerId);
     Task<IEnumerable<ScheduleResponse>> GetWorkshopSchedulesAsync(int workshopId);
+    Task<IEnumerable<ScheduleResponse>> GetProviderSchedulesAsync(int providerId);
 }

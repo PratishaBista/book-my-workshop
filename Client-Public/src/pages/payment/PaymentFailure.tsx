@@ -1,30 +1,57 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../../components/landing/Navbar';
 import Footer from '../../components/landing/Footer';
-import { XCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const PaymentFailure = () => {
     return (
-        <div className="min-h-screen bg-cream-base flex flex-col">
+        <div className="min-h-screen bg-[#FDFBF7] text-deep-purple font-sans flex flex-col selection:bg-orange-100">
             <Navbar />
-            <div className="flex-1 flex items-center justify-center p-6">
-                <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-xl text-center space-y-6">
-                    <div className="w-20 h-20 mx-auto rounded-full bg-red-100 flex items-center justify-center">
-                        <XCircle className="text-red-600" size={40} />
-                    </div>
-                    <h2 className="text-2xl font-bold text-deep-purple">Payment Failed</h2>
-                    <p className="text-gray-500">
-                        We couldn't process your payment. Please try again or contact support if the issue persists.
-                    </p>
-                    <Link
-                        to="/"
-                        className="inline-block mt-4 px-8 py-3 bg-deep-purple text-white rounded-xl font-bold hover:bg-deep-purple/90 transition-all"
+
+            <main className="flex-grow flex items-center justify-center pt-24 pb-32 px-6">
+                <div className="max-w-xl w-full text-center">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.5 }}
+                        className="space-y-10"
                     >
-                        Return Home
-                    </Link>
+                        <div className="w-24 h-24 bg-red-50 rounded-full mx-auto flex items-center justify-center text-red-500">
+                            <AlertCircle size={48} strokeWidth={1.5} />
+                        </div>
+
+                        <div className="space-y-4">
+                            <h1 className="text-5xl md:text-6xl font-serif font-bold tracking-tight">Oh, no.</h1>
+                            <p className="text-xl text-gray-500 leading-relaxed max-w-md mx-auto italic font-serif">
+                                We couldn't complete your reservation because the payment didn't go through.
+                            </p>
+                        </div>
+
+                        <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-4 text-sm font-bold uppercase tracking-widest">
+                            <button
+                                onClick={() => window.history.back()}
+                                className="w-full sm:w-auto px-10 py-5 bg-deep-purple text-white rounded-2xl flex items-center justify-center gap-3 hover:translate-y-[-2px] transition-all shadow-lg shadow-deep-purple/10"
+                            >
+                                <RefreshCw size={18} />
+                                Try Again
+                            </button>
+                            <Link
+                                to="/"
+                                className="w-full sm:w-auto px-10 py-5 border border-gray-200 rounded-2xl flex items-center justify-center gap-3 hover:bg-white transition-all"
+                            >
+                                <ArrowLeft size={18} />
+                                Return Home
+                            </Link>
+                        </div>
+
+                        <div className="pt-12 text-sm text-gray-400 font-serif italic">
+                            If you think this is a mistake, please check your eSewa balance or contact our support team.
+                        </div>
+                    </motion.div>
                 </div>
-            </div>
+            </main>
+
             <Footer />
         </div>
     );

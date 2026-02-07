@@ -48,6 +48,12 @@ export const API_ENDPOINTS = {
         categories: `${API_URL}/api/preferences/categories`,
         my: `${API_URL}/api/preferences/my`,
         save: `${API_URL}/api/preferences/save`,
+    },
+    booking: {
+        my: `${API_URL}/api/booking/my-bookings`,
+        byId: (id: number) => `${API_URL}/api/booking/${id}`,
+        byCode: (code: string) => `${API_URL}/api/booking/confirmation/${code}`,
+        cancel: (id: number) => `${API_URL}/api/booking/${id}/cancel`,
     }
 };
 

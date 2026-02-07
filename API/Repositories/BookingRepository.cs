@@ -61,6 +61,17 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
             && b.BookingStatus != BookingStatus.Cancelled);
     }
 
+    public async Task<List<int>> GetBookedScheduleIdsForUserAsync(string userId, int workshopId)
+    {
+        return await _context.Bookings
+            .Where(b => b.UserId == userId 
+                     && b.WorkshopSchedule.WorkshopId == workshopId
+                     && b.BookingStatus != BookingStatus.Cancelled)
+            .Select(b => b.WorkshopScheduleId)
+            .Distinct()
+            .ToListAsync();
+    }
+
     public async Task<int> GetBookedSeatsForScheduleAsync(int scheduleId)
     {
         return await _dbSet

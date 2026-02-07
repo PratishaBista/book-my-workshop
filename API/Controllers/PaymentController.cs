@@ -35,31 +35,26 @@ public class PaymentController : ControllerBase
 
         try
         {
-            var mockBookingId = 999;
-            var mockAmount = 1000m; 
-
-            var paymentParams = await _paymentService.InitiatePaymentAsync(mockBookingId, mockAmount);
-            return Ok(paymentParams);
-
-            /* PRODUCTION CODE:
             var booking = await _bookingService.CreateBookingAsync(userId, request);
             var paymentParams = await _paymentService.InitiatePaymentAsync(booking.Id, booking.TotalAmount);
             return Ok(paymentParams);
-            */
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message);
+            return BadRequest(new { Message = ex.Message });
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ex.Message);
+            return StatusCode(500, new { Message = "An unexpected error occurred: " + ex.Message });
         }
     }
 
     [HttpPost("verify")]
     public async Task<IActionResult> VerifyPayment([FromBody] PaymentVerifyRequest request)
     {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null) return Unauthorized();
+
         if (string.IsNullOrEmpty(request.Data)) return BadRequest("No data");
 
         try
@@ -98,7 +93,18 @@ public class PaymentController : ControllerBase
             var success = await _bookingService.ConfirmBookingPaymentAsync(bookingId, transactionUuid);
             if (!success) return BadRequest("Confirmation failed");
 
-            return Ok(new { Message = "Verified", BookingId = bookingId });
+            // Fetch extra details for the frontend success page
+            var booking = await _bookingService.GetBookingByIdAsync(bookingId, userId);
+
+            return Ok(new 
+            { 
+                Message = "Verified", 
+                BookingId = bookingId,
+                WorkshopTitle = booking?.WorkshopTitle,
+                WorkshopSlug = booking?.WorkshopSlug,
+                StartDateTime = booking?.StartDateTime,
+                CustomerName = booking?.UserName
+            });
         }
         catch (Exception ex)
         {

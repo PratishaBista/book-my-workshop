@@ -26,6 +26,7 @@ public class WorkshopService : IWorkshopService
     private readonly IMLService _mlService;
     private readonly WorkshopChangeDetector _changeDetector;
     private readonly IGenericRepository<WorkshopModification> _modificationRepository;
+    private readonly IBookingRepository _bookingRepository;
 
     public WorkshopService(
         IWorkshopRepository workshopRepository,
@@ -35,7 +36,8 @@ public class WorkshopService : IWorkshopService
         IMapper mapper,
         IMLService mlService,
         WorkshopChangeDetector changeDetector,
-        IGenericRepository<WorkshopModification> modificationRepository)
+        IGenericRepository<WorkshopModification> modificationRepository,
+        IBookingRepository bookingRepository)
     {
         _workshopRepository = workshopRepository;
         _categoryRepository = categoryRepository;
@@ -45,6 +47,7 @@ public class WorkshopService : IWorkshopService
         _mlService = mlService;
         _changeDetector = changeDetector;
         _modificationRepository = modificationRepository;
+        _bookingRepository = bookingRepository;
         _htmlSanitizer = new HtmlSanitizer();
     }
 
@@ -268,17 +271,17 @@ public class WorkshopService : IWorkshopService
         return true;
     }
 
-    public async Task<WorkshopDetailResponse?> GetWorkshopBySlugAsync(string slug)
+    public async Task<WorkshopDetailResponse?> GetWorkshopBySlugAsync(string slug, string? userId = null)
     {
         var workshops = await _workshopRepository.FindAsync(w => w.Slug == slug && w.IsActive);
         var workshopEntity = workshops.FirstOrDefault();
         
         if (workshopEntity == null) return null;
         
-        return await GetWorkshopByIdAsync(workshopEntity.Id);
+        return await GetWorkshopByIdAsync(workshopEntity.Id, userId);
     }
 
-    public async Task<WorkshopDetailResponse?> GetWorkshopByIdAsync(int id)
+    public async Task<WorkshopDetailResponse?> GetWorkshopByIdAsync(int id, string? userId = null)
     {
         var workshop = await _workshopRepository.GetWorkshopWithDetailsAsync(id);
         if (workshop == null)
@@ -286,7 +289,14 @@ public class WorkshopService : IWorkshopService
             return null;
         }
 
-        return _mapper.Map<WorkshopDetailResponse>(workshop);
+        var response = _mapper.Map<WorkshopDetailResponse>(workshop);
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            response.BookedScheduleIds = await _bookingRepository.GetBookedScheduleIdsForUserAsync(userId, id);
+        }
+
+        return response;
     }
 
     public async Task<IEnumerable<WorkshopListResponse>> GetAllPublishedWorkshopsAsync()
@@ -481,6 +491,12 @@ public class WorkshopService : IWorkshopService
     public async Task<IEnumerable<ScheduleResponse>> GetWorkshopSchedulesAsync(int workshopId)
     {
         var schedules = await _scheduleRepository.GetUpcomingSchedulesForWorkshopAsync(workshopId);
+        return _mapper.Map<IEnumerable<ScheduleResponse>>(schedules);
+    }
+
+    public async Task<IEnumerable<ScheduleResponse>> GetProviderSchedulesAsync(int providerId)
+    {
+        var schedules = await _scheduleRepository.GetProviderUpcomingSchedulesAsync(providerId);
         return _mapper.Map<IEnumerable<ScheduleResponse>>(schedules);
     }
 
