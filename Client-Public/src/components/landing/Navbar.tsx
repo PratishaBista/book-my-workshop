@@ -421,6 +421,9 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
                                                 <Link to={username ? `/u/${username}` : '/settings/edit-profile'} onClick={() => setUserMenuOpen(false)} className="w-full block px-4 py-3 rounded-lg hover:bg-cream-base text-left font-semibold">
                                                     My Profile
                                                 </Link>
+                                                <Link to="/profile/bookings" onClick={() => setUserMenuOpen(false)} className="w-full block px-4 py-3 rounded-lg hover:bg-cream-base text-left font-semibold">
+                                                    My Bookings
+                                                </Link>
                                                 <Link to="/settings" onClick={() => setUserMenuOpen(false)} className="w-full block px-4 py-3 rounded-lg hover:bg-cream-base text-left font-semibold">
                                                     Settings
                                                 </Link>

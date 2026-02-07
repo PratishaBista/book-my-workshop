@@ -44,6 +44,7 @@ public class WorkshopInfoResponse
 {
     public int Id { get; set; }
     public string Title { get; set; } = string.Empty;
+    public string Slug { get; set; } = string.Empty;
     public string? Tagline { get; set; }
     public string LocationAddress { get; set; } = string.Empty;
     public List<CategoryResponse> Categories { get; set; } = new();

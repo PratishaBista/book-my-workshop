@@ -122,7 +122,10 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
 
         CreateMap<WorkshopSchedule, ScheduleResponse>()
-            .ForMember(dest => dest.IsSoldOut, opt => opt.MapFrom(src => src.IsSoldOut));
+            .ForMember(dest => dest.IsSoldOut, opt => opt.MapFrom(src => src.IsSoldOut))
+            .ForMember(dest => dest.WorkshopId, opt => opt.MapFrom(src => src.WorkshopId))
+            .ForMember(dest => dest.WorkshopTitle, opt => opt.MapFrom(src => src.Workshop != null ? src.Workshop.Title : "Unknown"))
+            .ForMember(dest => dest.BasePrice, opt => opt.MapFrom(src => src.Workshop != null && src.Workshop.Pricing != null ? src.Workshop.Pricing.BasePrice : 0));
 
         CreateMap<WorkshopSchedule, ScheduleInfoResponse>();
 

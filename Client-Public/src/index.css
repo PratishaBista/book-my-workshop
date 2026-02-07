@@ -35,3 +35,11 @@ html, body {
 .location-dropdown-scroll::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg, #AF82C5 0%, #E57A44 100%);
 }
+
+.hide-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+}

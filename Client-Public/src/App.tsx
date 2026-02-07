@@ -10,6 +10,8 @@ import Profile from './pages/profile/Profile';
 import ProfileQR from './pages/profile/ProfileQR';
 import PaymentSuccess from './pages/payment/PaymentSuccess';
 import PaymentFailure from './pages/payment/PaymentFailure';
+import Checkout from './pages/payment/Checkout';
+import MyBookings from './pages/profile/MyBookings';
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import PublicRoute from './components/auth/PublicRoute'
 import { AuthProvider } from './context/AuthContext';
@@ -34,10 +36,12 @@ function App() {
           {/* Private Routes - Only logged in customers can access */}
           <Route element={<ProtectedRoute allowedRoles={['User']} />}>
             <Route path="/u/:username" element={<Profile />} />
+            <Route path="/profile/bookings" element={<MyBookings />} />
             <Route path="/u/:username/qr" element={<ProfileQR />} />
             <Route path="/settings/*" element={<Settings />} />
             <Route path="/payment/success" element={<PaymentSuccess />} />
             <Route path="/payment/failure" element={<PaymentFailure />} />
+            <Route path="/checkout" element={<Checkout />} />
           </Route>
         </Routes>
       </Router>
