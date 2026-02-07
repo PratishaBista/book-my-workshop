@@ -47,6 +47,7 @@ public class ScheduleRepository : GenericRepository<WorkshopSchedule>, ISchedule
     {
         return await _dbSet
             .Include(s => s.Workshop)
+                .ThenInclude(w => w.Pricing)
             .Where(s => s.Workshop.ProviderId == providerId
                      && s.StartDateTime > DateTime.UtcNow
                      && s.Status == ScheduleStatus.Upcoming)

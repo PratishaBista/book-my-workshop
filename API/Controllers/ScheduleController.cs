@@ -180,6 +180,28 @@ public class ScheduleController : ControllerBase
         }
     }
 
+    // GET: api/provider/schedule
+    [HttpGet("~/api/provider/schedule")]
+    public async Task<IActionResult> GetProviderSchedules()
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var providerId = await GetProviderIdAsync(userId);
+            if (providerId == null) return BadRequest(new { message = "Provider profile not found." });
+
+            var schedules = await _workshopService.GetProviderSchedulesAsync(providerId.Value);
+            return Ok(schedules);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting provider schedules");
+            return StatusCode(500, new { message = "An error occurred while retrieving schedules." });
+        }
+    }
+
     private async Task<int?> GetProviderIdAsync(string userId)
     {
         var provider = await _providerRepository.FirstOrDefaultAsync(p => p.UserId == userId);
