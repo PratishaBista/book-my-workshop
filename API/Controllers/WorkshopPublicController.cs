@@ -22,19 +22,20 @@ public class WorkshopPublicController : ControllerBase
         return Ok(workshops);
     }
 
-    // GET: api/workshops/public/{id}
     // GET: api/workshops/public/{idOrSlug}
     [HttpGet("{idOrSlug}")]
     public async Task<IActionResult> GetWorkshopDetail(string idOrSlug)
     {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
         if (int.TryParse(idOrSlug, out int id))
         {
-             var workshopById = await _workshopService.GetWorkshopByIdAsync(id);
+             var workshopById = await _workshopService.GetWorkshopByIdAsync(id, userId);
              if (workshopById != null) return Ok(workshopById);
              return NotFound();
         }
 
-        var workshop = await _workshopService.GetWorkshopBySlugAsync(idOrSlug);
+        var workshop = await _workshopService.GetWorkshopBySlugAsync(idOrSlug, userId);
         if (workshop == null)
         {
             return NotFound();

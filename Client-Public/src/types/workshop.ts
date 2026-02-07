@@ -76,6 +76,7 @@ export interface ScheduleResponse {
     startDateTime: string;
     endDateTime: string;
     availableSeats: number;
+    maxCapacity: number; // Added to match backend
     isSoldOut: boolean;
     status: ScheduleStatus;
 }
@@ -115,6 +116,7 @@ export interface WorkshopDetail {
     reviews: ReviewResponse[];
     averageRating?: number;
     reviewCount: number;
+    bookedScheduleIds?: number[];
     whatToBring?: string;
     skillLevel?: string;
     suitability?: string;

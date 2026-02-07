@@ -59,6 +59,7 @@ public class WorkshopDetailResponse
     public string? RejectionReason { get; set; }
     public DateTime? RejectedAt { get; set; }
     public bool HasPendingModifications { get; set; }
+    public List<int> BookedScheduleIds { get; set; } = new();
     
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -106,6 +107,9 @@ public class MediaResponse
 public class ScheduleResponse
 {
     public int Id { get; set; }
+    public int WorkshopId { get; set; }
+    public string WorkshopTitle { get; set; }
+    public decimal BasePrice { get; set; }
     public DateTime StartDateTime { get; set; }
     public DateTime EndDateTime { get; set; }
     public int MaxCapacity { get; set; }
