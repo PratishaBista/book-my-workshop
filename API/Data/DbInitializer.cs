@@ -16,6 +16,7 @@ public static class DbInitializer
         await SeedRoleAsync(roleManager, UserRoles.Admin);
         await SeedRoleAsync(roleManager, UserRoles.User);
         await SeedRoleAsync(roleManager, UserRoles.Provider);
+        await SeedRoleAsync(roleManager, UserRoles.SuperAdmin);
 
         // 2. Seed Admin User
         var adminEmail = "admin@bookmyworkshop.com";
@@ -35,6 +36,27 @@ public static class DbInitializer
             if (result.Succeeded)
             {
                 await userManager.AddToRoleAsync(admin, UserRoles.Admin);
+            }
+        }
+
+        // 2.1 Seed SuperAdmin User
+        var superAdminEmail = "velvetscarfsoda@gmail.com";
+        var superAdminUser = await userManager.FindByEmailAsync(superAdminEmail);
+
+        if (superAdminUser == null)
+        {
+            var superAdmin = new ApplicationUser
+            {
+                UserName = superAdminEmail,
+                Email = superAdminEmail,
+                FullName = "System Owner",
+                EmailConfirmed = true
+            };
+
+            var result = await userManager.CreateAsync(superAdmin, "SuperAdmin@123"); 
+            if (result.Succeeded)
+            {
+                await userManager.AddToRoleAsync(superAdmin, UserRoles.SuperAdmin);
             }
         }
 

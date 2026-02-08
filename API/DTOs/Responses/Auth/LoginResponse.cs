@@ -7,4 +7,5 @@ public class LoginResponse
     public bool IsApproved { get; set; } = true; // Default to true for normal users
     public API.Enums.ProviderStatus? Status { get; set; }
     public bool HasCompletedOnboarding { get; set; }
+    public bool RequiresMFA { get; set; }
 }

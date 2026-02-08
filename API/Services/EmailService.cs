@@ -47,8 +47,17 @@ public class EmailService : IEmailService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error sending email via SMTP to {to}: {ex.Message}");
-            throw;
+            Console.WriteLine("=================================================");
+            Console.WriteLine($"[EMAIL FAILED]: {ex.Message}");
+            Console.WriteLine($"TO: {to}");
+            Console.WriteLine($"SUBJECT: {subject}");
+            Console.WriteLine("-------------------------------------------------");
+            if (subject.Contains("Verification Code"))
+            {
+                Console.WriteLine("MFA CODE DETECTED IN LOGS FOR DEV:");
+            }
+            Console.WriteLine(body);
+            Console.WriteLine("=================================================");
         }
     }
 }

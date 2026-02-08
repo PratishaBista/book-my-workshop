@@ -7,6 +7,7 @@ using Google.Apis.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace API.Controllers;
 
@@ -19,14 +20,22 @@ public class AuthController : ControllerBase
     private readonly IConfiguration _configuration;
     private readonly ApplicationDbContext _context;
     private readonly IEmailService _emailService;
+    private readonly IMemoryCache _cache;
 
-    public AuthController(UserManager<ApplicationUser> userManager, TokenService tokenService, IConfiguration configuration, ApplicationDbContext context, IEmailService emailService)
+    public AuthController(
+        UserManager<ApplicationUser> userManager, 
+        TokenService tokenService, 
+        IConfiguration configuration, 
+        ApplicationDbContext context, 
+        IEmailService emailService,
+        IMemoryCache cache)
     {
         _userManager = userManager;
         _tokenService = tokenService;
         _configuration = configuration;
         _context = context;
         _emailService = emailService;
+        _cache = cache;
     }
 
     [HttpPost("provider/signup")]
@@ -171,6 +180,25 @@ public class AuthController : ControllerBase
 
         var roles = await _userManager.GetRolesAsync(user);
         
+        // Handle SuperAdmin MFA
+        if (roles.Contains(API.Enums.UserRoles.SuperAdmin))
+        {
+            var code = new Random().Next(100000, 999999).ToString();
+            
+            // Store code in cache for 10 minutes
+            var cacheKey = $"MFA_{user.Email}";
+            _cache.Set(cacheKey, code, TimeSpan.FromMinutes(10));
+
+            // Send Email
+            var emailBody = EmailTemplates.GetSuperAdminMfaEmail(code);
+            await _emailService.SendEmailAsync(user.Email!, "SuperAdmin Verification Code - BookMyWorkshop", emailBody);
+
+            return Ok(new LoginResponse 
+            { 
+                RequiresMFA = true 
+            });
+        }
+
         string primaryRole = API.Enums.UserRoles.User;
         if (roles.Contains(API.Enums.UserRoles.Admin)) primaryRole = API.Enums.UserRoles.Admin;
         else if (roles.Contains(API.Enums.UserRoles.Provider)) primaryRole = API.Enums.UserRoles.Provider;
@@ -202,7 +230,41 @@ public class AuthController : ControllerBase
             Expiry = expiry, 
             IsApproved = isApproved, 
             Status = status,
-            HasCompletedOnboarding = user.HasCompletedOnboarding
+            HasCompletedOnboarding = user.HasCompletedOnboarding,
+            RequiresMFA = false
+        });
+    }
+
+    [HttpPost("verify-superadmin-mfa")]
+    public async Task<ActionResult<LoginResponse>> VerifySuperAdminMfa([FromBody] VerifyMfaRequest request)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+
+        var user = await _userManager.FindByEmailAsync(request.Email);
+        if (user == null) return Unauthorized("Invalid request");
+
+        var roles = await _userManager.GetRolesAsync(user);
+        if (!roles.Contains(API.Enums.UserRoles.SuperAdmin)) 
+            return Unauthorized("Unauthorized role access");
+
+        var cacheKey = $"MFA_{request.Email}";
+        if (!_cache.TryGetValue(cacheKey, out string? storedCode))
+            return BadRequest("Code expired or invalid. Please login again.");
+
+        if (storedCode != request.Code)
+            return BadRequest("Invalid verification code.");
+
+        // Clear code after successful verification
+        _cache.Remove(cacheKey);
+
+        var (token, expiry) = _tokenService.CreateToken(user, API.Enums.UserRoles.SuperAdmin);
+
+        return Ok(new LoginResponse 
+        { 
+            Token = token, 
+            Expiry = expiry, 
+            IsApproved = true, 
+            RequiresMFA = false
         });
     }
 

@@ -252,4 +252,73 @@ public static class EmailTemplates
 </body>
 </html>";
     }
+
+    public static string GetSuperAdminMfaEmail(string code)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>SuperAdmin Verification Code</title>
+</head>
+<body style='margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, ""Helvetica Neue"", Arial, sans-serif; background-color: #f5f5f5;'>
+    <table role='presentation' style='width: 100%; border-collapse: collapse;'>
+        <tr>
+            <td align='center' style='padding: 40px 20px;'>
+                <table role='presentation' style='width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-top: 4px solid #6B46C1;'>
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style='padding: 40px 40px 20px 40px; text-align: center;'>
+                            <img src='https://res.cloudinary.com/daaysxdli/image/upload/v1767434247/Badge_hjkzju.png' alt='BookMyWorkshop' style='height: 50px; margin-bottom: 20px;' />
+                            <p style='margin: 0; color: #6B7280; font-size: 12px; font-weight: 700; letter-spacing: 2px; uppercase;'>
+                                SECURITY ALERT
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Body -->
+                    <tr>
+                        <td style='padding: 20px 40px 40px 40px;'>
+                            <h1 style='margin: 0 0 20px 0; color: #111827; font-size: 24px; font-weight: 700; text-align: center;'>
+                                Your Verification Code
+                            </h1>
+                            <p style='margin: 0 0 32px 0; color: #374151; font-size: 16px; line-height: 1.6; text-align: center;'>
+                                A login attempt was detected for the SuperAdmin account. Please use the following code to complete your sign-in:
+                            </p>
+                            
+                            <!-- Verification Code -->
+                            <div style='text-align: center; margin: 32px 0;'>
+                                <div style='background-color: #F3F0FF; color: #6B46C1; font-size: 36px; font-weight: 800; letter-spacing: 12px; padding: 24px; border-radius: 12px; display: inline-block; border: 2px dashed #6B46C1;'>
+                                    {code}
+                                </div>
+                            </div>
+                            
+                            <p style='margin: 32px 0 0 0; color: #6B7280; font-size: 14px; line-height: 1.5; text-align: center;'>
+                                This code is valid for <strong>10 minutes</strong>. 
+                            </p>
+                            <p style='margin: 8px 0 0 0; color: #EF4444; font-size: 13px; font-weight: 500; text-align: center;'>
+                                If you did not attempt this login, please contact technical security immediately.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style='background-color: #F9FAFB; padding: 32px 40px; border-top: 1px solid #E5E7EB;'>
+                            <p style='margin: 0; color: #9CA3AF; font-size: 12px; text-align: center;'>
+                                © 2026 BookMyWorkshop Architecture. System Identity Module.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>";
+    }
 }
