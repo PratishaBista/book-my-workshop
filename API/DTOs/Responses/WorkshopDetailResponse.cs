@@ -108,7 +108,7 @@ public class ScheduleResponse
 {
     public int Id { get; set; }
     public int WorkshopId { get; set; }
-    public string WorkshopTitle { get; set; }
+    public string WorkshopTitle { get; set; } = string.Empty;
     public decimal BasePrice { get; set; }
     public DateTime StartDateTime { get; set; }
     public DateTime EndDateTime { get; set; }

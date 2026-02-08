@@ -12,6 +12,12 @@ public class BookingResponse
     public string ConfirmationCode { get; set; } = string.Empty;
     public DateTime BookingDate { get; set; }
     
+    // Helper properties for flatter access
+    public string? WorkshopTitle { get; set; }
+    public string? WorkshopSlug { get; set; }
+    public DateTime? StartDateTime { get; set; }
+    public string? UserName { get; set; }
+    
     // Workshop Schedule Info
     public ScheduleInfoResponse Schedule { get; set; } = null!;
     

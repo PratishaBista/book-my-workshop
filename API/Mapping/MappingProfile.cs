@@ -145,6 +145,10 @@ public class MappingProfile : Profile
         CreateMap<Booking, BookingResponse>()
             .ForMember(dest => dest.Schedule, opt => opt.MapFrom(src => src.WorkshopSchedule))
             .ForMember(dest => dest.Workshop, opt => opt.MapFrom(src => src.WorkshopSchedule.Workshop))
+            .ForMember(dest => dest.WorkshopTitle, opt => opt.MapFrom(src => src.WorkshopSchedule.Workshop.Title))
+            .ForMember(dest => dest.WorkshopSlug, opt => opt.MapFrom(src => src.WorkshopSchedule.Workshop.Slug))
+            .ForMember(dest => dest.StartDateTime, opt => opt.MapFrom(src => src.WorkshopSchedule.StartDateTime))
+            .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.FullName))
             .ForMember(dest => dest.CanReview, opt => opt.Ignore())
             .ForMember(dest => dest.HasReviewed, opt => opt.MapFrom(src => src.Review != null));
 
