@@ -24,6 +24,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<WorkshopReview> WorkshopReviews { get; set; }
     public DbSet<WorkshopModification> WorkshopModifications { get; set; }
     public DbSet<UserPreference> UserPreferences { get; set; }
+    public DbSet<PlatformSettings> PlatformSettings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

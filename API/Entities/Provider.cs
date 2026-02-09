@@ -42,6 +42,10 @@ public class Provider
 
     public ICollection<Venue> Venues { get; set; } = new List<Venue>();
 
+    // Financials
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal WalletBalance { get; set; } = 0.0m; // Amount the platform owes the host
+
     // Foreign Key to ApplicationUser
     [Required]
     public string UserId { get; set; } = string.Empty;
