@@ -85,6 +85,54 @@ namespace API.Controllers
 
             return Ok(new { Message = "Commission rate updated successfully", NewRate = settings.CommissionPercentage });
         }
+
+        // --- HOST PAYOUTS ---
+
+        [HttpGet("payouts")]
+        public async Task<IActionResult> GetHostPayouts()
+        {
+            var hosts = await _context.Providers
+                .Include(p => p.User)
+                .Select(p => new
+                {
+                    ProviderId = p.Id,
+                    BusinessName = p.BusinessName,
+                    Email = p.User.Email,
+                    WalletBalance = p.WalletBalance,
+                })
+                .OrderByDescending(p => p.WalletBalance)
+                .ToListAsync();
+
+            return Ok(hosts);
+        }
+
+        [HttpPost("payouts/{providerId}/settle")]
+        public async Task<IActionResult> SettlePayout(int providerId)
+        {
+            var provider = await _context.Providers.FindAsync(providerId);
+            if (provider == null) return NotFound("Host not found");
+            if (provider.WalletBalance <= 0) return BadRequest("No pending balance to settle");
+
+            // Mark all pending bookings for this host as paid out
+            var bookings = await _context.Bookings
+                .Include(b => b.WorkshopSchedule)
+                    .ThenInclude(s => s.Workshop)
+                .Where(b => b.WorkshopSchedule.Workshop.ProviderId == providerId
+                         && b.PayoutStatus == PayoutStatus.Pending
+                         && b.PaymentStatus == PaymentStatus.Paid)
+                .ToListAsync();
+
+            foreach (var booking in bookings)
+                booking.PayoutStatus = PayoutStatus.Paid;
+
+            // Zero out host wallet
+            var settledAmount = provider.WalletBalance;
+            provider.WalletBalance = 0;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = "Payout settled", SettledAmount = settledAmount, BookingsUpdated = bookings.Count });
+        }
     }
 
     public class UpdateCommissionRequest

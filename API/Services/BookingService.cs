@@ -1,3 +1,4 @@
+using API.Data;
 using API.DTOs.Requests;
 using API.DTOs.Responses;
 using API.Entities;
@@ -20,19 +21,22 @@ public class BookingService : IBookingService
     private readonly IWorkshopRepository _workshopRepository;
     private readonly IMapper _mapper;
     private readonly ILogger<BookingService> _logger;
+    private readonly ApplicationDbContext _context;
 
     public BookingService(
         IBookingRepository bookingRepository,
         IScheduleRepository scheduleRepository,
         IWorkshopRepository workshopRepository,
         IMapper mapper,
-        ILogger<BookingService> logger)
+        ILogger<BookingService> logger,
+        ApplicationDbContext context)
     {
         _bookingRepository = bookingRepository;
         _scheduleRepository = scheduleRepository;
         _workshopRepository = workshopRepository;
         _mapper = mapper;
         _logger = logger;
+        _context = context;
     }
 
     public async Task<BookingResponse> CreateBookingAsync(string userId, CreateBookingRequest request)
@@ -245,10 +249,30 @@ public class BookingService : IBookingService
         booking.TransactionId = transactionUuid;
         booking.PaymentGateway = "eSewa";
 
+        // --- Financial Split ---
+        var settings = await _context.PlatformSettings.FirstOrDefaultAsync();
+        var commissionRate = settings?.CommissionPercentage ?? 10.0m;
+
+        booking.PlatformFee = Math.Round(booking.TotalAmount * commissionRate / 100, 2);
+        booking.HostEarnings = booking.TotalAmount - booking.PlatformFee;
+        booking.PayoutStatus = PayoutStatus.Pending;
+
+        // Credit the host wallet
+        var schedule = await _context.WorkshopSchedules
+            .Include(s => s.Workshop)
+                .ThenInclude(w => w.Provider)
+            .FirstOrDefaultAsync(s => s.Id == booking.WorkshopScheduleId);
+
+        if (schedule?.Workshop?.Provider != null)
+        {
+            schedule.Workshop.Provider.WalletBalance += booking.HostEarnings;
+        }
+
         _bookingRepository.Update(booking);
         await _bookingRepository.SaveChangesAsync();
 
-        _logger.LogInformation($"Payment confirmed for Booking {booking.Id}. Transaction: {transactionUuid}");
+        _logger.LogInformation(
+            $"Payment confirmed for Booking {booking.Id}. Fee: {booking.PlatformFee}, Host Earnings: {booking.HostEarnings}. Transaction: {transactionUuid}");
         return true;
     }
 
