@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../../config/api';
 
 const SuperLogin: React.FC = () => {
+    const navigate = useNavigate();
     const [step, setStep] = useState<'login' | 'mfa'>('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -62,6 +64,7 @@ const SuperLogin: React.FC = () => {
 
             localStorage.setItem('superadmin_token', data.token);
             setSuccess(true);
+            setTimeout(() => navigate('/dashboard/overview'), 1000);
         } catch (err: any) {
             setError(err.message);
         } finally {
