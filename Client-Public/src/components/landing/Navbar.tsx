@@ -24,7 +24,7 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
     const userMenuRef = useRef<HTMLDivElement>(null);
     const locationDropdownRef = useRef<HTMLDivElement>(null);
 
-    const [selectedLocation, setSelectedLocation] = useState('Kathmandu');
+    const [selectedLocation, setSelectedLocation] = useState('All Locations');
     const [locationOpen, setLocationOpen] = useState(false);
     const [locationSearch, setLocationSearch] = useState('');
     const [profilePic, setProfilePic] = useState<string | null>(null);
@@ -34,6 +34,12 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
     const [exploreOpen, setExploreOpen] = useState(false);
     const [categories, setCategories] = useState<any[]>([]);
     const exploreRef = useRef<HTMLDivElement>(null);
+
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [searchOpen, setSearchOpen] = useState(false);
+    const searchRef = useRef<HTMLDivElement>(null);
 
     const fetchNavbarProfile = async () => {
         const token = localStorage.getItem('token');
@@ -77,7 +83,7 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
     }, [isAuthenticated]);
 
     const popularCities = [
-        'Kathmandu', 'Pokhara', 'Lalitpur', 'Bhaktapur', 'Biratnagar',
+        'All Locations', 'Kathmandu', 'Pokhara', 'Lalitpur', 'Bhaktapur', 'Biratnagar',
         'Birgunj', 'Dharan', 'Hetauda', 'Butwal', 'Janakpur'
     ];
 
@@ -147,6 +153,54 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [locationOpen]);
+
+    // Live Search effect
+    useEffect(() => {
+        const fetchSearchResults = async () => {
+            if (!searchQuery.trim()) {
+                setSearchResults([]);
+                setIsSearching(false);
+                return;
+            }
+            setIsSearching(true);
+            try {
+                const url = API_ENDPOINTS.workshop.search(searchQuery, selectedLocation);
+                const response = await fetch(url);
+                if (response.ok) {
+                    const data = await response.json();
+                    setSearchResults(data);
+                }
+            } catch (e) {
+                console.error("error fetching search results", e);
+            } finally {
+                setIsSearching(false);
+            }
+        };
+
+        const timeoutId = setTimeout(() => {
+            fetchSearchResults();
+        }, 300); // 300ms debounce
+
+        return () => clearTimeout(timeoutId);
+    }, [searchQuery, selectedLocation]);
+
+    // Close search dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+                setSearchOpen(false);
+            }
+        };
+
+        if (searchOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [searchOpen]);
+
 
     const communityItems = [
         { label: 'Our Impact', color: '#73A757' },
@@ -343,9 +397,124 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
                                     )}
                                 </AnimatePresence>
                             </div>
-                            <div className="flex items-center gap-2 flex-1">
-                                <input type="text" placeholder="Search workshops..." className="w-full bg-transparent outline-none text-sm font-sans text-deep-purple placeholder:text-deep-purple/40" />
+                            <div className="relative flex items-center gap-2 flex-1" ref={searchRef}>
+                                <input 
+                                    type="text" 
+                                    placeholder="Search workshops..." 
+                                    value={searchQuery}
+                                    onChange={(e) => {
+                                        setSearchQuery(e.target.value);
+                                        setSearchOpen(true);
+                                    }}
+                                    onFocus={() => {
+                                        if (searchQuery.trim()) setSearchOpen(true);
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && searchQuery.trim()) {
+                                            setSearchOpen(false);
+                                            navigate(`/search?q=${encodeURIComponent(searchQuery)}${selectedLocation !== 'All Locations' ? `&loc=${encodeURIComponent(selectedLocation)}` : ''}`);
+                                        }
+                                    }}
+                                    className="w-full bg-transparent outline-none text-sm font-sans text-deep-purple placeholder:text-deep-purple/40" 
+                                />
                                 <ArrowRight size={18} className="text-deep-purple" />
+                                
+                                <AnimatePresence>
+                                    {searchOpen && searchQuery.trim() && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: 10 }}
+                                            className="absolute top-full right-0 mt-4 w-[400px] bg-white border border-deep-purple/10 shadow-xl rounded-2xl overflow-hidden py-4 z-[60]"
+                                        >
+                                            {/* Categories Match */}
+                                            {categories.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 && (
+                                                <div className="mb-4">
+                                                    <div className="px-4 text-[10px] font-bold text-deep-purple/50 uppercase tracking-widest mb-2">
+                                                        Topics
+                                                    </div>
+                                                    {categories.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 3).map(category => (
+                                                        <Link
+                                                            key={category.id}
+                                                            to={`/explore?category=${encodeURIComponent(category.name)}`}
+                                                            onClick={() => setSearchOpen(false)}
+                                                            className="flex items-center gap-3 px-4 py-2 hover:bg-cream-base transition-colors"
+                                                        >
+                                                            <div className="w-8 h-8 rounded-lg bg-[#D94F80]/10 flex items-center justify-center text-[#D94F80]">
+                                                                {React.createElement(getCategoryIcon(category.name), { size: 16 })}
+                                                            </div>
+                                                            <div className="text-sm font-bold text-deep-purple uppercase tracking-wider">
+                                                                {category.name} <span className="text-deep-purple/40 font-normal">CLASSES</span>
+                                                            </div>
+                                                        </Link>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Workshop Results */}
+                                            <div>
+                                                <div className="px-4 text-[10px] font-bold text-deep-purple/50 uppercase tracking-widest mb-2 border-t border-deep-purple/5 pt-3">
+                                                    In-Person Classes (Top Results)
+                                                </div>
+                                                
+                                                {isSearching ? (
+                                                    <div className="px-4 py-6 text-center text-sm text-deep-purple/50 font-semibold">
+                                                        Searching...
+                                                    </div>
+                                                ) : searchResults.length > 0 ? (
+                                                    <>
+                                                        {searchResults.slice(0, 4).map(workshop => (
+                                                            <Link
+                                                                key={workshop.id}
+                                                                to={`/workshop/${workshop.slug}`}
+                                                                onClick={() => setSearchOpen(false)}
+                                                                className="flex gap-4 px-4 py-3 hover:bg-cream-base transition-colors group"
+                                                            >
+                                                                <div className="w-16 h-12 rounded-lg bg-gray-200 overflow-hidden shrink-0">
+                                                                    {workshop.media && workshop.media.length > 0 ? (
+                                                                        <img src={workshop.media[0].fileUrl} alt={workshop.title} className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        <div className="w-full h-full bg-primary-orange/10 flex items-center justify-center text-primary-orange/50">
+                                                                            <Camera size={16} />
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="text-xs font-bold text-deep-purple uppercase tracking-wider mb-1 line-clamp-1 group-hover:text-primary-orange transition-colors">
+                                                                        {workshop.title}
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1.5 text-xs text-deep-purple/60">
+                                                                       <span className="font-bold text-[#D94F80]">
+                                                                           {/* Workshop avg rating mock */ '4.9'} <span className="text-[10px]">★</span>
+                                                                       </span> 
+                                                                       <span>({/* Workshop reviews count mock */ Math.floor(Math.random() * 300) + 10})</span>
+                                                                       <span className="text-deep-purple/30">•</span>
+                                                                       <span className="line-clamp-1">{workshop.locationAddress || selectedLocation}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </Link>
+                                                        ))}
+                                                        
+                                                        {/* See all results button */}
+                                                        <div className="px-4 pt-4 mt-2 border-t border-deep-purple/5">
+                                                            <Link
+                                                                to={`/search?q=${encodeURIComponent(searchQuery)}${selectedLocation !== 'All Locations' ? `&loc=${encodeURIComponent(selectedLocation)}` : ''}`}
+                                                                onClick={() => setSearchOpen(false)}
+                                                                className="inline-block px-4 py-1.5 border border-[#D94F80] text-[#D94F80] hover:bg-[#D94F80] hover:text-white rounded font-bold text-sm transition-all"
+                                                            >
+                                                                See all results
+                                                            </Link>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className="px-4 py-6 text-center text-sm text-deep-purple/50 font-semibold">
+                                                        No classes found for "{searchQuery}"
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </div>
                     </div>

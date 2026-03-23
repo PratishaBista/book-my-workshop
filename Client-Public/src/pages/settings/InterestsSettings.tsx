@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2 } from 'lucide-react';
 import { API_ENDPOINTS } from '../../config/api';
 
 interface Category {
@@ -56,8 +56,8 @@ const InterestsSettings: React.FC = () => {
     };
 
     const handleSave = async () => {
-        if (selectedIds.length < 3) {
-            setMessage('Please select at least 3 interests.');
+        if (selectedIds.length < 1) {
+            setMessage('Please select at least 1 interest.');
             return;
         }
 
@@ -77,10 +77,13 @@ const InterestsSettings: React.FC = () => {
             if (response.ok) {
                 setMessage('Interests updated successfully!');
             } else {
-                setMessage('Failed to update interests.');
+                const errorData = await response.json();
+                console.error('Save failed:', errorData);
+                setMessage(`Failed: ${errorData.message || 'Unknown error'}`);
             }
         } catch (error) {
-            setMessage('An error occurred.');
+            console.error('Save error:', error);
+            setMessage('An network error occurred.');
         } finally {
             setSaving(false);
         }
@@ -102,7 +105,7 @@ const InterestsSettings: React.FC = () => {
         >
             <div className="mb-8">
                 <h2 className="text-3xl font-serif font-bold text-deep-purple mb-2">Your Interests</h2>
-                <p className="text-deep-purple/60">Choose what you love so we can suggest the best workshops for you.</p>
+                <p className="text-deep-purple/60">Choose 1 or more interests so we can suggest the best workshops for you.</p>
             </div>
 
             {message && (
@@ -111,32 +114,20 @@ const InterestsSettings: React.FC = () => {
                 </div>
             )}
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <div className="flex flex-wrap gap-3 mb-4">
                 {categories.map((category) => (
                     <button
                         key={category.id}
                         onClick={() => toggleCategory(category.id)}
                         className={`
-                            relative p-5 rounded-3xl border-2 transition-all duration-300 flex flex-col items-center gap-3
+                            px-6 py-3 rounded-full border-2 font-bold text-sm transition-all duration-300
                             ${selectedIds.includes(category.id)
-                                ? 'border-primary-orange bg-primary-orange/5 shadow-md shadow-primary-orange/5'
-                                : 'border-deep-purple/5 bg-white hover:border-deep-purple/10'
+                                ? 'border-primary-orange bg-primary-orange text-white shadow-lg shadow-primary-orange/20'
+                                : 'border-deep-purple/10 bg-white text-deep-purple hover:border-deep-purple/30'
                             }
                         `}
                     >
-                        <div className={`
-                            w-12 h-12 rounded-xl flex items-center justify-center text-2xl
-                            ${selectedIds.includes(category.id) ? 'bg-primary-orange text-white' : 'bg-cream-base text-deep-purple'}
-                        `}>
-                            {category.iconUrl ? <img src={category.iconUrl} alt="" className="w-8 h-8 object-contain" /> : '🎨'}
-                        </div>
-                        <span className="font-bold text-xs text-deep-purple">{category.name}</span>
-
-                        {selectedIds.includes(category.id) && (
-                            <div className="absolute top-2 right-2 w-5 h-5 bg-primary-orange rounded-full flex items-center justify-center text-white border-2 border-white">
-                                <Check size={10} strokeWidth={4} />
-                            </div>
-                        )}
+                        {category.name}
                     </button>
                 ))}
             </div>

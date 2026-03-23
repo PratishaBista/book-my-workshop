@@ -33,8 +33,12 @@ export const API_ENDPOINTS = {
     workshop: {
         base: `${API_URL}/api/workshop`,
         public: `${API_URL}/api/workshops/public`,
+        featured: `${API_URL}/api/workshops/public/featured`,
+        userRecommendations: `${API_URL}/api/workshops/public/recommendations`,
+        search: (query: string, location: string) => 
+            `${API_URL}/api/workshops/public/search?q=${encodeURIComponent(query)}${location && location !== 'All Locations' ? `&location=${encodeURIComponent(location)}` : ''}`,
         byProvider: (id: number) => `${API_URL}/api/workshops/public/provider/${id}`,
-        recommendations: (id: number) => `${API_URL}/api/workshop/${id}/recommendations`,
+        related: (id: number) => `${API_URL}/api/workshops/public/${id}/related`,
     },
     media: {
         base: `${API_URL}/api/media`,

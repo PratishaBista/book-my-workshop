@@ -17,6 +17,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
         return <Navigate to="/login" replace />;
     }
 
+    // New: Check for onboarding status for regular Users
+    if (user && user.role === 'User' && !user.hasCompletedOnboarding && window.location.pathname !== '/onboarding') {
+        return <Navigate to="/onboarding" replace />;
+    }
+
     if (allowedRoles && user && !allowedRoles.includes(user.role)) {
         // Redirect to appropriate dashboard or home based on role
         if (user.role === 'Admin') return <Navigate to="/admin/dashboard" replace />;

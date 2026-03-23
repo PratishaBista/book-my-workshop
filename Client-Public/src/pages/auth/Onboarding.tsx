@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Check, ArrowRight, X } from 'lucide-react';
+import { Sparkles, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config/api';
 
@@ -25,7 +25,10 @@ const Onboarding: React.FC = () => {
 
     const fetchCategories = async () => {
         try {
-            const response = await fetch(API_ENDPOINTS.preferences.categories);
+            const token = localStorage.getItem('token');
+            const response = await fetch(API_ENDPOINTS.preferences.categories, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
             if (response.ok) {
                 const data = await response.json();
                 setCategories(data);
@@ -44,7 +47,7 @@ const Onboarding: React.FC = () => {
     };
 
     const handleSave = async () => {
-        if (selectedIds.length < 3) return;
+        if (selectedIds.length < 1) return;
 
         setSaving(true);
         try {
@@ -61,6 +64,9 @@ const Onboarding: React.FC = () => {
             if (response.ok) {
                 updateOnboardingStatus(true);
                 navigate('/', { replace: true });
+            } else {
+                const errorData = await response.json();
+                console.error('Onboarding Save failed:', errorData);
             }
         } catch (error) {
             console.error('Failed to save preferences:', error);
@@ -69,10 +75,6 @@ const Onboarding: React.FC = () => {
         }
     };
 
-    const handleSkip = () => {
-        updateOnboardingStatus(true);
-        navigate('/', { replace: true });
-    };
 
     if (loading) {
         return (
@@ -94,12 +96,6 @@ const Onboarding: React.FC = () => {
                     <div className="w-10 h-10 bg-deep-purple rounded-xl flex items-center justify-center text-white font-black italic">B</div>
                     <span className="font-serif font-black text-xl text-deep-purple tracking-tight">BookMyWorkshop</span>
                 </div>
-                <button
-                    onClick={handleSkip}
-                    className="text-deep-purple/40 hover:text-deep-purple font-bold text-sm transition-colors flex items-center gap-1"
-                >
-                    Skip for now <X size={14} />
-                </button>
             </header>
 
             <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 max-w-4xl mx-auto text-center pb-20">
@@ -117,43 +113,27 @@ const Onboarding: React.FC = () => {
                         <span className="text-primary-orange italic">interested</span> in?
                     </h1>
                     <p className="text-lg text-deep-purple/60 mb-12 max-w-xl mx-auto">
-                        Pick at least <span className="text-deep-purple font-bold">3 interests</span> so we can recommend the perfect workshops for you.
+                        Pick <span className="text-deep-purple font-bold">1 or more interests</span> so we can recommend the perfect workshops for you.
                     </p>
                 </motion.div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 w-full">
+                <div className="flex flex-wrap justify-center gap-4 w-full">
                     {categories.map((category, index) => (
                         <motion.button
-                            initial={{ opacity: 0, scale: 0.9 }}
+                            initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: index * 0.05 }}
+                            transition={{ delay: index * 0.03 }}
                             key={category.id}
                             onClick={() => toggleCategory(category.id)}
                             className={`
-                                relative p-6 rounded-[2rem] border-2 transition-all duration-300 flex flex-col items-center gap-4 group
+                                px-8 py-4 rounded-full border-2 font-bold text-base transition-all duration-300
                                 ${selectedIds.includes(category.id)
-                                    ? 'border-primary-orange bg-primary-orange/5 shadow-lg shadow-primary-orange/10'
-                                    : 'border-deep-purple/5 bg-white hover:border-deep-purple/20'
+                                    ? 'border-primary-orange bg-primary-orange text-white shadow-xl shadow-primary-orange/20'
+                                    : 'border-deep-purple/10 bg-white text-deep-purple hover:border-deep-purple/30'
                                 }
                             `}
                         >
-                            <div className={`
-                                w-16 h-16 rounded-2xl flex items-center justify-center text-3xl transition-all duration-300
-                                ${selectedIds.includes(category.id) ? 'bg-primary-orange text-white' : 'bg-cream-base group-hover:bg-primary-orange/10 text-deep-purple'}
-                            `}>
-                                {category.iconUrl ? <img src={category.iconUrl} alt="" className="w-10 h-10 object-contain" /> : '🎨'}
-                            </div>
-                            <span className="font-bold text-sm text-deep-purple">{category.name}</span>
-
-                            {selectedIds.includes(category.id) && (
-                                <motion.div
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    className="absolute top-2 right-2 w-6 h-6 bg-primary-orange rounded-full flex items-center justify-center text-white shadow-sm border-2 border-white"
-                                >
-                                    <Check size={12} strokeWidth={4} />
-                                </motion.div>
-                            )}
+                            {category.name}
                         </motion.button>
                     ))}
                 </div>
@@ -164,10 +144,10 @@ const Onboarding: React.FC = () => {
                 >
                     <button
                         onClick={handleSave}
-                        disabled={selectedIds.length < 3 || saving}
+                        disabled={selectedIds.length < 1 || saving}
                         className={`
                             w-full py-5 rounded-3xl font-black text-lg flex items-center justify-center gap-3 transition-all duration-300
-                            ${selectedIds.length >= 3
+                            ${selectedIds.length >= 1
                                 ? 'bg-deep-purple text-white shadow-2xl shadow-deep-purple/20 hover:scale-[1.02] active:scale-[0.98]'
                                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                             }
@@ -177,7 +157,7 @@ const Onboarding: React.FC = () => {
                             <div className="animate-spin h-6 w-6 border-3 border-white border-t-transparent rounded-full" />
                         ) : (
                             <>
-                                {selectedIds.length < 3 ? `Pick ${3 - selectedIds.length} more` : "Let's Explore"}
+                                {selectedIds.length < 1 ? `Pick your interests` : "Let's Explore"}
                                 <ArrowRight size={20} />
                             </>
                         )}
