@@ -19,6 +19,7 @@ public class PreferencesController : ControllerBase
         _context = context;
     }
 
+    [AllowAnonymous]
     [HttpGet("categories")]
     public async Task<IActionResult> GetCategories()
     {
@@ -49,9 +50,9 @@ public class PreferencesController : ControllerBase
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-        if (categoryIds == null || categoryIds.Count < 3)
+        if (categoryIds == null || categoryIds.Count < 1)
         {
-            return BadRequest(new { message = "Please select at least 3 interests." });
+            return BadRequest(new { message = "Please select at least 1 interest." });
         }
 
         var user = await _context.Users

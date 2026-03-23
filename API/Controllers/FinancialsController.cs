@@ -21,7 +21,6 @@ namespace API.Controllers
         }
 
         // --- DASHBOARD OVERVIEW ---
-
         [HttpGet("dashboard")]
         public async Task<IActionResult> GetDashboardStats()
         {
@@ -49,12 +48,42 @@ namespace API.Controllers
                 .Where(b => b.PaymentStatus == PaymentStatus.Paid)
                 .SumAsync(b => b.TotalAmount);
 
+            // 5. Total counts
+            var totalUsers = await _context.Users.CountAsync();
+            var totalProviders = await _context.Providers.CountAsync();
+            var totalWorkshops = await _context.Workshops.CountAsync();
+
+            // 6. Monthly Booking Data (Last 6 Months)
+            var sixMonthsAgo = DateTime.UtcNow.AddMonths(-6);
+            
+            // Get raw data from DB
+            var recentBookingsRaw = await _context.Bookings
+                .Where(b => b.PaymentStatus == PaymentStatus.Paid && b.BookingDate >= sixMonthsAgo)
+                .Select(b => new { b.BookingDate, b.PlatformFee })
+                .ToListAsync();
+
+            // Group in memory
+            var monthlyRevenueData = recentBookingsRaw
+                .GroupBy(b => new { b.BookingDate.Year, b.BookingDate.Month })
+                .Select(g => new
+                {
+                    month = new DateTime(g.Key.Year, g.Key.Month, 1).ToString("MMM yyyy"),
+                    revenue = g.Sum(b => b.PlatformFee)
+                })
+                .OrderBy(d => DateTime.Parse(d.month)) // Re-order after grouping
+                .ToList();
+
+
             return Ok(new
             {
                 CommissionRate = settings.CommissionPercentage,
                 TotalPlatformRevenue = totalRevenue,
                 PendingHostPayouts = pendingPayouts,
-                TotalBookingVolume = totalVolume
+                TotalBookingVolume = totalVolume,
+                TotalUsers = totalUsers,
+                TotalProviders = totalProviders,
+                TotalWorkshops = totalWorkshops,
+                MonthlyRevenueData = monthlyRevenueData
             });
         }
 

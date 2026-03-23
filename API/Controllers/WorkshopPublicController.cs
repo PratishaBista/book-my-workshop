@@ -74,4 +74,19 @@ public class WorkshopPublicController : ControllerBase
         var workshops = await _workshopService.GetProviderWorkshopsAsync(providerId);
         return Ok(workshops);
     }
+
+    // GET: api/workshops/public/recommendations
+    [HttpGet("recommendations")]
+    public async Task<IActionResult> GetRecommendations([FromQuery] int count = 6)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            // If guest, just return featured
+            return Ok(await _workshopService.GetFeaturedWorkshopsAsync(count));
+        }
+
+        var recommendations = await _workshopService.GetRecommendedWorkshopsForUserAsync(userId, count);
+        return Ok(recommendations);
+    }
 }

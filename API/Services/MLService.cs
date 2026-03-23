@@ -59,13 +59,13 @@ public class MLService : IMLService
         return (null, null, null);
     }
 
-    public async Task<List<(int Id, double Score)>> PredictSimilaritiesWithScoresAsync(string sourceText, List<(int Id, string Text)> candidates)
+    public async Task<List<(int Id, double Score)>> PredictSimilaritiesWithScoresAsync(string userInterests, List<(int Id, string Text)> candidates)
     {
         try 
         {
             var request = new 
             { 
-                source_text = sourceText, 
+                user_interests = userInterests, 
                 candidates = candidates.Select(c => new { id = c.Id, text = c.Text }).ToList() 
             };
 
