@@ -84,3 +84,7 @@ Documentation/
 
 API/Properties/launchSettings.json
 API/build_error.txt
+
+# Python
+__pycache__/
+*.pyc
