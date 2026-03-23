@@ -1,36 +1,43 @@
 import pandas as pd
-from sentence_transformers import SentenceTransformer, InputExample, losses, evaluation
-from torch.utils.data import DataLoader
+import joblib
 import os
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
-def train():
-    data_path = "data/raw/similarity_training_data.csv"
-    if not os.path.exists(data_path):
-        print(f"Error: Dataset not found at {data_path}")
+# 1. Configuration
+DATA_PATH = "data/workshops_data.csv"
+MODEL_DIR = "models/custom_recommender"
+if not os.path.exists(MODEL_DIR):
+    os.makedirs(MODEL_DIR)
+
+def train_model():
+    print("Starting Custom ML Model Training (TF-IDF)...")
+    
+    # 2. Loading real data from CSV
+    if not os.path.exists(DATA_PATH):
+        print(f"Error: Data file not found at {DATA_PATH}. Run export_data.py first.")
         return
 
-    df = pd.read_csv(data_path)
-    print(f"Loaded {len(df)} pairs for training.")
+    df = pd.read_csv(DATA_PATH)
+    
+    if df.empty:
+        print("Warning: Data file is empty. Nothing to train on.")
+        return
 
-    model_name = "all-MiniLM-L6-v2"
-    model = SentenceTransformer(model_name)
-    print(f"Initialized base model: {model_name}")
+    print(f"Loaded {len(df)} workshops for training.")
 
-    train_examples = []
-    for _, row in df.iterrows():
-        train_examples.append(InputExample(texts=[str(row['text_a']), str(row['text_b'])], label=float(row['label'])))
+    # 3. Vectorization
+    # We remove 'stop words' (the, a, is) to keep only the meaningful technical terms
+    vectorizer = TfidfVectorizer(stop_words='english', ngram_range=(1, 2))
+    tfidf_matrix = vectorizer.fit_transform(df['text'].fillna(''))
 
-    train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=16)
-    train_loss = losses.CosineSimilarityLoss(model)
+    # 4. Save the artifacts
+    joblib.dump(vectorizer, f"{MODEL_DIR}/vectorizer.pkl")
+    joblib.dump(tfidf_matrix, f"{MODEL_DIR}/tfidf_matrix.pkl")
+    joblib.dump(df, f"{MODEL_DIR}/workshops_df.pkl")
 
-    print("Starting fine-tuning (Supervised Similarity)...")
-    model.fit(
-        train_objectives=[(train_dataloader, train_loss)],
-        epochs=1,
-        warmup_steps=100,
-        output_path="models/workshop_recommender"
-    )
-    print("Training complete. Model saved to 'models/workshop_recommender'")
+    print(f"Custom Model trained and saved to {MODEL_DIR}")
+    print(f"Features learned: {len(vectorizer.get_feature_names_out())}")
 
 if __name__ == "__main__":
-    train()
+    train_model()

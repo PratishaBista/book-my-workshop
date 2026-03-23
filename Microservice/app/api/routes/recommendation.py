@@ -13,7 +13,8 @@ class Candidate(BaseModel):
     text: str
 
 class RecommendRequest(BaseModel):
-    source_text: str
+    source_text: str = ""
+    user_interests: str # e.g. "Pottery Cooking"
     candidates: List[Candidate]
 
 class RankedItem(BaseModel):
@@ -26,15 +27,14 @@ class RecommendResponse(BaseModel):
 @router.post("/recommend", response_model=RecommendResponse)
 async def get_recommendations(request: RecommendRequest):
     """
-    Ranks a list of candidate workshops based on their similarity to a source workshop.
-    Expects 'source_text' (clicked workshop) and a list of 'candidates' (ID + Text).
+    Ranks workshops based on the user's specific interests using custom TF-IDF.
     """
     if not recommender.model_loaded:
-        raise HTTPException(status_code=503, detail="Recommender model not loaded.")
+        # If model isn't trained yet, return original order
+        return RecommendResponse(recommendations=[{"id": c.id, "score": 0.0} for c in request.candidates])
     
-    # Extract candidates as list of dicts for the service
-    candidate_list = [{"id": c.id, "text": c.text} for c in request.candidates]
+    candidate_list = [{"id": c.id, "text": f"{c.text}"} for c in request.candidates]
     
-    results = recommender.rank_workshops(request.source_text, candidate_list)
+    results = recommender.rank_for_user(request.user_interests, candidate_list)
     
     return RecommendResponse(recommendations=results)
