@@ -203,9 +203,9 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
 
 
     const communityItems = [
-        { label: 'Our Impact', color: '#73A757' },
-        { label: 'Help Center', color: '#0E0E0C' },
-        { label: 'Contact Us', color: '#AF82C5' }
+        { label: 'Our Mission', color: '#73A757', path: '/mission' },
+        { label: 'How It Works', color: '#0E0E0C', path: '/how-it-works' },
+        { label: 'Contact Us', color: '#AF82C5', path: '/contact' }
     ];
 
     const categoryIconMap: Record<string, any> = {
@@ -335,7 +335,7 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
                                         {communityItems.map((item, index) => (
                                             <Link
                                                 key={index}
-                                                to={`/${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                                                to={item.path}
                                                 className="flex items-center gap-3 px-4 py-3 rounded-lg group"
                                             >
                                                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />

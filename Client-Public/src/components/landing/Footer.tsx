@@ -53,10 +53,10 @@ const Footer: React.FC = () => {
                     <div>
                         <h4 className="font-mono text-xs uppercase tracking-[0.2em] text-primary-orange mb-6">Company</h4>
                         <ul className="space-y-3 font-sans text-lg text-cream-base/60">
-                            <li><Link to="/about" className="transition-colors hover:text-white">About Us</Link></li>
+                            <li><Link to="/mission" className="transition-colors hover:text-white">Our Mission</Link></li>
+                            <li><Link to="/how-it-works" className="transition-colors hover:text-white">How It Works</Link></li>
+                            <li><Link to="/contact" className="transition-colors hover:text-white">Contact Us</Link></li>
                             <li><Link to="/host-workshop" className="transition-colors hover:text-white">Become a Host</Link></li>
-                            <li><Link to="/careers" className="transition-colors hover:text-white">Careers</Link></li>
-                            <li><Link to="/sitemap" className="transition-colors hover:text-white">Sitemap</Link></li>
                         </ul>
                         <div className="mt-12">
                             <h4 className="font-mono text-xs uppercase tracking-[0.2em] text-primary-orange mb-4">(Connect with us)</h4>
