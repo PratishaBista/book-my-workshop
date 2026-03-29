@@ -6,6 +6,7 @@ import { HostOverview } from './views/HostOverview';
 import { MyWorkshops } from './views/MyWorkshops';
 import { ScheduleManagement } from './views/ScheduleManagement';
 import { BusinessProfile } from './views/BusinessProfile';
+import { Earnings } from './views/Earnings';
 import { PlaceholderView } from './views/PlaceholderView';
 import type { HostTab, ProviderProfile } from '../../types/host';
 import { ProviderStatus } from '../../types/host';
@@ -104,10 +105,7 @@ const HostDashboard: React.FC = () => {
                     description="Keep track of everyone joining your workshops. You'll be able to mark attendance and manage groups here."
                 />;
             case 'earnings':
-                return <PlaceholderView
-                    title="Earnings & Payouts"
-                    description="Total transparency on your workshop income, platform commissions, and scheduled payouts to your bank."
-                />;
+                return <Earnings />;
             case 'reviews':
                 return <PlaceholderView
                     title="Student Reviews"

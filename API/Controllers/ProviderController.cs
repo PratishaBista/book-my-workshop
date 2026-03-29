@@ -139,4 +139,50 @@ public class ProviderController : ControllerBase
             return BadRequest(ex.Message);
         }
     }
+
+    [HttpGet("earnings")]
+    public async Task<ActionResult<HostEarningsResponse>> GetEarnings()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var provider = await _context.Providers.FirstOrDefaultAsync(p => p.UserId == userId);
+        
+        if (provider == null) return NotFound("Provider profile not found");
+
+        var bookings = await _context.Bookings
+            .Include(b => b.WorkshopSchedule)
+                .ThenInclude(s => s.Workshop)
+            .Include(b => b.User)
+            .Where(b => b.WorkshopSchedule.Workshop.ProviderId == provider.Id && 
+                        (b.PaymentStatus == PaymentStatus.Paid || b.PaymentStatus == PaymentStatus.Refunded))
+            .OrderByDescending(b => b.BookingDate)
+            .ToListAsync();
+
+        var totalEarnings = bookings.Where(b => b.PaymentStatus == PaymentStatus.Paid).Sum(b => b.HostEarnings);
+        var pendingPayouts = bookings.Where(b => b.PayoutStatus == PayoutStatus.Pending && b.PaymentStatus == PaymentStatus.Paid).Sum(b => b.HostEarnings);
+        var paidOut = bookings.Where(b => b.PayoutStatus == PayoutStatus.Paid).Sum(b => b.HostEarnings);
+
+        var transactions = bookings.Select(b => new EarningTransactionResponse
+        {
+            BookingId = b.Id,
+            WorkshopTitle = b.WorkshopSchedule.Workshop.Title,
+            BookingDate = b.BookingDate,
+            GuestName = b.User.FullName,
+            NumberOfSeats = b.NumberOfSeats,
+            TotalAmount = b.TotalAmount,
+            PlatformFee = b.PlatformFee,
+            HostEarnings = b.HostEarnings,
+            PayoutStatus = b.PayoutStatus.ToString(),
+            BookingStatus = b.BookingStatus.ToString()
+        }).ToList();
+
+        return new HostEarningsResponse
+        {
+            WalletBalance = provider.WalletBalance,
+            TotalEarnings = totalEarnings,
+            PendingPayouts = pendingPayouts,
+            PaidOut = paidOut,
+            TotalBookings = bookings.Count,
+            RecentTransactions = transactions
+        };
+    }
 }
