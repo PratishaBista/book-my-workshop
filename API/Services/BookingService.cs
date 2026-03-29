@@ -183,24 +183,24 @@ public class BookingService : IBookingService
         return responses;
     }
 
-    public async Task<bool> CancelBookingAsync(int bookingId, string userId, string? reason = null)
+    public async Task<CancellationResult> CancelBookingAsync(int bookingId, string userId, string? reason = null)
     {
         var booking = await _bookingRepository.GetBookingWithDetailsAsync(bookingId);
         
         if (booking == null || booking.UserId != userId)
-        {
-            return false;
-        }
+            throw new KeyNotFoundException("Booking not found.");
 
-        if (booking.BookingStatus == BookingStatus.Cancelled)
-        {
+        if (booking.BookingStatus == BookingStatus.Cancelled || booking.BookingStatus == BookingStatus.Refunded)
             throw new InvalidOperationException("Booking is already cancelled.");
-        }
 
         if (booking.WorkshopSchedule.Status != ScheduleStatus.Upcoming)
-        {
-            throw new InvalidOperationException("Cannot cancel booking for this workshop.");
-        }
+            throw new InvalidOperationException("Cannot cancel a booking for a workshop that has already started or completed.");
+
+        var workshopStart = booking.WorkshopSchedule.StartDateTime;
+        var hoursUntilWorkshop = (workshopStart - DateTime.UtcNow).TotalHours;
+
+        int refundPct = CalculateRefundPercentage(hoursUntilWorkshop);
+        decimal refundAmount = Math.Round(booking.TotalAmount * refundPct / 100, 2);
 
         // Return seats to schedule
         var schedule = await _scheduleRepository.GetByIdAsync(booking.WorkshopScheduleId);
@@ -210,25 +210,56 @@ public class BookingService : IBookingService
             _scheduleRepository.Update(schedule);
         }
 
-        // Update booking status
+        // Update booking
         booking.BookingStatus = BookingStatus.Cancelled;
         booking.CancelledAt = DateTime.UtcNow;
         booking.CancellationReason = reason;
+        booking.CancelledBy = "User";
+        booking.RefundPercentage = refundPct;
+        booking.RefundAmount = refundAmount;
 
-        // If payment was made, mark for refund
         if (booking.PaymentStatus == PaymentStatus.Paid)
         {
-            booking.PaymentStatus = PaymentStatus.Refunded;
-            booking.BookingStatus = BookingStatus.Refunded;
+            booking.PaymentStatus = refundPct > 0 ? PaymentStatus.Refunded : PaymentStatus.Paid;
+            booking.BookingStatus = refundPct > 0 ? BookingStatus.Refunded : BookingStatus.Cancelled;
+
+            if (refundPct > 0 && booking.HostEarnings > 0)
+            {
+                var hostClawback = Math.Round(booking.HostEarnings * refundPct / 100, 2);
+                var scheduleWithProvider = await _context.WorkshopSchedules
+                    .Include(s => s.Workshop).ThenInclude(w => w.Provider)
+                    .FirstOrDefaultAsync(s => s.Id == booking.WorkshopScheduleId);
+
+                if (scheduleWithProvider?.Workshop?.Provider != null)
+                {
+                    scheduleWithProvider.Workshop.Provider.WalletBalance -= hostClawback;
+                }
+            }
         }
 
         _bookingRepository.Update(booking);
         await _bookingRepository.SaveChangesAsync();
 
-        _logger.LogInformation($"Booking cancelled: {booking.ConfirmationCode}");
+        _logger.LogInformation($"Booking {booking.ConfirmationCode} cancelled by user. Refund: {refundPct}% (NPR {refundAmount})");
 
-        return true;
+        return new CancellationResult
+        {
+            RefundPercentage = refundPct,
+            RefundAmount = refundAmount,
+            HoursNotice = hoursUntilWorkshop,
+            Message = refundPct == 100 ? "Full refund will be processed within 3–5 business days."
+                    : refundPct == 50  ? "A 50% partial refund will be processed within 3–5 business days."
+                    : "No refund is applicable as the cancellation was made less than 24 hours before the workshop."
+        };
     }
+
+    private static int CalculateRefundPercentage(double hoursUntilWorkshop)
+    {
+        if (hoursUntilWorkshop > 48) return 100;
+        if (hoursUntilWorkshop > 24) return 50;
+        return 0;
+    }
+
 
     public async Task<bool> CanUserReviewWorkshopAsync(string userId, int workshopId)
     {
@@ -240,7 +271,6 @@ public class BookingService : IBookingService
         var booking = await _bookingRepository.GetByIdAsync(bookingId);
         if (booking == null) return false;
 
-        // Idempotency check
         if (booking.PaymentStatus == PaymentStatus.Paid) return true;
 
         booking.BookingStatus = BookingStatus.Confirmed;
@@ -249,7 +279,6 @@ public class BookingService : IBookingService
         booking.TransactionId = transactionUuid;
         booking.PaymentGateway = "eSewa";
 
-        // --- Financial Split ---
         var settings = await _context.PlatformSettings.FirstOrDefaultAsync();
         var commissionRate = settings?.CommissionPercentage ?? 10.0m;
 

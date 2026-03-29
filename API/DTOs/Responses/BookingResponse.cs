@@ -32,6 +32,9 @@ public class BookingResponse
     // Cancellation
     public DateTime? CancelledAt { get; set; }
     public string? CancellationReason { get; set; }
+    public decimal? RefundAmount { get; set; }
+    public int? RefundPercentage { get; set; }
+    public string? CancelledBy { get; set; }
     
     // Review status
     public bool CanReview { get; set; }

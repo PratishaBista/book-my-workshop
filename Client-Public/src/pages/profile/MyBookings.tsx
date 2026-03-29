@@ -6,7 +6,7 @@ import {
     ChevronRight, Search,
     Loader2, AlertCircle, RefreshCcw,
     ArrowRight, CreditCard, Ticket,
-    CheckCircle2, Clock3, Ban
+    CheckCircle2, Clock3, Ban, X, AlertTriangle, Receipt
 } from 'lucide-react';
 import Navbar from '../../components/landing/Navbar';
 import Footer from '../../components/landing/Footer';
@@ -38,6 +38,11 @@ interface Booking {
     paymentStatus: PaymentStatus;
     confirmationCode: string;
     bookingDate: string;
+    cancelledAt?: string;
+    cancellationReason?: string;
+    refundAmount?: number;
+    refundPercentage?: number;
+    cancelledBy?: string;
     schedule: {
         id: number;
         startDateTime: string;
@@ -58,6 +63,11 @@ const MyBookings: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [filter, setFilter] = useState<'upcoming' | 'past' | 'all'>('upcoming');
+    
+    // Cancellation Modal State
+    const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
+    const [cancelReason, setCancelReason] = useState('');
+    const [isCancelling, setIsCancelling] = useState(false);
 
     useEffect(() => {
         fetchBookings();
@@ -123,6 +133,49 @@ const MyBookings: React.FC = () => {
                 return { label: status === BookingStatus.Refunded ? 'Refunded' : 'Cancelled', icon: Ban, bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-100' };
             default:
                 return { label: 'Pending', icon: Clock3, bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-100' };
+        }
+    };
+
+    const calculateRefundPrediction = (startDateTime: string, totalAmount: number) => {
+        const hoursNotice = (new Date(startDateTime).getTime() - new Date().getTime()) / (1000 * 60 * 60);
+        if (hoursNotice >= 48) return { percentage: 100, amount: totalAmount, tier: 'Full Refund (>48h notice)' };
+        if (hoursNotice >= 24) return { percentage: 50, amount: totalAmount * 0.5, tier: 'Partial Refund (24-48h notice)' };
+        return { percentage: 0, amount: 0, tier: 'No Refund (<24h notice)' };
+    };
+
+    const handleCancelSubmit = async () => {
+        if (!bookingToCancel) return;
+        try {
+            setIsCancelling(true);
+            const token = localStorage.getItem('token');
+            const response = await fetch(API_ENDPOINTS.booking.cancel(bookingToCancel.id), {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ reason: cancelReason })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                // Update local list
+                setBookings(prev => prev.map(b => b.id === bookingToCancel.id ? { 
+                    ...b, 
+                    bookingStatus: result.refundAmount > 0 ? BookingStatus.Refunded : BookingStatus.Cancelled,
+                    refundAmount: result.refundAmount,
+                    refundPercentage: result.refundPercentage
+                } : b));
+                setBookingToCancel(null);
+                setCancelReason('');
+            } else {
+                alert('Failed to cancel booking. Please try again.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('A network error occurred.');
+        } finally {
+            setIsCancelling(false);
         }
     };
 
@@ -285,14 +338,33 @@ const MyBookings: React.FC = () => {
                                                     <p className="text-sm text-gray-500 font-medium">
                                                         {booking.numberOfSeats} Guest{booking.numberOfSeats > 1 ? 's' : ''} reserved
                                                     </p>
+                                                    
+                                                    {/* Refund info for cancelled bookings */}
+                                                    {(booking.bookingStatus === BookingStatus.Cancelled || booking.bookingStatus === BookingStatus.Refunded) && booking.refundAmount !== undefined && (
+                                                        <div className="mt-2 text-xs font-bold px-3 py-1 bg-gray-50 text-gray-500 rounded-lg inline-flex items-center gap-1.5 border border-gray-100">
+                                                            <Receipt size={12} />
+                                                            Rs {booking.refundAmount.toLocaleString()} Refunded ({booking.refundPercentage}%)
+                                                        </div>
+                                                    )}
                                                 </div>
 
-                                                <Link
-                                                    to={`/workshop/${booking.workshop?.slug}`}
-                                                    className="w-14 h-14 rounded-full bg-deep-purple text-white flex items-center justify-center hover:bg-primary-orange hover:shadow-xl hover:shadow-primary-orange/20 transition-all duration-300 active:scale-90"
-                                                >
-                                                    <ChevronRight size={24} />
-                                                </Link>
+                                                <div className="flex items-center gap-3">
+                                                    {(booking.bookingStatus === BookingStatus.Confirmed || booking.bookingStatus === BookingStatus.Pending) && isUpcoming(booking.schedule?.startDateTime) && (
+                                                        <button 
+                                                            onClick={() => setBookingToCancel(booking)}
+                                                            className="px-4 py-2 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    )}
+
+                                                    <Link
+                                                        to={`/workshop/${booking.workshop?.slug}`}
+                                                        className="w-14 h-14 rounded-full bg-deep-purple text-white flex items-center justify-center hover:bg-primary-orange hover:shadow-xl hover:shadow-primary-orange/20 transition-all duration-300 active:scale-90"
+                                                    >
+                                                        <ChevronRight size={24} />
+                                                    </Link>
+                                                </div>
                                             </div>
                                         </motion.div>
                                     );
@@ -300,6 +372,85 @@ const MyBookings: React.FC = () => {
                             </AnimatePresence>
                         </div>
                     )}
+
+                    <AnimatePresence>
+                        {bookingToCancel && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                                <motion.div 
+                                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                    className="absolute inset-0 bg-deep-purple/40 backdrop-blur-sm"
+                                    onClick={() => setBookingToCancel(null)}
+                                />
+                                <motion.div 
+                                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                    className="bg-white rounded-[2rem] p-8 max-w-lg w-full relative z-10 shadow-2xl border border-red-100"
+                                >
+                                    <button 
+                                        onClick={() => setBookingToCancel(null)}
+                                        className="absolute top-6 right-6 w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 hover:text-deep-purple transition-colors"
+                                    >
+                                        <X size={20} />
+                                    </button>
+
+                                    <div className="w-16 h-16 bg-red-50 text-red-500 rounded-[1.5rem] flex items-center justify-center mb-6 transform -rotate-6">
+                                        <AlertTriangle size={32} />
+                                    </div>
+
+                                    <h2 className="text-3xl font-serif font-bold text-deep-purple mb-2">Cancel Booking?</h2>
+                                    <p className="text-gray-500 mb-6">You are about to cancel your reservation for <span className="font-bold text-deep-purple">{bookingToCancel.workshop.title}</span>.</p>
+
+                                    {(() => {
+                                        const refund = calculateRefundPrediction(bookingToCancel.schedule.startDateTime, bookingToCancel.totalAmount);
+                                        return (
+                                            <div className="bg-orange-50/50 border border-orange-100 rounded-2xl p-5 mb-6">
+                                                <div className="text-xs font-bold uppercase tracking-widest text-primary-orange mb-3 flex items-center gap-2">
+                                                    <CreditCard size={14} /> Refund Policy Engine
+                                                </div>
+                                                <div className="flex justify-between items-end mb-2">
+                                                    <div className="text-sm font-medium text-gray-600">{refund.tier}</div>
+                                                    <div className="text-xs font-bold text-gray-400">{refund.percentage}% Eligibility</div>
+                                                </div>
+                                                <div className="flex items-baseline justify-between pt-3 border-t border-orange-100/50">
+                                                    <div className="text-sm font-bold text-gray-400">Estimated Refund</div>
+                                                    <div className={`text-2xl font-serif font-bold ${refund.amount > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                                                        Rs {refund.amount.toLocaleString()}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    <div className="mb-8 space-y-2">
+                                        <label className="text-sm font-bold text-deep-purple ml-1">Reason for cancellation (Optional)</label>
+                                        <textarea 
+                                            value={cancelReason}
+                                            onChange={(e) => setCancelReason(e.target.value)}
+                                            placeholder="Why are you cancelling?"
+                                            className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-deep-purple focus:ring-2 focus:ring-primary-orange/50 transition-shadow resize-none h-24"
+                                        />
+                                    </div>
+
+                                    <div className="flex gap-3">
+                                        <button 
+                                            onClick={() => setBookingToCancel(null)}
+                                            className="flex-1 py-4 font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-2xl transition-colors"
+                                        >
+                                            Keep Booking
+                                        </button>
+                                        <button 
+                                            onClick={handleCancelSubmit}
+                                            disabled={isCancelling}
+                                            className="flex-1 py-4 font-bold text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20 rounded-2xl transition-all disabled:opacity-70 flex items-center justify-center gap-2 active:scale-95"
+                                        >
+                                            {isCancelling ? <Loader2 size={20} className="animate-spin" /> : 'Confirm Cancel'}
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </main>
 

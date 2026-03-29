@@ -110,17 +110,21 @@ public class BookingController : ControllerBase
         {
             var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userId))
-            {
                 return Unauthorized();
-            }
 
             var result = await _bookingService.CancelBookingAsync(id, userId, request?.Reason);
-            if (!result)
-            {
-                return NotFound();
-            }
 
-            return Ok(new { message = "Booking cancelled successfully." });
+            return Ok(new
+            {
+                message = result.Message,
+                refundPercentage = result.RefundPercentage,
+                refundAmount = result.RefundAmount,
+                hoursNotice = Math.Round(result.HoursNotice, 1)
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
         }
         catch (InvalidOperationException ex)
         {

@@ -58,6 +58,13 @@ public class Booking
     [MaxLength(1000)]
     public string? CancellationReason { get; set; }
 
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal? RefundAmount { get; set; }
+
+    public int? RefundPercentage { get; set; } // 0, 50, or 100
+
+    public string? CancelledBy { get; set; } // "User", "Host", "Admin"
+
     // Audit
     public DateTime BookingDate { get; set; } = DateTime.UtcNow;
 
