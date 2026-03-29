@@ -224,6 +224,16 @@ public class AuthController : ControllerBase
 
         var (token, expiry) = _tokenService.CreateToken(user, primaryRole);
 
+        bool isReactivated = false;
+        if (user.IsDeactivated || user.DeletionScheduledAt != null)
+        {
+            user.IsDeactivated = false;
+            user.DeletionScheduledAt = null;
+            user.DeletionWarningSent = false;
+            await _userManager.UpdateAsync(user);
+            isReactivated = true;
+        }
+
         return Ok(new LoginResponse 
         { 
             Token = token, 
@@ -231,7 +241,8 @@ public class AuthController : ControllerBase
             IsApproved = isApproved, 
             Status = status,
             HasCompletedOnboarding = user.HasCompletedOnboarding,
-            RequiresMFA = false
+            RequiresMFA = false,
+            IsReactivated = isReactivated
         });
     }
 
@@ -375,13 +386,25 @@ public class AuthController : ControllerBase
             }
 
             var (token, expiry) = _tokenService.CreateToken(user, primaryRole);
+
+            bool isReactivated = false;
+            if (user.IsDeactivated || user.DeletionScheduledAt != null)
+            {
+                user.IsDeactivated = false;
+                user.DeletionScheduledAt = null;
+                user.DeletionWarningSent = false;
+                await _userManager.UpdateAsync(user);
+                isReactivated = true;
+            }
+
             return Ok(new LoginResponse 
             { 
                 Token = token, 
                 Expiry = expiry, 
                 IsApproved = isApproved, 
                 Status = status,
-                HasCompletedOnboarding = user.HasCompletedOnboarding
+                HasCompletedOnboarding = user.HasCompletedOnboarding,
+                IsReactivated = isReactivated
             });
 
         }

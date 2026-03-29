@@ -321,4 +321,77 @@ public static class EmailTemplates
 </body>
 </html>";
     }
+
+    public static string GetDeletionWarningEmail(string userName, string loginLink)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Final Notice: Account Deletion</title>
+</head>
+<body style='margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, ""Helvetica Neue"", Arial, sans-serif; background-color: #f5f5f5;'>
+    <table role='presentation' style='width: 100%; border-collapse: collapse;'>
+        <tr>
+            <td align='center' style='padding: 40px 20px;'>
+                <table role='presentation' style='width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-top: 4px solid #EF4444;'>
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style='padding: 40px 40px 20px 40px; text-align: center;'>
+                            <img src='https://res.cloudinary.com/daaysxdli/image/upload/v1767434247/Badge_hjkzju.png' alt='BookMyWorkshop' style='height: 50px; margin-bottom: 20px;' />
+                            <p style='margin: 0; color: #EF4444; font-size: 12px; font-weight: 700; letter-spacing: 2px;'>
+                                FINAL NOTICE
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Body -->
+                    <tr>
+                        <td style='padding: 20px 40px 40px 40px;'>
+                            <h1 style='margin: 0 0 20px 0; color: #111827; font-size: 24px; font-weight: 700;'>
+                                Your account will be deleted in 24 hours
+                            </h1>
+                            <p style='margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;'>
+                                Hi {userName},
+                            </p>
+                            <p style='margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;'>
+                                30 days ago, you requested to delete your BookMyWorkshop account. This process is now almost complete.
+                            </p>
+                            <p style='margin: 0 0 32px 0; color: #374151; font-size: 16px; line-height: 1.6; padding: 16px; background-color: #FEF2F2; border-radius: 8px; border-left: 4px solid #EF4444;'>
+                                <strong>In less than 24 hours</strong>, your profile, workshops, and all personal data will be permanently purged from our systems. <strong>This action cannot be undone.</strong>
+                            </p>
+                            
+                            <p style='margin: 0 0 32px 0; color: #374151; font-size: 16px; line-height: 1.6;'>
+                                If you've changed your mind, there's still time! Simply log back into your account before the timer runs out to cancel the deletion request and keep your data.
+                            </p>
+                            
+                            <!-- Action Link -->
+                            <div style='text-align: center; margin: 32px 0;'>
+                                <a href='{loginLink}' style='background-color: #6B46C1; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; padding: 14px 32px; border-radius: 6px; display: inline-block;'>Log In to Cancel Deletion</a>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style='background-color: #F9FAFB; padding: 32px 40px; border-top: 1px solid #E5E7EB;'>
+                            <p style='margin: 0; color: #9CA3AF; font-size: 12px; text-align: center;'>
+                                If you intended to delete your account, you can disregard this email.
+                            </p>
+                            <p style='margin: 12px 0 0 0; color: #9CA3AF; font-size: 12px; text-align: center;'>
+                                © 2026 BookMyWorkshop. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>";
+    }
 }

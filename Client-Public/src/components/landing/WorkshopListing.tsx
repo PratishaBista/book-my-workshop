@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { API_ENDPOINTS } from '../../config/api';
 
 interface Workshop {
@@ -28,8 +28,21 @@ interface WorkshopSectionProps {
 
 const WorkshopSection: React.FC<WorkshopSectionProps> = ({ title, subtitle, workshops, loading, onWorkshopClick }) => {
     const [wishlist, setWishlist] = useState<number[]>([]);
+    const [showLoginToast, setShowLoginToast] = useState(false);
+    const navigate = useNavigate();
+    const location = useLocation();
 
     const toggleWishlist = (id: number) => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            setShowLoginToast(true);
+            setTimeout(() => {
+                setShowLoginToast(false);
+                navigate('/login', { state: { from: location } });
+            }, 1500);
+            return;
+        }
+        
         setWishlist(prev =>
             prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
         );
@@ -120,6 +133,19 @@ const WorkshopSection: React.FC<WorkshopSectionProps> = ({ title, subtitle, work
                     ))}
                 </AnimatePresence>
             </div>
+
+            <AnimatePresence>
+                {showLoginToast && (
+                    <motion.div
+                        initial={{ y: 50, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 50, opacity: 0 }}
+                        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-deep-purple text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-4"
+                    >
+                        <span className="font-sans font-bold text-sm uppercase tracking-widest">Please log in to save your wishlist.</span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
@@ -169,7 +195,6 @@ const WorkshopListing: React.FC = () => {
                 const response = await fetch(API_ENDPOINTS.workshop.public);
                 if (response.ok) {
                     const data = await response.json();
-                    // Filter out workshops that are already in the personalized list to provide more variety
                     const filtered = data.filter((w: Workshop) =>
                         !personalized.some(p => p.id === w.id)
                     );
@@ -194,7 +219,6 @@ const WorkshopListing: React.FC = () => {
     return (
         <section className="py-24 md:py-32 px-6 bg-[#F9F9F5]">
             <div className="max-w-7xl mx-auto">
-                {/* Personalized Section - Only show if user is logged in */}
                 {token && (
                     <WorkshopSection
                         title="Handpicked for You"
@@ -205,7 +229,6 @@ const WorkshopListing: React.FC = () => {
                     />
                 )}
 
-                {/* Featured Section */}
                 <WorkshopSection
                     title="Trending Sessions"
                     subtitle="Most popular and highly rated experiences"
@@ -214,7 +237,6 @@ const WorkshopListing: React.FC = () => {
                     onWorkshopClick={handleWorkshopClick}
                 />
 
-                {/* Latest Section */}
                 <WorkshopSection
                     title="Explore More"
                     subtitle="Discover new workshops happening around you"

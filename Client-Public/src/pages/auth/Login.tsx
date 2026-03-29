@@ -64,7 +64,11 @@ const Login: React.FC = () => {
       // Store token via context to update state
       login(data.token, data.expiry, data.hasCompletedOnboarding);
 
-      setSuccessMessage('Google login successful!');
+      if (data.isReactivated) {
+        setSuccessMessage('Welcome back! Your account has been reactivated and your data is safe.');
+      } else {
+        setSuccessMessage('Google login successful!');
+      }
 
       setTimeout(() => {
         sessionStorage.setItem('introShown', 'true');
@@ -278,7 +282,11 @@ const Login: React.FC = () => {
             setLoading(false);
             return;
           } else {
-            setSuccessMessage('Login successful!');
+            if (data.isReactivated) {
+              setSuccessMessage('Welcome back! Your account has been reactivated.');
+            } else {
+              setSuccessMessage('Login successful!');
+            }
             sessionStorage.setItem('introShown', 'true');
 
             if (!data.hasCompletedOnboarding) {

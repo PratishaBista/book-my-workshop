@@ -367,4 +367,24 @@ public class AdminController : ControllerBase
 
         return BadRequest("Please specify a role (Customer or Provider).");
     }
+
+    // PUT: api/admin/verify-user/{userId}
+    [HttpPut("verify-user/{userId}")]
+    public async Task<IActionResult> VerifyUser(string userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null) return NotFound("User not found");
+
+        if (user.EmailConfirmed) return BadRequest("User is already verified");
+
+        user.EmailConfirmed = true;
+        var result = await _userManager.UpdateAsync(user);
+
+        if (!result.Succeeded)
+        {
+            return StatusCode(500, new { errors = result.Errors });
+        }
+
+        return Ok(new { Message = $"User '{user.FullName}' has been manually verified." });
+    }
 }

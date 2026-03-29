@@ -43,6 +43,12 @@ namespace API.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DeletionScheduledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("DeletionWarningSent")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
@@ -61,6 +67,9 @@ namespace API.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("HasCompletedOnboarding")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeactivated")
                         .HasColumnType("bit");
 
                     b.Property<string>("Location")
@@ -145,6 +154,9 @@ namespace API.Migrations
                     b.Property<DateTime?>("CancelledAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CancelledBy")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ConfirmationCode")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -175,6 +187,12 @@ namespace API.Migrations
 
                     b.Property<decimal>("PlatformFee")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("RefundAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("RefundPercentage")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(18,2)");

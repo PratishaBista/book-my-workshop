@@ -8,4 +8,5 @@ public class LoginResponse
     public API.Enums.ProviderStatus? Status { get; set; }
     public bool HasCompletedOnboarding { get; set; }
     public bool RequiresMFA { get; set; }
+    public bool IsReactivated { get; set; }
 }

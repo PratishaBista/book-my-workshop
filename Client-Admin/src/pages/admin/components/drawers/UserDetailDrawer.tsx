@@ -15,11 +15,30 @@ export const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({ user, onClos
 
     const handleApprove = async () => {
         if (!user?.providerId) return;
-
         setIsApproving(true);
         const token = localStorage.getItem('token');
         try {
             const res = await fetch(`https://localhost:7166/api/admin/approve-provider/${user.providerId}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                if (onRefresh) onRefresh();
+                onClose();
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsApproving(false);
+        }
+    };
+
+    const handleVerifyEmail = async () => {
+        if (!user?.id) return;
+        setIsApproving(true);
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch(`https://localhost:7166/api/admin/verify-user/${user.id}`, {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -154,10 +173,21 @@ export const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({ user, onClos
                         {isApproving ? 'Approving...' : 'Approve Host Account'}
                     </button>
                 ) : (
-                    <>
-                        <button className="w-full py-3 bg-white hover:bg-slate-50 text-slate-600 font-bold rounded-xl border border-slate-200 transition-all">Reset Password</button>
-                        <button className="w-full py-3 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl border border-red-200 transition-all">Suspend User</button>
-                    </>
+                    <div className="col-span-2 space-y-4">
+                        {!user.emailConfirmed && (
+                            <button
+                                onClick={handleVerifyEmail}
+                                disabled={isApproving}
+                                className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-100 transition-all flex items-center justify-center gap-2 disabled:opacity-70 mb-2"
+                            >
+                                <Shield size={18} /> {isApproving ? 'Verifying...' : 'Verify Email Manually'}
+                            </button>
+                        )}
+                        <div className="grid grid-cols-2 gap-4">
+                            <button className="w-full py-3 bg-white hover:bg-slate-50 text-slate-600 font-bold rounded-xl border border-slate-200 transition-all">Reset Password</button>
+                            <button className="w-full py-3 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl border border-red-200 transition-all">Suspend User</button>
+                        </div>
+                    </div>
                 )}
             </div>
         </motion.div>

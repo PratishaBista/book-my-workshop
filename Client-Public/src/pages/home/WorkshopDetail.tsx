@@ -2,13 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Calendar, Clock, MapPin,
-    ChevronRight, ChevronLeft, Star,
+    Clock, MapPin,
+    ChevronLeft, Star,
     Share2, Heart, CheckCircle2,
-    Users, ShieldCheck, Map,
-    Facebook, Twitter, Instagram,
-    Info, Users2, Timer,
-    Maximize2, Play, AlertCircle,
+    Users, ShieldCheck,
+    Maximize2,
     ArrowRight, CreditCard,
     Ban, ChevronDown, Check,
     ArrowUpRight, Loader2
@@ -60,15 +58,21 @@ const WorkshopDetail: React.FC = () => {
         setGuests(1);
     }, [selectedScheduleId]);
 
-    const handleReserve = () => {
+    const checkLogin = () => {
         const token = localStorage.getItem('token');
         if (!token) {
             setShowLoginToast(true);
             setTimeout(() => {
+                setShowLoginToast(false);
                 navigate('/login', { state: { from: location } });
             }, 1500);
-            return;
+            return false;
         }
+        return true;
+    };
+
+    const handleReserve = () => {
+        if (!checkLogin()) return;
 
         if (!selectedScheduleId || !workshop) {
             alert("Please select a date from the calendar.");
@@ -120,7 +124,7 @@ const WorkshopDetail: React.FC = () => {
                     setHostWorkshops(otherHostWorkshops.filter((w: any) => w.id !== currentWorkshop.id));
                 }
 
-                const similarRes = await fetch(API_ENDPOINTS.workshop.recommendations(currentWorkshop.id));
+                const similarRes = await fetch(API_ENDPOINTS.workshop.related(currentWorkshop.id));
                 if (similarRes.ok) {
                     const simWorkshops = await similarRes.json();
 
@@ -192,7 +196,10 @@ const WorkshopDetail: React.FC = () => {
                         <button className="p-2 rounded-full hover:bg-gray-50 transition-colors text-deep-purple">
                             <Share2 size={20} strokeWidth={1.5} />
                         </button>
-                        <button className="p-2 rounded-full hover:bg-gray-50 transition-colors text-deep-purple">
+                        <button 
+                            onClick={handleReserve}
+                            className={`p-2 rounded-full hover:bg-gray-50 transition-colors ${showLoginToast ? 'text-primary-orange' : 'text-deep-purple'}`}
+                        >
                             <Heart size={20} strokeWidth={1.5} />
                         </button>
                     </div>

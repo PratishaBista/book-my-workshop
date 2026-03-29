@@ -558,39 +558,46 @@ public class WorkshopService : IWorkshopService
 
     public async Task<IEnumerable<WorkshopListResponse>> GetRecommendedWorkshopsForUserAsync(string userId, int count = 6)
     {
-        // 1. Get User Interest Categories
+        // Get User Interest Categories
         var userPrefs = await _userPreferenceRepository.FindAsync(up => up.UserId == userId);
         
         if (!userPrefs.Any())
         {
-            // Fallback: If no interests, just show featured/latest
-            return await GetFeaturedWorkshopsAsync(count);
+            // If no interests, return empty to avoid duplicate featured sessions
+            return Enumerable.Empty<WorkshopListResponse>();
         }
 
         var categoryIds = userPrefs.Select(p => p.CategoryId).ToList();
         var userCategories = await _categoryRepository.FindAsync(c => categoryIds.Contains(c.Id));
 
-        // 2. Create "User Profile Text" (Combined names of all interested categories)
+        // Create "User Profile Text" (Combined names of all interested categories)
         var userInterestText = string.Join(" ", userCategories.Select(c => c.Name));
 
-        // 3. Get all published workshops as candidates
+        // Get all published workshops as candidates
         var allWorkshops = await _workshopRepository.GetPublishedWorkshopsAsync();
         var candidates = allWorkshops
             .Select(w => (w.Id, $"{w.Title}. {w.Tagline}. {w.Description}"))
             .ToList();
 
-        // 4. Call Custom ML Service to Rank
+        // Call Custom ML Service to Rank
         var rankedResults = await _mlService.PredictSimilaritiesWithScoresAsync(userInterestText, candidates);
 
-        // 5. Select the top N items
+        // Select the top N items (only those with positive similarity)
         var topIds = rankedResults
+            .Where(r => r.Score > 0) // Filter out non-matching workshops
             .OrderByDescending(r => r.Score)
             .Take(count)
             .Select(r => r.Id)
             .ToList();
 
+        if (!topIds.Any())
+        {
+            return Enumerable.Empty<WorkshopListResponse>();
+        }
+
         var recommendedWorkshops = allWorkshops
             .Where(w => topIds.Contains(w.Id))
+            .ToList()
             .OrderBy(w => {
                 var index = topIds.IndexOf(w.Id);
                 return index == -1 ? int.MaxValue : index;
@@ -598,7 +605,6 @@ public class WorkshopService : IWorkshopService
 
         var results = _mapper.Map<List<WorkshopListResponse>>(recommendedWorkshops);
         
-        // Add scores for transparency (Good for FYP demo)
         foreach (var item in results)
         {
             var match = rankedResults.FirstOrDefault(r => r.Id == item.Id);
