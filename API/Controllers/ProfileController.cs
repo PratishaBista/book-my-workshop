@@ -18,12 +18,14 @@ public class ProfileController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IMediaService _mediaService;
+    private readonly IUserService _userService;
     private readonly ApplicationDbContext _context;
 
-    public ProfileController(UserManager<ApplicationUser> userManager, IMediaService mediaService, ApplicationDbContext context)
+    public ProfileController(UserManager<ApplicationUser> userManager, IMediaService mediaService, IUserService userService, ApplicationDbContext context)
     {
         _userManager = userManager;
         _mediaService = mediaService;
+        _userService = userService;
         _context = context;
     }
 
@@ -102,6 +104,11 @@ public class ProfileController : ControllerBase
             Website = user.Website,
             FunFact = user.FunFact,
             ProfileUsername = user.ProfileUsername,
+            PhoneNumber = user.PhoneNumber,
+            GoogleId = user.GoogleId,
+            EmailConfirmed = user.EmailConfirmed,
+            IsDeactivated = user.IsDeactivated,
+            DeletionScheduledAt = user.DeletionScheduledAt,
             CreatedAt = user.CreatedAt
         };
     }
@@ -125,6 +132,11 @@ public class ProfileController : ControllerBase
             Website = user.Website,
             FunFact = user.FunFact,
             ProfileUsername = user.ProfileUsername,
+            PhoneNumber = user.PhoneNumber,
+            GoogleId = user.GoogleId,
+            EmailConfirmed = user.EmailConfirmed,
+            IsDeactivated = user.IsDeactivated,
+            DeletionScheduledAt = user.DeletionScheduledAt,
             CreatedAt = user.CreatedAt
         };
     }
@@ -147,6 +159,15 @@ public class ProfileController : ControllerBase
         user.FunFact = request.FunFact;
         user.ProfilePictureUrl = request.ProfilePictureUrl;
         user.CoverImageUrl = request.CoverImageUrl;
+        user.PhoneNumber = request.PhoneNumber;
+
+        if (!string.IsNullOrEmpty(request.Email) && request.Email != user.Email)
+        {
+             user.Email = request.Email;
+             user.UserName = request.Email;
+             user.NormalizedEmail = request.Email.ToUpper();
+             user.NormalizedUserName = request.Email.ToUpper();
+        }
 
         if (!string.IsNullOrEmpty(request.ProfileUsername) && request.ProfileUsername != user.ProfileUsername)
         {
@@ -170,12 +191,17 @@ public class ProfileController : ControllerBase
             Website = user.Website,
             FunFact = user.FunFact,
             ProfileUsername = user.ProfileUsername,
+            PhoneNumber = user.PhoneNumber,
+            GoogleId = user.GoogleId,
+            EmailConfirmed = user.EmailConfirmed,
+            IsDeactivated = user.IsDeactivated,
+            DeletionScheduledAt = user.DeletionScheduledAt,
             CreatedAt = user.CreatedAt
         };
     }
 
-    [HttpDelete("delete")]
-    public async Task<ActionResult> DeleteAccount()
+    [HttpPut("deactivate")]
+    public async Task<ActionResult> DeactivateAccount()
     {
         var email = User.FindFirstValue(ClaimTypes.Email);
         if (email == null) return Unauthorized();
@@ -183,89 +209,50 @@ public class ProfileController : ControllerBase
         var user = await _userManager.FindByEmailAsync(email);
         if (user == null) return NotFound();
 
-        using var transaction = await _context.Database.BeginTransactionAsync();
+        user.IsDeactivated = true;
+        await _userManager.UpdateAsync(user);
 
-        try
-        {
-            var reviews = await _context.WorkshopReviews
-                .Where(r => r.UserId == user.Id)
-                .ToListAsync();
-            
-            if (reviews.Any())
-            {
-                _context.WorkshopReviews.RemoveRange(reviews);
-            }
+        return Ok(new { message = "Account deactivated successfully. You can reactivate by logging in anytime." });
+    }
 
-            var bookings = await _context.Bookings
-                .Where(b => b.UserId == user.Id)
-                .ToListAsync();
+    [HttpDelete("delete")]
+    public async Task<ActionResult> RequestAccountDeletion()
+    {
+        var email = User.FindFirstValue(ClaimTypes.Email);
+        if (email == null) return Unauthorized();
 
-            if (bookings.Any())
-            {
-                var bookingIds = bookings.Select(b => b.Id).ToList();
-                var reviewsOnBookings = await _context.WorkshopReviews
-                    .Where(r => bookingIds.Contains(r.BookingId))
-                    .ToListAsync();
-                
-                if (reviewsOnBookings.Any())
-                {
-                    _context.WorkshopReviews.RemoveRange(reviewsOnBookings);
-                }
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user == null) return NotFound();
 
-                _context.Bookings.RemoveRange(bookings);
-            }
-            
-            var provider = await _context.Providers.FirstOrDefaultAsync(p => p.UserId == user.Id);
-            if (provider != null)
-            {
-                var workshops = await _context.Workshops
-                    .Include(w => w.Schedules)
-                    .Where(w => w.ProviderId == provider.Id)
-                    .ToListAsync();
+        user.IsDeactivated = true;
+        user.DeletionScheduledAt = DateTime.UtcNow;
+        await _userManager.UpdateAsync(user);
 
-                foreach (var workshop in workshops)
-                {
-                    foreach (var schedule in workshop.Schedules)
-                    {
-                        var scheduleBookings = await _context.Bookings
-                            .Where(b => b.WorkshopScheduleId == schedule.Id)
-                            .ToListAsync();
+        return Ok(new { message = "Deletion scheduled. Your data will be permanently removed in 30 days. Log in to cancel this request." });
+    }
 
-                        if (scheduleBookings.Any())
-                        {
-                            var sBookingIds = scheduleBookings.Select(b => b.Id).ToList();
-                            var sReviews = await _context.WorkshopReviews
-                                .Where(r => sBookingIds.Contains(r.BookingId))
-                                .ToListAsync();
+    [HttpPost("reactivate")]
+    public async Task<ActionResult> ReactivateAccount()
+    {
+        var email = User.FindFirstValue(ClaimTypes.Email);
+        if (email == null) return Unauthorized();
 
-                            if (sReviews.Any()) _context.WorkshopReviews.RemoveRange(sReviews);
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user == null) return NotFound();
 
-                            _context.Bookings.RemoveRange(scheduleBookings);
-                        }
-                    }
-                    
-                     _context.Workshops.Remove(workshop);
-                }
+        user.IsDeactivated = false;
+        user.DeletionScheduledAt = null;
+        await _userManager.UpdateAsync(user);
 
-                _context.Providers.Remove(provider);
-            }
+        return Ok(new { message = "Welcome back! Your account has been reactivated." });
+    }
 
-            await _context.SaveChangesAsync();
-
-            var result = await _userManager.DeleteAsync(user);
-            if (!result.Succeeded)
-            {
-                throw new Exception(string.Join(", ", result.Errors.Select(e => e.Description)));
-            }
-
-            await transaction.CommitAsync();
-
-            return Ok(new { message = "Account deleted successfully" });
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            return BadRequest(new { message = "Failed to delete account", error = ex.Message });
-        }
+    [ApiExplorerSettings(IgnoreApi = true)]
+    [HttpDelete("hard-delete-internal/{userId}")]
+    public async Task<ActionResult> HardDeleteInternal(string userId)
+    {
+        var success = await _userService.HardDeleteUserAsync(userId);
+        if (!success) return BadRequest(new { message = "Failed to hard delete user" });
+        return Ok(new { message = "User purged successfully" });
     }
 }

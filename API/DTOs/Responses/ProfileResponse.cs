@@ -12,5 +12,10 @@ public class ProfileResponse
     public string? Website { get; set; }
     public string? FunFact { get; set; }
     public string? ProfileUsername { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string? GoogleId { get; set; }
+    public bool EmailConfirmed { get; set; }
+    public bool IsDeactivated { get; set; }
+    public DateTime? DeletionScheduledAt { get; set; }
     public DateTime CreatedAt { get; set; }
 }

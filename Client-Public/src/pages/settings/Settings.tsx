@@ -8,6 +8,7 @@ import Navbar from '../../components/landing/Navbar';
 
 import EditProfile from './EditProfile';
 import InterestsSettings from './InterestsSettings';
+import AccountSettings from './AccountSettings';
 import PlaceholderSection from './PlaceholderSection';
 
 const Settings: React.FC = () => {
@@ -35,14 +36,11 @@ const Settings: React.FC = () => {
         <div className="min-h-screen bg-cream-base flex flex-col font-sans text-deep-purple">
             <Navbar minimal={true} />
 
-            {/* Header Spacer */}
             <div className="h-28" />
 
-            {/* Layout Body */}
             <div className="flex flex-1 pb-32">
                 <div className="w-full max-w-7xl mx-auto flex px-4 md:px-8 gap-12">
 
-                    {/* Sidebar */}
                     <aside className="w-64 flex-shrink-0 sticky top-32 h-fit">
                         <nav className="flex flex-col gap-2">
                             {navItems.map((item) => {
@@ -66,14 +64,13 @@ const Settings: React.FC = () => {
                         </nav>
                     </aside>
 
-                    {/* Main Content */}
                     <main className="flex-1">
                         <AnimatePresence mode="wait">
                             <Routes location={location} key={location.pathname}>
                                 <Route path="/" element={<Navigate to="edit-profile" replace />} />
                                 <Route path="edit-profile" element={<EditProfile />} />
                                 <Route path="interests" element={<InterestsSettings />} />
-                                <Route path="account" element={<PlaceholderSection title="Account Management" desc="Manage your account settings, password, and linked social accounts." />} />
+                                <Route path="account" element={<AccountSettings />} />
                                 <Route path="visibility" element={<PlaceholderSection title="Profile Visibility" desc="Control who can see your profile and workshops." />} />
                                 <Route path="notifications" element={<PlaceholderSection title="Notifications" desc="Choose which notifications you want to receive." />} />
                                 <Route path="privacy" element={<PlaceholderSection title="Privacy and Data" desc="Manage your data and privacy preferences." />} />
@@ -84,7 +81,6 @@ const Settings: React.FC = () => {
                 </div>
             </div>
 
-            {/* Bottom Action Bar */}
             <footer className="fixed bottom-0 left-0 right-0 h-24 bg-white/80 backdrop-blur-md flex items-center justify-center border-t border-deep-purple/5 z-50">
                 <div className="flex gap-4">
                     <button

@@ -11,4 +11,6 @@ public class UpdateProfileRequest
     public string? ProfilePictureUrl { get; set; }
     public string? CoverImageUrl { get; set; }
     public string? ProfileUsername { get; set; }
+    public string? Email { get; set; }
+    public string? PhoneNumber { get; set; }
 }

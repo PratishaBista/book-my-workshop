@@ -24,6 +24,9 @@ export const API_ENDPOINTS = {
         update: `${API_URL}/api/profile`,
         uploadAvatar: `${API_URL}/api/profile/upload-avatar`,
         uploadCover: `${API_URL}/api/profile/upload-cover`,
+        delete: `${API_URL}/api/profile/delete`,
+        deactivate: `${API_URL}/api/profile/deactivate`,
+        reactivate: `${API_URL}/api/profile/reactivate`,
     },
     provider: {
         profile: `${API_URL}/api/provider/profile`,

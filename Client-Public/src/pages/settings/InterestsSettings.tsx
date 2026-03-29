@@ -12,9 +12,18 @@ interface Category {
 const InterestsSettings: React.FC = () => {
     const [categories, setCategories] = useState<Category[]>([]);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [initialSelectedIds, setInitialSelectedIds] = useState<number[]>([]);
     const [loading, setLoading] = useState(true);
-    const [_saving, setSaving] = useState(false);
+    const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState('');
+
+    const selectedIdsRef = React.useRef(selectedIds);
+    const initialIdsRef = React.useRef(initialSelectedIds);
+
+    useEffect(() => {
+        selectedIdsRef.current = selectedIds;
+        initialIdsRef.current = initialSelectedIds;
+    }, [selectedIds, initialSelectedIds]);
 
     useEffect(() => {
         const loadInterests = async () => {
@@ -31,7 +40,9 @@ const InterestsSettings: React.FC = () => {
                 });
                 if (prefRes.ok) {
                     const myPrefs = await prefRes.json();
-                    setSelectedIds(myPrefs.map((p: any) => p.categoryId));
+                    const ids = myPrefs.map((p: any) => p.categoryId);
+                    setSelectedIds(ids);
+                    setInitialSelectedIds(ids);
                 }
             } catch (err) {
                 console.error(err);
@@ -45,9 +56,19 @@ const InterestsSettings: React.FC = () => {
 
     useEffect(() => {
         const handleGlobalSave = () => handleSave();
+        const handleGlobalReset = () => {
+            setSelectedIds([]);
+            setMessage('');
+        };
+
         window.addEventListener('settings-save', handleGlobalSave);
-        return () => window.removeEventListener('settings-save', handleGlobalSave);
-    }, [selectedIds]);
+        window.addEventListener('settings-reset', handleGlobalReset);
+
+        return () => {
+            window.removeEventListener('settings-save', handleGlobalSave);
+            window.removeEventListener('settings-reset', handleGlobalReset);
+        };
+    }, []);
 
     const toggleCategory = (id: number) => {
         setSelectedIds(prev =>
@@ -56,7 +77,8 @@ const InterestsSettings: React.FC = () => {
     };
 
     const handleSave = async () => {
-        if (selectedIds.length < 1) {
+        const currentSelected = selectedIdsRef.current;
+        if (currentSelected.length < 1) {
             setMessage('Please select at least 1 interest.');
             return;
         }
@@ -71,11 +93,12 @@ const InterestsSettings: React.FC = () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify(selectedIds)
+                body: JSON.stringify(currentSelected)
             });
 
             if (response.ok) {
                 setMessage('Interests updated successfully!');
+                setInitialSelectedIds(currentSelected);
             } else {
                 const errorData = await response.json();
                 console.error('Save failed:', errorData);
@@ -107,6 +130,13 @@ const InterestsSettings: React.FC = () => {
                 <h2 className="text-3xl font-serif font-bold text-deep-purple mb-2">Your Interests</h2>
                 <p className="text-deep-purple/60">Choose 1 or more interests so we can suggest the best workshops for you.</p>
             </div>
+
+            {saving && (
+                <div className="mb-6 animate-pulse text-deep-purple/40 font-bold flex items-center gap-2">
+                    <Loader2 className="animate-spin" size={18} />
+                    <span>Saving your interests...</span>
+                </div>
+            )}
 
             {message && (
                 <div className={`mb-6 p-4 rounded-2xl font-bold flex items-center gap-2 ${message.includes('success') ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
