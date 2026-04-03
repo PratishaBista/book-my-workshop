@@ -1,84 +1,98 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import { AnimatedHoverText } from '../ui/AnimatedHoverText';
 
 const BecomeHost: React.FC = () => {
+    const heroRef = useRef<HTMLDivElement>(null);
+    const { scrollYProgress } = useScroll({
+        target: heroRef,
+        offset: ["start end", "end start"]
+    });
+
+    const leftImageY = useTransform(scrollYProgress, [0, 1], [100, -150]);
+    const rightImageY = useTransform(scrollYProgress, [0, 1], [200, -250]);
+    
+    // Line finishes drawing by the time the section is halfway up the screen
+    const pathLength = useTransform(scrollYProgress, [0.2, 0.5], [0, 1]);
+
     return (
-        <section className="relative py-24 px-6 overflow-hidden bg-[#Fdfbf7]">
-            <div className="absolute inset-0 z-0 opacity-40">
-                <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <pattern id="terrazzo" x="0" y="0" width="200" height="200" patternUnits="userSpaceOnUse">
-                            <circle cx="20" cy="20" r="12" fill="#E8D4C5" />
-                            <path d="M50 50 L70 80 L30 80 Z" fill="#D4E2D4" transform="rotate(20 50 65)" />
-                            <rect x="120" y="40" width="20" height="30" fill="#E6D2D2" transform="rotate(-15 130 55)" />
-                            <circle cx="160" cy="140" r="8" fill="#F0E6D2" />
-                            <path d="M80 150 Q100 120 120 150 T160 150" stroke="#C8D6C9" strokeWidth="4" fill="none" />
-                            <circle cx="100" cy="100" r="4" fill="#6B4C3E" fillOpacity="0.1" />
-                            <rect x="10" y="160" width="40" height="40" rx="10" fill="#D6C8D6" transform="rotate(45 30 180)" />
-                        </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#terrazzo)" />
-                </svg>
-            </div>
+        <div className="w-full bg-white relative z-10">
+            <section ref={heroRef} className="relative w-full min-h-[90vh] flex flex-col items-center justify-center overflow-hidden py-32 bg-[#FCFBF7] border-y border-deep-purple/10 shadow-[0_10px_60px_rgba(0,0,0,0.03)]">
 
-            <div className="max-w-6xl mx-auto relative z-10">
+                {/* Parallax Images */}
+                <motion.img
+                    style={{ y: leftImageY }}
+                    src="https://images.unsplash.com/photo-1610701596007-11502861dcfa?q=80&w=1200&auto=format&fit=crop"
+                    alt="Pottery Workshop"
+                    className="absolute left-[-15%] md:left-[-5%] top-[10%] w-[55vw] md:w-[32vw] max-w-[450px] aspect-[4/5] object-cover rounded-[2.5rem] shadow-2xl rotate-[10deg] z-0"
+                />
 
-                <motion.div
-                    initial={{ y: 40, opacity: 0, rotate: 1 }}
-                    whileInView={{ y: 0, opacity: 1, rotate: 0 }}
-                    viewport={{ once: true, margin: "-100px" }}
-                    transition={{ duration: 0.8, type: "spring", bounce: 0.3 }}
-                    className="bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[500px]"
-                >
-                    <div
-                        className="absolute inset-0 pointer-events-none opacity-[0.03]"
-                        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
-                    />
+                <motion.img
+                    style={{ y: rightImageY }}
+                    src="https://images.unsplash.com/photo-1556910103-1c02745aae4d?q=80&w=1200&auto=format&fit=crop"
+                    alt="Culinary Workshop"
+                    className="absolute right-[-15%] md:right-[-5%] top-[40%] w-[50vw] md:w-[28vw] max-w-[400px] aspect-[3/4] object-cover rounded-[2.5rem] shadow-2xl rotate-[-12deg] z-0"
+                />
 
-                    <div className="md:w-5/12 relative h-64 md:h-auto bg-[#F5F5F0]">
-                        <img
-                            src="https://images.unsplash.com/photo-1606092195730-5d7b9af1efc5?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                            alt="Host teaching"
-                            className="absolute inset-0 w-full h-full object-cover grayscale opacity-90 mix-blend-multiply"
-                        />
-                        <div className="absolute inset-0 bg-primary-orange/10 mix-blend-overlay"></div>
-
-                        <div className="absolute top-8 left-1/2 -translate-x-1/2 w-32 h-8 bg-[#E6D2D2]/80 rotate-2 shadow-sm backdrop-blur-sm"></div>
+                {/* Content */}
+                <div className="relative z-10 flex flex-col items-center text-center max-w-5xl px-6 mix-blend-multiply">
+                    <h1 className="font-serif text-[10vw] sm:text-6xl md:text-7xl xl:text-[7rem] leading-[1.1] text-[#1A1A1A] font-bold tracking-tighter uppercase mb-0">
+                        Do you host creative <br />
+                    </h1>
+                    <div className="relative inline-block mb-10">
+                        <h1 className="font-serif text-[10vw] sm:text-6xl md:text-7xl xl:text-[7rem] leading-[1] text-[#1A1A1A] font-bold tracking-tighter uppercase relative z-10 block">
+                            workshops?
+                        </h1>
+                        {/* Elegant Layered Brush Underline */}
+                        <svg className="absolute w-[110%] h-[60px] left-[-5%] bottom-[-15px] pointer-events-none overflow-visible z-[-1] opacity-90" viewBox="0 0 400 60" preserveAspectRatio="none">
+                            {/* Main thick core */}
+                            <motion.path
+                                d="M 10 50 Q 150 15, 250 40 T 390 25"
+                                fill="none"
+                                stroke="#7E57C2" 
+                                strokeWidth="18"
+                                strokeLinecap="round"
+                                opacity="0.9"
+                                style={{ pathLength }}
+                            />
+                            {/* Top brush bristle */}
+                            <motion.path
+                                d="M 5 42 Q 140 5, 240 32 T 395 18"
+                                fill="none"
+                                stroke="#7E57C2" 
+                                strokeWidth="6"
+                                strokeLinecap="round"
+                                opacity="0.5"
+                                style={{ pathLength }}
+                            />
+                            {/* Bottom brush bristle */}
+                            <motion.path
+                                d="M 15 58 Q 160 25, 260 48 T 385 32"
+                                fill="none"
+                                stroke="#7E57C2" 
+                                strokeWidth="8"
+                                strokeLinecap="round"
+                                opacity="0.4"
+                                style={{ pathLength }}
+                            />
+                        </svg>
                     </div>
 
-                    <div className="md:w-7/12 p-10 md:p-16 flex flex-col justify-center text-left relative">
+                    <p className="font-sans text-lg md:text-xl font-medium text-deep-purple/80 max-w-lg mb-10 leading-relaxed">
+                        Join a community of artisans, makers, and mentors. We handle the booking logistics so you can focus on sharing your craft.
+                    </p>
 
-                        <div className="absolute top-8 right-8 hidden md:block opacity-20 rotate-12">
-                            <svg width="80" height="80" viewBox="0 0 100 100" fill="none" stroke="currentColor" className="text-deep-purple">
-                                <circle cx="50" cy="50" r="40" strokeWidth="2" strokeDasharray="4 4" />
-                                <text x="50" y="55" fontSize="14" textAnchor="middle" fontFamily="serif" fill="currentColor">EST 2024</text>
-                            </svg>
-                        </div>
-
-                        <h2 className="font-serif text-4xl md:text-5xl text-deep-purple mb-6 leading-tight">
-                            Do you host <br className="hidden md:block" />
-                            <span className="italic text-primary-orange">creative</span> experiences?
-                        </h2>
-
-                        <p className="font-sans text-gray-600 text-lg leading-relaxed mb-8 max-w-md">
-                            Join a community of artisans, makers, and mentors. We handle the booking logistics so you can focus on sharing your craft.
-                        </p>
-
-                        <div className="flex gap-4 items-center">
-                            <Link to="/host-workshop" className="px-8 py-4 bg-deep-purple text-white font-medium rounded-full hover:bg-[#2A1B3D] transition-all shadow-lg">
-                                Learn more
-                            </Link>
-                        </div>
-                    </div>
-
-                </motion.div>
-
-                <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-primary-orange rounded-full opacity-10 blur-2xl"></div>
-                <div className="absolute -top-12 -right-12 w-32 h-32 bg-deep-purple rounded-full opacity-5 blur-3xl"></div>
-
-            </div>
-        </section>
+                    <Link
+                        to="/host-workshop"
+                        className="group px-12 py-5 bg-primary-orange text-[#1A1A1A] font-bold text-lg uppercase tracking-widest rounded-full transition-all duration-400 flex items-center gap-3 overflow-hidden"
+                    >
+                        <AnimatedHoverText text="Learn More" />
+                        <span className="text-2xl font-light transform transition-transform duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] group-hover:translate-x-1 group-hover:-translate-y-1">↗</span>
+                    </Link>
+                </div>
+            </section>
+        </div>
     );
 };
 

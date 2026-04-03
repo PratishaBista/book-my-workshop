@@ -19,7 +19,6 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
     const isProvider = user?.role === 'Provider';
     const isAdmin = user?.role === 'Admin';
 
-    const [communityOpen, setCommunityOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const userMenuRef = useRef<HTMLDivElement>(null);
     const locationDropdownRef = useRef<HTMLDivElement>(null);
@@ -202,12 +201,6 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
     }, [searchOpen]);
 
 
-    const communityItems = [
-        { label: 'Our Mission', color: '#73A757', path: '/mission' },
-        { label: 'How It Works', color: '#0E0E0C', path: '/how-it-works' },
-        { label: 'Contact Us', color: '#AF82C5', path: '/contact' }
-    ];
-
     const categoryIconMap: Record<string, any> = {
         "Art & Craft": Palette,
         "Cooking & Baking": ChefHat,
@@ -247,106 +240,33 @@ const Navbar: React.FC<NavbarProps> = ({ minimal = false }) => {
                 </Link>
 
                 {!minimal && (
-                    <div className="hidden md:flex items-center gap-16">
-                        <div className="relative" ref={exploreRef}>
-                            <button
-                                onClick={() => setExploreOpen(!exploreOpen)}
-                                className={`flex items-center gap-2 font-sans text-base font-semibold transition-colors ${exploreOpen ? 'text-primary-orange' : 'text-[#0E0E0C] hover:text-primary-orange'}`}
+                    <div className="hidden md:flex items-center gap-12">
+                        {/* Primary Navigation Links */}
+                        <div className="flex items-center gap-10">
+                            <Link 
+                                to="/explore" 
+                                className="font-sans text-sm font-bold text-[#0E0E0C] hover:text-primary-orange transition-colors tracking-tight"
                             >
-                                Explore
-                                <motion.div animate={{ rotate: exploreOpen ? 180 : 0 }}>
-                                    <ChevronDown size={18} />
-                                </motion.div>
-                            </button>
-
-                            <AnimatePresence>
-                                {exploreOpen && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: -10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        className="absolute top-full left-0 mt-4 w-[600px] bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-deep-purple/5 p-8 z-[60]"
-                                    >
-                                        <div className="flex items-center justify-between mb-6">
-                                            <button
-                                                onClick={() => setExploreOpen(false)}
-                                                className="p-2 rounded-full transition-colors"
-                                            >
-                                                <X size={20} className="text-deep-purple/40" />
-                                            </button>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-4">
-                                            {categories.length > 0 ? (
-                                                categories.map((category) => {
-                                                    const Icon = getCategoryIcon(category.name);
-                                                    return (
-                                                        <Link
-                                                            key={category.id}
-                                                            to={`/explore?category=${encodeURIComponent(category.name)}`}
-                                                            onClick={() => setExploreOpen(false)}
-                                                            className="flex items-center gap-4 p-4 rounded-2xl transition-all group"
-                                                        >
-                                                            <div className="w-12 h-12 rounded-xl bg-primary-orange/5 flex items-center justify-center text-primary-orange transition-all">
-                                                                <Icon size={24} />
-                                                            </div>
-                                                            <div>
-                                                                <h3 className="font-sans font-bold text-[#0E0E0C] text-sm">
-                                                                    {category.name}
-                                                                </h3>
-                                                                <p className="text-xs text-deep-purple/50 line-clamp-1">
-                                                                    {category.description}
-                                                                </p>
-                                                            </div>
-                                                        </Link>
-                                                    );
-                                                })
-                                            ) : (
-                                                <div className="col-span-2 py-8 text-center text-deep-purple/40 font-semibold">
-                                                    Loading categories...
-                                                </div>
-                                            )}
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-
-                        <div
-                            className="relative"
-                            onMouseEnter={() => setCommunityOpen(true)}
-                            onMouseLeave={() => setCommunityOpen(false)}
-                        >
-                            <button className="flex items-center gap-2 font-sans text-base font-semibold text-[#0E0E0C]">
-                                About Us
-                                <motion.div animate={{ rotate: communityOpen ? 180 : 0 }}>
-                                    <ChevronDown size={18} />
-                                </motion.div>
-                            </button>
-
-                            <AnimatePresence>
-                                {communityOpen && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: -10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        className="absolute top-full left-0 mt-4 w-56 bg-cream-offwhite rounded-2xl shadow-xl border border-deep-purple/10 py-3 px-2"
-                                    >
-                                        {communityItems.map((item, index) => (
-                                            <Link
-                                                key={index}
-                                                to={item.path}
-                                                className="flex items-center gap-3 px-4 py-3 rounded-lg group"
-                                            >
-                                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                                                <span className="font-sans text-base font-semibold text-[#0E0E0C] group-hover:text-gray-500">
-                                                    {item.label}
-                                                </span>
-                                            </Link>
-                                        ))}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
+                                Workshops
+                            </Link>
+                            <Link 
+                                to="/gift-cards" 
+                                className="font-sans text-sm font-bold text-[#0E0E0C] hover:text-primary-orange transition-colors tracking-tight"
+                            >
+                                Gift Cards
+                            </Link>
+                            <Link 
+                                to="/stories" 
+                                className="font-sans text-sm font-bold text-[#0E0E0C] hover:text-primary-orange transition-colors tracking-tight"
+                            >
+                                Stories
+                            </Link>
+                            <Link 
+                                to="/mission" 
+                                className="font-sans text-sm font-bold text-[#0E0E0C] hover:text-primary-orange transition-colors tracking-tight"
+                            >
+                                About
+                            </Link>
                         </div>
                     </div>
                 )}

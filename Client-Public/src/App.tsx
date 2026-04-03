@@ -13,7 +13,6 @@ import PaymentFailure from './pages/payment/PaymentFailure';
 import Checkout from './pages/payment/Checkout';
 import MyBookings from './pages/profile/MyBookings';
 import MissionPage from './pages/identity/MissionPage';
-import HowItWorksPage from './pages/identity/HowItWorksPage';
 import ContactPage from './pages/identity/ContactPage';
 
 import ProtectedRoute from './components/auth/ProtectedRoute'
@@ -28,7 +27,6 @@ function App() {
           {/* Public Routes - Anyone can access */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/mission" element={<MissionPage />} />
-          <Route path="/how-it-works" element={<HowItWorksPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/host-workshop" element={<HostWorkshopPage />} />
           <Route path="/workshop/:id" element={<WorkshopDetail />} />
