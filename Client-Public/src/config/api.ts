@@ -61,6 +61,9 @@ export const API_ENDPOINTS = {
         byId: (id: number) => `${API_URL}/api/booking/${id}`,
         byCode: (code: string) => `${API_URL}/api/booking/confirmation/${code}`,
         cancel: (id: number) => `${API_URL}/api/booking/${id}/cancel`,
+    },
+    newsletter: {
+        subscribe: `${API_URL}/api/newsletter/subscribe`,
     }
 };
 
