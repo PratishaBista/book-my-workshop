@@ -394,4 +394,89 @@ public static class EmailTemplates
 </body>
 </html>";
     }
+
+    public static string GetNewsletterWelcomeEmail()
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Welcome to BookMyWorkshop</title>
+</head>
+<body style='margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, ""Helvetica Neue"", Arial, sans-serif; background-color: #FAF8F2;'>
+    <table role='presentation' style='width: 100%; border-collapse: collapse;'>
+        <tr>
+            <td align='center' style='padding: 40px 20px;'>
+                <table role='presentation' style='width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.05);'>
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style='padding: 40px 40px 30px 40px; text-align: center; background-color: #ffffff;'>
+                            <img src='https://res.cloudinary.com/daaysxdli/image/upload/v1767434247/Badge_hjkzju.png' alt='BookMyWorkshop' style='height: 60px; margin-bottom: 16px; display: block; margin-left: auto; margin-right: auto;' />
+                            <p style='margin: 0; color: #EE7932; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;'>
+                                Community & Craft
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Body -->
+                    <tr>
+                        <td style='padding: 20px 40px 40px 40px;'>
+                            <h1 style='margin: 0 0 24px 0; color: #1A0B2E; font-size: 28px; font-weight: 700; text-align: center; font-family: serif; line-height: 1.2;'>
+                                You're on the list.
+                            </h1>
+                            <p style='margin: 0 0 20px 0; color: #4A4A4A; font-size: 16px; line-height: 1.7; text-align: center;'>
+                                Thank you for joining our creative community. From now on, you'll be the first to know about new workshops, artisan stories, and exclusive community events across Nepal.
+                            </p>
+                            
+                            <!-- Main Call to Action -->
+                            <div style='text-align: center; margin: 40px 0;'>
+                                <a href='http://localhost:4000/workshops' style='background-color: #EE7932; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; padding: 16px 40px; border-radius: 50px; display: inline-block; box-shadow: 0 10px 20px rgba(238, 121, 50, 0.2);'>Explore Live Workshops</a>
+                            </div>
+
+                            <hr style='border: 0; border-top: 1px solid #F0F0F0; margin: 40px 0;' />
+
+                            <h3 style='margin: 0 0 20px 0; color: #1A0B2E; font-size: 18px; font-weight: 600; text-align: center;'>Other ways to engage</h3>
+                            
+                            <table role='presentation' style='width: 100%; border-collapse: collapse;'>
+                                <tr>
+                                    <td style='width: 50%; padding: 10px;'>
+                                        <div style='background-color: #F9F9F5; padding: 20px; border-radius: 12px; text-align: center;'>
+                                            <p style='margin: 0 0 10px 0; font-size: 14px; color: #4A4A4A; font-weight: 500;'>Gift an Experience</p>
+                                            <a href='http://localhost:4000/' style='color: #EE7932; text-decoration: none; font-size: 14px; font-weight: 700; border-bottom: 2px solid #EE7932;'>Gift Cards</a>
+                                        </div>
+                                    </td>
+                                    <td style='width: 50%; padding: 10px;'>
+                                        <div style='background-color: #F9F9F5; padding: 20px; border-radius: 12px; text-align: center;'>
+                                            <p style='margin: 0 0 10px 0; font-size: 14px; color: #4A4A4A; font-weight: 500;'>Teach Your Craft</p>
+                                            <a href='http://localhost:4000/host-workshop' style='color: #EE7932; text-decoration: none; font-size: 14px; font-weight: 700; border-bottom: 2px solid #EE7932;'>Become a Host</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style='background-color: #1A0B2E; padding: 40px; color: #ffffff;'>
+                            <p style='margin: 0 0 16px 0; font-size: 13px; text-align: center; color: #ffffff/60; line-height: 1.5;'>
+                                You received this because you subscribed to the BookMyWorkshop newsletter.
+                            </p>
+                            <p style='margin: 0; font-size: 12px; text-align: center; color: #ffffff/40;'>
+                                © 2026 BookMyWorkshop. All rights reserved. <br /> Kathmandu, Nepal.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>";
+    }
 }

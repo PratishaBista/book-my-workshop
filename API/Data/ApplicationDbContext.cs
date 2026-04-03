@@ -25,6 +25,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<WorkshopModification> WorkshopModifications { get; set; }
     public DbSet<UserPreference> UserPreferences { get; set; }
     public DbSet<PlatformSettings> PlatformSettings { get; set; }
+    public DbSet<NewsletterSubscription> NewsletterSubscriptions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -179,6 +180,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<UserPreference>()
             .HasIndex(up => new { up.UserId, up.CategoryId })
+            .IsUnique();
+
+        // Newsletter Subscription
+        builder.Entity<NewsletterSubscription>()
+            .HasIndex(ns => ns.Email)
             .IsUnique();
     }
 }
