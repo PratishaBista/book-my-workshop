@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using API.Data;
 using API.DTOs.Requests;
 using API.DTOs.Responses;
@@ -22,13 +23,17 @@ public class ProviderController : ControllerBase
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IMapper _mapper;
     private readonly IMediaService _mediaService;
+    private readonly IStorageService _storageService;
+    private readonly IMLService _mlService;
 
-    public ProviderController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IMapper mapper, IMediaService mediaService)
+    public ProviderController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IMapper mapper, IMediaService mediaService, IStorageService storageService, IMLService mlService)
     {
         _context = context;
         _userManager = userManager;
         _mapper = mapper;
         _mediaService = mediaService;
+        _storageService = storageService;
+        _mlService = mlService;
     }
 
     [HttpGet("profile")]
@@ -138,6 +143,98 @@ public class ProviderController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
+    }
+
+    // Trust & Safety - Private S3 Uploads
+    [HttpPost("upload-id-card")]
+    public async Task<IActionResult> UploadIdCard(IFormFile file)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var provider = await _context.Providers.FirstOrDefaultAsync(p => p.UserId == userId);
+        if (provider == null) return NotFound();
+
+        try 
+        {
+            using var stream = file.OpenReadStream();
+            var url = await _storageService.UploadFileAsync(stream, file.FileName, file.ContentType, isPrivate: true);
+            
+            provider.IdCardUrl = url;
+            provider.IdFileName = file.FileName;
+            provider.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "ID Card uploaded securely to vault", fileName = file.FileName });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = "Secure upload failed.", detail = ex.Message });
+        }
+    }
+
+    [HttpPost("upload-pan-card")]
+    public async Task<IActionResult> UploadPanCard(IFormFile file)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var provider = await _context.Providers.FirstOrDefaultAsync(p => p.UserId == userId);
+        if (provider == null) return NotFound();
+
+        try 
+        {
+            using var stream = file.OpenReadStream();
+            var url = await _storageService.UploadFileAsync(stream, file.FileName, file.ContentType, isPrivate: true);
+            
+            provider.PanCardUrl = url;
+            provider.PanFileName = file.FileName;
+            provider.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "PAN Certificate uploaded securely to vault", fileName = file.FileName });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = "Secure upload failed.", detail = ex.Message });
+        }
+    }
+
+    [HttpPost("submit-verification")]
+    public async Task<IActionResult> SubmitForVerification()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var provider = await _context.Providers.FirstOrDefaultAsync(p => p.UserId == userId);
+        if (provider == null) return NotFound();
+
+        if (string.IsNullOrEmpty(provider.IdCardUrl) || string.IsNullOrEmpty(provider.PanCardUrl))
+        {
+            return BadRequest(new { message = "Please upload both ID Card and PAN Certificate." });
+        }
+
+        // Trigger AI Consistency Check (NLP Fraud Detection)
+        try 
+        {
+            var regText = $"{provider.BusinessName}. {provider.Tagline}. {provider.Description}";
+            var docText = $"{provider.User.FullName} {provider.IdFileName} {provider.PanFileName}";
+            
+            var analysis = await _mlService.VerifyInformationConsistencyAsync(regText, docText, provider.Website);
+            
+            if (analysis != null)
+            {
+                provider.TrustScore = analysis.OverallScore;
+                provider.TrustAnalysisJson = JsonSerializer.Serialize(analysis);
+                
+                // Optional: Auto-reject if score is dangerously low (e.g., < 10%)
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log but don't block the submission if the ML service is down
+            Console.WriteLine($"[AI VERIFY ERROR]: {ex.Message}");
+        }
+
+        provider.Status = ProviderStatus.PendingReview;
+        provider.UpdatedAt = DateTime.UtcNow;
+        
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "Profile submitted for review. Admin will verify shortly." });
     }
 
     [HttpGet("earnings")]

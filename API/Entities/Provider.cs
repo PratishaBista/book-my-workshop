@@ -31,6 +31,24 @@ public class Provider
     public string? LogoUrl { get; set; }
     public string? CoverImageUrl { get; set; }
 
+    // Trust & Safety Fields
+    public string? IdCardUrl { get; set; } // Path to Identity Document in S3 (Private)
+    public string? PanCardUrl { get; set; } // Path to PAN Certificate in S3 (Private)
+    public string? IdFileName { get; set; } // Original file name for reference
+    public string? PanFileName { get; set; } // Original file name for reference
+    public string? ExtractedPanNumber { get; set; } // Set by AI OCR Simulation
+    public string? ExtractedIdName { get; set; } // Set by AI OCR Simulation
+    
+    // Verification Status
+    public bool IsIdVerified { get; set; } = false;
+    public bool IsPanVerified { get; set; } = false;
+    public DateTime? DocumentsReviewedAt { get; set; }
+    public string? ReviewNotes { get; set; }
+
+    public float TrustScore { get; set; } = 0.0f; // Calculated based on consistency (0-100)
+    public string? TrustAnalysisJson { get; set; } // Raw results from NLP Consistency Check
+    public bool IsManuallyVerified { get; set; } = false;
+
     // Lifecycle Status
     public ProviderStatus Status { get; set; } = ProviderStatus.Incomplete;
     

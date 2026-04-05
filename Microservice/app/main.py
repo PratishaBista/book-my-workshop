@@ -5,7 +5,7 @@ FastAPI application for machine learning inference.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.api.routes import classification, health, enhancement, recommendation
+from app.api.routes import classification, health, enhancement, recommendation, verification
 
 
 # Initialize FastAPI app
@@ -31,6 +31,7 @@ app.include_router(health.router)
 app.include_router(classification.router)
 app.include_router(enhancement.router)
 app.include_router(recommendation.router)
+app.include_router(verification.router)
 
 
 # Legacy endpoint for backwards compatibility

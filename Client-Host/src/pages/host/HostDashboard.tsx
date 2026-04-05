@@ -7,6 +7,7 @@ import { MyWorkshops } from './views/MyWorkshops';
 import { ScheduleManagement } from './views/ScheduleManagement';
 import { BusinessProfile } from './views/BusinessProfile';
 import { Earnings } from './views/Earnings';
+import { VerificationCenter } from './views/VerificationCenter';
 import { PlaceholderView } from './views/PlaceholderView';
 import type { HostTab, ProviderProfile } from '../../types/host';
 import { ProviderStatus } from '../../types/host';
@@ -95,6 +96,7 @@ const HostDashboard: React.FC = () => {
                 <HostOverview
                     status={profile.status}
                     onStartOnboarding={() => setActiveTab('profile')}
+                    onStartVerification={() => setActiveTab('verification')}
                 />
             );
             case 'workshops': return <MyWorkshops isApproved={isApproved} />;
@@ -113,6 +115,8 @@ const HostDashboard: React.FC = () => {
                 />;
             case 'profile':
                 return <BusinessProfile profile={profile} onUpdate={(updated) => setProfile(updated)} />;
+            case 'verification':
+                return <VerificationCenter profile={profile} onUpdate={(updated) => setProfile(updated)} />;
             case 'support':
                 return <PlaceholderView
                     title="Host Support"

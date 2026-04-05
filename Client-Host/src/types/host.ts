@@ -1,4 +1,4 @@
-export type HostTab = 'overview' | 'workshops' | 'schedules' | 'bookings' | 'earnings' | 'reviews' | 'profile' | 'support' | 'settings';
+export type HostTab = 'overview' | 'workshops' | 'schedules' | 'bookings' | 'earnings' | 'reviews' | 'profile' | 'verification' | 'support' | 'settings';
 
 export const ProviderStatus = {
     Incomplete: 0,
@@ -29,6 +29,16 @@ export interface ProviderProfile {
     isApproved: boolean;
     contactPerson: string;
     email: string;
+
+    // Trust & Safety
+    idCardUrl?: string;
+    idFileName?: string;
+    panCardUrl?: string;
+    panFileName?: string;
+    isIdVerified: boolean;
+    isPanVerified: boolean;
+    trustScore: number;
+    trustAnalysisJson?: string;
 }
 
 export interface Venue {

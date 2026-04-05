@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, Check, X, Mail } from 'lucide-react';
+import { ShieldCheck, ChevronRight, Check, X, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { PendingProvider } from '../../../types/admin';
 
@@ -104,6 +104,20 @@ export const PendingProviders: React.FC = () => {
                                     </div>
                                     <p className="text-lg font-medium text-slate-800">{selectedItem.email}</p>
                                 </div>
+                                
+                                {selectedItem.trustScore > 0 && (
+                                    <div className="col-span-2 p-5 bg-emerald-50 rounded-2xl border border-emerald-100">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <ShieldCheck size={16} className="text-emerald-600" />
+                                                <span className="text-xs font-bold text-emerald-600 uppercase">Integrity Match Strength</span>
+                                            </div>
+                                            <span className="text-xl font-black text-emerald-600">{Math.round(selectedItem.trustScore)}%</span>
+                                        </div>
+                                        <p className="text-[10px] text-emerald-600/70 mt-2 font-medium italic">High-confidence match detected by internal NLP consistency engine.</p>
+                                    </div>
+                                )}
+
                                 <div className="p-5 bg-slate-50/80 rounded-2xl border border-slate-100 flex items-center justify-between">
                                     <span className="text-xs font-bold text-slate-400 uppercase">Handle</span>
                                     <p className="font-mono text-sm text-[#E57A44] font-bold">host/{selectedItem.slug}</p>

@@ -11,6 +11,7 @@ public interface IMLService
 {
     Task<(string? Category, double? Confidence, bool? IsConfident)> PredictCategoryAsync(string title, string description);
     Task<List<(int Id, double Score)>> PredictSimilaritiesWithScoresAsync(string sourceText, List<(int Id, string Text)> candidates);
+    Task<TrustAnalysisResponse?> VerifyInformationConsistencyAsync(string registrationText, string documentText, string? websiteText = null);
 }
 
 public class MLService : IMLService
@@ -92,6 +93,51 @@ public class MLService : IMLService
 
         return candidates.Select(c => (c.Id, 0.0)).ToList(); 
     }
+
+    public async Task<TrustAnalysisResponse?> VerifyInformationConsistencyAsync(string registrationText, string documentText, string? websiteText = null)
+    {
+        try
+        {
+            var request = new 
+            { 
+                registration_text = registrationText, 
+                document_text = documentText,
+                website_text = websiteText
+            };
+
+            var json = JsonSerializer.Serialize(request);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync($"{_pythonApiUrl}/api/v1/verify-consistency", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var resultJson = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<TrustAnalysisResponse>(resultJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling ML Verification Microservice");
+        }
+
+        return null;
+    }
+}
+
+public class TrustAnalysisResponse
+{
+    public float OverallScore { get; set; }
+    public string Summary { get; set; } = string.Empty;
+    public List<TrustCheckResult> Checks { get; set; } = new();
+}
+
+public class TrustCheckResult
+{
+    public string Name { get; set; } = string.Empty;
+    public float Score { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public bool Passed { get; set; }
 }
 
 public class RecommendationResponse

@@ -12,6 +12,8 @@ export interface PendingProvider {
     slug?: string;
     referralSource: string;
     registeredAt: string;
+    trustScore: number;
+    trustAnalysisJson: string;
 }
 
 export interface PendingWorkshop {

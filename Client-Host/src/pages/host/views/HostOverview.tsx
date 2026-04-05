@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Clock, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 import { ProviderStatus } from '../../../types/host';
 import type { ProviderStatusType } from '../../../types/host';
@@ -8,9 +8,10 @@ import type { ProviderStatusType } from '../../../types/host';
 interface HostOverviewProps {
     status: ProviderStatusType;
     onStartOnboarding?: () => void;
+    onStartVerification?: () => void;
 }
 
-export const HostOverview: React.FC<HostOverviewProps> = ({ status, onStartOnboarding }) => {
+export const HostOverview: React.FC<HostOverviewProps> = ({ status, onStartVerification }) => {
 
     return (
         <div className="space-y-8">
@@ -36,20 +37,20 @@ export const HostOverview: React.FC<HostOverviewProps> = ({ status, onStartOnboa
                 >
                     <div className="flex items-start gap-4">
                         <div className="bg-primary-orange/10 p-3 rounded-2xl text-primary-orange">
-                            <Sparkles size={24} />
+                            <ShieldCheck size={24} />
                         </div>
                         <div>
-                            <h3 className="font-bold text-deep-purple text-lg mb-1">Welcome to your studio, Artisan!</h3>
+                            <h3 className="font-bold text-deep-purple text-lg mb-1">Identity Verification Required</h3>
                             <p className="text-gray-500 text-sm leading-relaxed max-w-2xl">
-                                Your account is almost ready. Complete your business profile so our team can review and verify your studio for the marketplace.
+                                To start listing workshops, we need to verify your identity. Please upload your Government ID and PAN Certificate in the Security Center.
                             </p>
                         </div>
                     </div>
                     <button
-                        onClick={onStartOnboarding}
+                        onClick={onStartVerification}
                         className="px-6 py-3 bg-deep-purple text-white font-bold rounded-xl hover:shadow-lg transition-all active:scale-95 whitespace-nowrap"
                     >
-                        Complete Profile
+                        Verify Identity
                     </button>
                 </motion.div>
             )}

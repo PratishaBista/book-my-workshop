@@ -3,6 +3,7 @@ using API.Entities;
 using API.Repositories;
 using API.Services;
 using API.Enums;
+using Amazon.S3;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -103,6 +104,22 @@ builder.Services.AddScoped<IPaymentService, EsewaPaymentService>();
 builder.Services.AddScoped<IMLService, MLService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<WorkshopChangeDetector>();
+
+// AWS S3 / MinIO Configuration
+var s3Config = new AmazonS3Config
+{
+    RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(builder.Configuration["AWS:Region"]),
+    ServiceURL = builder.Configuration["AWS:ServiceUrl"],
+    ForcePathStyle = builder.Configuration.GetValue<bool>("AWS:ForcePathStyle")
+};
+
+builder.Services.AddSingleton<IAmazonS3>(sp => 
+    new AmazonS3Client(
+        builder.Configuration["AWS:AccessKey"], 
+        builder.Configuration["AWS:SecretKey"], 
+        s3Config));
+
+builder.Services.AddScoped<IStorageService, S3StorageService>();
 
 builder.Services.AddHostedService<AccountCleanupService>();
 

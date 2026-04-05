@@ -48,7 +48,9 @@ public class AdminController : ControllerBase
                 p.ReferralSource,
                 ContactPerson = p.User.FullName,
                 Email = p.User.Email,
-                RegisteredAt = p.CreatedAt
+                RegisteredAt = p.CreatedAt,
+                p.TrustScore,
+                p.TrustAnalysisJson
             })
             .ToListAsync();
 

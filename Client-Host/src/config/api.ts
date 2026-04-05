@@ -31,6 +31,9 @@ export const API_ENDPOINTS = {
         uploadBanner: `${API_URL}/api/provider/upload-banner`,
         schedule: `${API_URL}/api/provider/schedule`,
         earnings: `${API_URL}/api/provider/earnings`,
+        uploadIdCard: `${API_URL}/api/provider/upload-id-card`,
+        uploadPanCard: `${API_URL}/api/provider/upload-pan-card`,
+        submitVerification: `${API_URL}/api/provider/submit-verification`,
     },
     workshop: {
         base: `${API_URL}/api/workshop`,

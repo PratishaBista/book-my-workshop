@@ -2,7 +2,7 @@ import React from 'react';
 import {
     LayoutGrid, BookOpen, Calendar, DollarSign,
     MessageCircle, User, HelpCircle, Settings,
-    PanelLeftClose, PanelLeftOpen
+    PanelLeftClose, PanelLeftOpen, ShieldCheck
 } from 'lucide-react';
 import type { HostTab } from '../../../types/host';
 
@@ -25,6 +25,7 @@ export const HostSidebar: React.FC<HostSidebarProps> = ({ activeTab, setActiveTa
         { id: 'reviews', label: 'Reviews', icon: MessageCircle },
         { type: 'divider', label: 'Preferences' },
         { id: 'profile', label: 'Business Profile', icon: User },
+        { id: 'verification', label: 'Security & Verification', icon: ShieldCheck },
         { id: 'support', label: 'Support', icon: HelpCircle },
         { id: 'settings', label: 'Settings', icon: Settings },
     ];
