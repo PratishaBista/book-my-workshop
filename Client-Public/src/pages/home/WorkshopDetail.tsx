@@ -33,6 +33,12 @@ const WorkshopDetail: React.FC = () => {
     const [similarWorkshops, setSimilarWorkshops] = useState<any[]>([]);
 
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+    
+    // Reviews state
+    const [reviews, setReviews] = useState<any[]>([]);
+    const [averageRating, setAverageRating] = useState<number | null>(null);
+    const [totalReviews, setTotalReviews] = useState(0);
+    const [loadingReviews, setLoadingReviews] = useState(true);
 
     const token = localStorage.getItem('token');
     const isLoggedIn = !!token;
@@ -116,6 +122,23 @@ const WorkshopDetail: React.FC = () => {
             }
         };
 
+        const fetchReviews = async (workshopId: number) => {
+            try {
+                setLoadingReviews(true);
+                const response = await fetch(`${API_ENDPOINTS.workshop.base}/${workshopId}/review`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setReviews(data.reviews);
+                    setAverageRating(data.averageRating);
+                    setTotalReviews(data.totalReviews);
+                }
+            } catch (error) {
+                console.error('Error fetching reviews:', error);
+            } finally {
+                setLoadingReviews(false);
+            }
+        };
+
         const fetchRelatedProducts = async (currentWorkshop: IWorkshopDetail) => {
             try {
                 const hostRes = await fetch(API_ENDPOINTS.workshop.byProvider(currentWorkshop.provider.id));
@@ -127,24 +150,17 @@ const WorkshopDetail: React.FC = () => {
                 const similarRes = await fetch(API_ENDPOINTS.workshop.related(currentWorkshop.id));
                 if (similarRes.ok) {
                     const simWorkshops = await similarRes.json();
-
-                    console.group('Similar workshops found');
-                    console.log('Source Workshop:', currentWorkshop.title);
-                    console.log('Resulting Recommendations:');
-                    console.table(simWorkshops.map((w: any) => ({
-                        id: w.id,
-                        title: w.title,
-                        category: w.categories?.[0]?.name || 'N/A',
-                        score: w.recommendationScore?.toFixed(4) || 'N/A'
-                    })));
-                    console.groupEnd();
-
+                    
                     setSimilarWorkshops(simWorkshops);
                 }
             } catch (error) {
                 console.error('Error fetching related workshops:', error);
             }
         };
+
+        if (workshop) {
+            fetchReviews(workshop.id);
+        }
 
         fetchWorkshop();
         window.scrollTo(0, 0);
@@ -183,7 +199,7 @@ const WorkshopDetail: React.FC = () => {
         <div className="min-h-screen bg-white text-deep-purple font-sans selection:bg-orange-100 selection:text-deep-purple">
             <Navbar />
 
-            <div className="pt-24 pb-4 px-6 md:px-12 max-w-[1400px] mx-auto">
+            <div className="pt-32 pb-4 px-6 md:px-12 max-w-[1400px] mx-auto">
                 <div className="flex justify-between items-start mb-6">
                     <button
                         onClick={() => navigate(-1)}
@@ -402,6 +418,79 @@ const WorkshopDetail: React.FC = () => {
                                 </AnimatePresence>
                             </div>
                         ))}
+                    </section>
+
+                    <section className="pt-16 border-t border-gray-100">
+                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
+                            <div className="space-y-4">
+                                <h2 className="text-5xl font-serif font-bold text-deep-purple">Verified Reviews</h2>
+                            </div>
+                            
+                            {averageRating && (
+                                <div className="flex items-center gap-6">
+                                    <div className="text-right">
+                                        <div className="text-4xl font-serif font-bold text-deep-purple leading-none mb-1">{averageRating.toFixed(1)} <span className="text-xl text-gray-300">/ 5</span></div>
+                                        <div className="text-xs font-bold text-gray-400 tracking-widest uppercase">From {totalReviews} reviews</div>
+                                    </div>
+                                    <div className="flex gap-1">
+                                        {[1, 2, 3, 4, 5].map(s => (
+                                            <Star 
+                                                key={s} 
+                                                size={24} 
+                                                className={s <= Math.round(averageRating) ? 'fill-primary-orange text-primary-orange' : 'text-gray-100'} 
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {loadingReviews ? (
+                            <div className="py-20 flex justify-center">
+                                <Loader2 className="animate-spin text-gray-200" size={32} />
+                            </div>
+                        ) : reviews.length === 0 ? (
+                            <div className="py-24 bg-gray-50/50 rounded-[3rem] border border-dashed border-gray-100 text-center px-10">
+                                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+                                    <Star size={32} className="text-gray-200" strokeWidth={1} />
+                                </div>
+                                <h3 className="text-2xl font-serif font-bold text-deep-purple mb-2">Be the first to share</h3>
+                                <p className="text-gray-500 font-light max-w-sm mx-auto">No reviews yet for this workshop. Be the first to attend and tell us your thoughts!</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {reviews.map((review) => (
+                                    <div key={review.id} className="bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl hover:translate-y-[-4px] transition-all duration-500 group">
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div className="flex gap-1">
+                                                {[1, 2, 3, 4, 5].map(s => (
+                                                    <Star 
+                                                        key={s} 
+                                                        size={14} 
+                                                        className={s <= review.rating ? 'fill-primary-orange text-primary-orange' : 'text-gray-100'} 
+                                                    />
+                                                ))}
+                                            </div>
+                                            <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-full uppercase tracking-widest flex items-center gap-1.5 border border-green-100">
+                                                <CheckCircle2 size={10} /> Verified
+                                            </span>
+                                        </div>
+                                        
+                                        <p className="text-lg text-deep-purple font-light leading-relaxed mb-8 italic">"{review.comment}"</p>
+                                        
+                                        <div className="flex items-center gap-4 pt-6 border-t border-gray-50">
+                                            <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 font-bold font-serif">
+                                                {review.userName?.[0] || 'U'}
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-bold text-deep-purple uppercase tracking-widest">{review.userName || 'Verified Attendee'}</div>
+                                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date(review.createdAt).toLocaleDateString()}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </section>
                 </div>
 

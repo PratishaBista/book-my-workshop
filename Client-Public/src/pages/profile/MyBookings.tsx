@@ -6,26 +6,27 @@ import {
     ChevronRight, Search,
     Loader2, AlertCircle, RefreshCcw,
     ArrowRight, CreditCard, Ticket,
-    CheckCircle2, Clock3, Ban, X, AlertTriangle, Receipt
+    CheckCircle2, Clock3, Ban, X, AlertTriangle, Receipt,
+    Star, StarHalf
 } from 'lucide-react';
 import Navbar from '../../components/landing/Navbar';
 import Footer from '../../components/landing/Footer';
 import { API_ENDPOINTS } from '../../config/api';
 
 const BookingStatus = {
-    Pending: 0,
-    Confirmed: 1,
-    Cancelled: 2,
-    Refunded: 3
+    Pending: 'Pending',
+    Confirmed: 'Confirmed',
+    Cancelled: 'Cancelled',
+    Refunded: 'Refunded'
 } as const;
 
 type BookingStatus = typeof BookingStatus[keyof typeof BookingStatus];
 
 const PaymentStatus = {
-    Pending: 0,
-    Paid: 1,
-    Failed: 2,
-    Refunded: 3
+    Pending: 'Pending',
+    Paid: 'Paid',
+    Failed: 'Failed',
+    Refunded: 'Refunded'
 } as const;
 
 type PaymentStatus = typeof PaymentStatus[keyof typeof PaymentStatus];
@@ -43,6 +44,7 @@ interface Booking {
     refundAmount?: number;
     refundPercentage?: number;
     cancelledBy?: string;
+    hasReviewed?: boolean;
     schedule: {
         id: number;
         startDateTime: string;
@@ -68,6 +70,13 @@ const MyBookings: React.FC = () => {
     const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
     const [cancelReason, setCancelReason] = useState('');
     const [isCancelling, setIsCancelling] = useState(false);
+    
+    // Review Modal State
+    const [bookingToReview, setBookingToReview] = useState<Booking | null>(null);
+    const [reviewRating, setReviewRating] = useState(0);
+    const [reviewComment, setReviewComment] = useState('');
+    const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+    const [hoverRating, setHoverRating] = useState(0);
 
     useEffect(() => {
         fetchBookings();
@@ -138,8 +147,7 @@ const MyBookings: React.FC = () => {
 
     const calculateRefundPrediction = (startDateTime: string, totalAmount: number) => {
         const hoursNotice = (new Date(startDateTime).getTime() - new Date().getTime()) / (1000 * 60 * 60);
-        if (hoursNotice >= 48) return { percentage: 100, amount: totalAmount, tier: 'Full Refund (>48h notice)' };
-        if (hoursNotice >= 24) return { percentage: 50, amount: totalAmount * 0.5, tier: 'Partial Refund (24-48h notice)' };
+        if (hoursNotice >= 24) return { percentage: 100, amount: totalAmount, tier: 'Full Refund (>24h notice)' };
         return { percentage: 0, amount: 0, tier: 'No Refund (<24h notice)' };
     };
 
@@ -176,6 +184,45 @@ const MyBookings: React.FC = () => {
             alert('A network error occurred.');
         } finally {
             setIsCancelling(false);
+        }
+    };
+
+    const handleReviewSubmit = async () => {
+        if (!bookingToReview || reviewRating === 0) return;
+        
+        try {
+            setIsSubmittingReview(true);
+            const token = localStorage.getItem('token');
+            // Backend endpoint: api/workshop/{workshopId}/review
+            const response = await fetch(`${API_ENDPOINTS.workshop.base}/${bookingToReview.workshop.id}/review`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    rating: reviewRating,
+                    comment: reviewComment,
+                    bookingId: bookingToReview.id
+                })
+            });
+
+            if (response.ok) {
+                // Update local state to mark it as reviewed
+                setBookings(prev => prev.map(b => b.id === bookingToReview.id ? { ...b, hasReviewed: true } : b));
+                setBookingToReview(null);
+                setReviewRating(0);
+                setReviewComment('');
+                alert('Thank you for your review!');
+            } else {
+                const errorData = await response.json();
+                alert(errorData.message || 'Failed to submit review.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('A network error occurred.');
+        } finally {
+            setIsSubmittingReview(false);
         }
     };
 
@@ -358,6 +405,16 @@ const MyBookings: React.FC = () => {
                                                         </button>
                                                     )}
 
+                                                    {booking.bookingStatus === BookingStatus.Confirmed && !isUpcoming(booking.schedule?.startDateTime) && !booking.hasReviewed && (
+                                                        <button 
+                                                            onClick={() => setBookingToReview(booking)}
+                                                            className="px-4 py-2 text-sm font-bold text-primary-orange bg-orange-50 hover:bg-orange-100 rounded-xl transition-colors flex items-center gap-2"
+                                                        >
+                                                            <Star size={14} fill="currentColor" />
+                                                            Rate Experience
+                                                        </button>
+                                                    )}
+
                                                     <Link
                                                         to={`/workshop/${booking.workshop?.slug}`}
                                                         className="w-14 h-14 rounded-full bg-deep-purple text-white flex items-center justify-center hover:bg-primary-orange hover:shadow-xl hover:shadow-primary-orange/20 transition-all duration-300 active:scale-90"
@@ -375,7 +432,7 @@ const MyBookings: React.FC = () => {
 
                     <AnimatePresence>
                         {bookingToCancel && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                                 <motion.div 
                                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                                     className="absolute inset-0 bg-deep-purple/40 backdrop-blur-sm"
@@ -446,6 +503,83 @@ const MyBookings: React.FC = () => {
                                         >
                                             {isCancelling ? <Loader2 size={20} className="animate-spin" /> : 'Confirm Cancel'}
                                         </button>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        )}
+
+                        {bookingToReview && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                                <motion.div 
+                                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                    className="absolute inset-0 bg-deep-purple/40 backdrop-blur-sm"
+                                    onClick={() => setBookingToReview(null)}
+                                />
+                                <motion.div 
+                                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                    className="bg-white rounded-[2rem] p-8 md:p-12 max-w-xl w-full relative z-10 shadow-2xl border border-gray-100"
+                                >
+                                    <button 
+                                        onClick={() => setBookingToReview(null)}
+                                        className="absolute top-6 right-6 w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 hover:text-deep-purple transition-colors"
+                                    >
+                                        <X size={20} />
+                                    </button>
+
+                                    <div className="space-y-8">
+                                        <div className="space-y-2">
+                                            <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary-orange font-mono">Feedback Loop</span>
+                                            <h2 className="text-4xl font-serif font-bold text-deep-purple leading-tight">Rate Your Experience</h2>
+                                            <p className="text-gray-500 italic">How was your time at <span className="font-bold text-deep-purple not-italic">"{bookingToReview.workshop.title}"</span>?</p>
+                                        </div>
+
+                                        <div className="flex justify-center gap-4 py-8 border-y border-gray-50 mb-8">
+                                            {[1, 2, 3, 4, 5].map((s) => (
+                                                <button
+                                                    key={s}
+                                                    onMouseEnter={() => setHoverRating(s)}
+                                                    onMouseLeave={() => setHoverRating(0)}
+                                                    onClick={() => setReviewRating(s)}
+                                                    className="transition-all duration-300 transform hover:scale-125 hover:-translate-y-1"
+                                                >
+                                                    <Star 
+                                                        size={48} 
+                                                        strokeWidth={1.5}
+                                                        className={`transition-colors duration-300 ${
+                                                            (hoverRating || reviewRating) >= s 
+                                                            ? 'fill-primary-orange text-primary-orange' 
+                                                            : 'text-gray-200'
+                                                        }`}
+                                                    />
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Write a Review</label>
+                                            <textarea 
+                                                value={reviewComment}
+                                                onChange={(e) => setReviewComment(e.target.value)}
+                                                placeholder="Tell us about the atmosphere, the host, or what you learned..."
+                                                className="w-full bg-gray-50 border-none rounded-3xl px-8 py-6 text-deep-purple focus:ring-2 focus:ring-primary-orange/50 transition-shadow resize-none h-40 text-lg leading-relaxed placeholder:text-gray-300"
+                                            />
+                                        </div>
+
+                                        <div className="pt-4">
+                                            <button 
+                                                onClick={handleReviewSubmit}
+                                                disabled={isSubmittingReview || reviewRating === 0}
+                                                className="w-full py-6 font-bold text-white bg-deep-purple rounded-2xl shadow-xl shadow-deep-purple/20 hover:bg-primary-orange hover:shadow-primary-orange/20 transition-all disabled:opacity-30 disabled:grayscale flex items-center justify-center gap-4 text-xl active:scale-95"
+                                            >
+                                                {isSubmittingReview ? (
+                                                    <Loader2 size={24} className="animate-spin" />
+                                                ) : (
+                                                    <>Submit Feedback <ArrowRight size={24} /></>
+                                                )}
+                                            </button>
+                                        </div>
                                     </div>
                                 </motion.div>
                             </div>

@@ -112,8 +112,17 @@ const WorkshopSection: React.FC<WorkshopSectionProps> = ({ title, subtitle, work
                                 <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-deep-purple/40 border-b border-deep-purple/5 pb-3">
                                     <span>{workshop.categoryName}</span>
                                     <div className='flex items-center gap-1.5'>
-                                        <span className="text-primary-orange">★</span>
-                                        <span>{workshop.averageRating?.toFixed(1) || 'N/A'}</span>
+                                        <span className={workshop.averageRating ? "text-primary-orange" : "text-gray-300"}>★</span>
+                                        <span className="text-deep-purple font-bold">
+                                            {workshop.averageRating ? (
+                                                <>
+                                                    {workshop.averageRating.toFixed(1)}
+                                                    <span className="text-gray-400 font-normal ml-1">({workshop.reviewCount})</span>
+                                                </>
+                                            ) : (
+                                                <span className="text-gray-300 font-normal">New</span>
+                                            )}
+                                        </span>
                                     </div>
                                 </div>
 
@@ -195,9 +204,15 @@ const WorkshopListing: React.FC = () => {
                 const response = await fetch(API_ENDPOINTS.workshop.public);
                 if (response.ok) {
                     const data = await response.json();
-                    const filtered = data.filter((w: Workshop) =>
+                    let filtered = data.filter((w: Workshop) =>
                         !personalized.some(p => p.id === w.id)
                     );
+                    
+                    for (let i = filtered.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+                    }
+                    
                     setLatest(filtered.slice(0, 6));
                 }
             } catch (error) {

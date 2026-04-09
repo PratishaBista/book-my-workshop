@@ -10,8 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
-[Authorize(Roles = "Provider,Admin")]
+[Route("api/workshop")]
 public class WorkshopController : ControllerBase
 {
     private readonly IWorkshopService _workshopService;
@@ -35,6 +34,7 @@ public class WorkshopController : ControllerBase
     }
 
     // POST: api/workshop
+    [Authorize(Roles = "Provider,Admin")]
     [HttpPost]
     public async Task<IActionResult> CreateWorkshop([FromBody] CreateWorkshopRequest request)
     {
@@ -72,6 +72,7 @@ public class WorkshopController : ControllerBase
     }
 
     // PUT: api/workshop/{id}
+    [Authorize(Roles = "Provider,Admin")]
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateWorkshop(int id, [FromBody] UpdateWorkshopRequest request)
     {
@@ -112,6 +113,7 @@ public class WorkshopController : ControllerBase
     }
 
     // DELETE: api/workshop/{id}
+    [Authorize(Roles = "Provider,Admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteWorkshop(int id)
     {
@@ -149,6 +151,7 @@ public class WorkshopController : ControllerBase
     }
 
     // GET: api/workshop/my-workshops
+    [Authorize(Roles = "Provider,Admin")]
     [HttpGet("my-workshops")]
     public async Task<IActionResult> GetMyWorkshops()
     {
@@ -215,6 +218,7 @@ public class WorkshopController : ControllerBase
     }
 
     // POST: api/workshop/{id}/publish
+    [Authorize(Roles = "Provider,Admin")]
     [HttpPost("{id}/publish")]
     public async Task<IActionResult> PublishWorkshop(int id)
     {
@@ -252,6 +256,7 @@ public class WorkshopController : ControllerBase
     }
 
     // POST: api/workshop/{id}/unpublish
+    [Authorize(Roles = "Provider,Admin")]
     [HttpPost("{id}/unpublish")]
     public async Task<IActionResult> UnpublishWorkshop(int id)
     {
