@@ -32,15 +32,27 @@ const VerifyEmail: React.FC = () => {
                     body: JSON.stringify({ email, token })
                 });
 
-                const data = await response.text();
+                let rawData = await response.text();
+                let parsedData: any = {};
+                try {
+                    parsedData = JSON.parse(rawData);
+                } catch (e) {
+                    // Ignore
+                }
 
                 if (response.ok) {
                     setStatus('success');
                     setMessage('Email verified successfully! Redirecting to login...');
-                    setTimeout(() => navigate('/login'), 3000);
+                    setTimeout(() => {
+                        if (parsedData.isProvider) {
+                            window.location.href = 'http://localhost:5174/login';
+                        } else {
+                            navigate('/login');
+                        }
+                    }, 3000);
                 } else {
                     setStatus('error');
-                    setMessage(data || 'Verification failed. Please try again.');
+                    setMessage(parsedData.message || rawData || 'Verification failed. Please try again.');
                 }
             } catch (err) {
                 setStatus('error');

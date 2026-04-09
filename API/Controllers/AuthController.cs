@@ -53,8 +53,11 @@ public class AuthController : ControllerBase
             if (!passwordValid) 
                 return BadRequest(new { message = "An account with this email already exists. Please use your existing password to upgrade to a host account." });
 
-            // Check if already a provider
+            // Check if already a provider or an admin
             var roles = await _userManager.GetRolesAsync(user!);
+            if (roles.Contains(API.Enums.UserRoles.Admin) || roles.Contains(API.Enums.UserRoles.SuperAdmin))
+                return BadRequest(new { message = "Administrative accounts cannot be registered as host accounts. Please use a regular user account." });
+
             if (roles.Contains(API.Enums.UserRoles.Provider))
                 return BadRequest(new { message = "You are already registered as a host. Please login to access your dashboard." });
             
@@ -159,9 +162,12 @@ public class AuthController : ControllerBase
 
         var result = await _userManager.ConfirmEmailAsync(user, request.Token);
 
-        if (!result.Succeeded) return BadRequest("Email verification failed");
+        if (!result.Succeeded) return BadRequest(new { message = "Email verification failed" });
 
-        return Ok("Email verified successfully. You can now login.");
+        var roles = await _userManager.GetRolesAsync(user);
+        bool isProvider = roles.Contains(API.Enums.UserRoles.Provider);
+
+        return Ok(new { message = "Email verified successfully. You can now login.", isProvider = isProvider });
     }
 
     [HttpPost("login")]

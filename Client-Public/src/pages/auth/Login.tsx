@@ -187,26 +187,7 @@ const Login: React.FC = () => {
     });
   };
 
-  const handleBlur = (field: keyof ValidationErrors, value: string) => {
-    let error: string | undefined;
 
-    switch (field) {
-      case 'email':
-        error = validateEmail(value);
-        break;
-      case 'password':
-        error = validatePassword(value);
-        break;
-      case 'fullName':
-        error = validateFullName(value);
-        break;
-      case 'confirmPassword':
-        error = validateConfirmPassword(value, password);
-        break;
-    }
-
-    setErrors(prev => ({ ...prev, [field]: error }));
-  };
 
   // Handle login
   const handleLogin = async (e: React.FormEvent) => {
@@ -378,14 +359,22 @@ const Login: React.FC = () => {
     <>
       <Navbar />
 
-      <div className="min-h-screen bg-cream-base flex items-center justify-center px-4 py-32">
+      <div className="min-h-screen bg-[#2D1B3E] relative flex items-center justify-center px-4 py-32 overflow-hidden">
+        {/* Abstract pattern background */}
+        <div 
+          className="absolute inset-0 pointer-events-none opacity-20"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-rule='evenodd'%3E%3Cpath d='M20 20l15-5-5 15zM70 40l20-10-10 20zM120 20l15-5-5 15zM40 80l20-10-10 20zM100 80l20-10-10 20zM20 140l15-5-5 15zM70 140l20-10-10 20zM120 140l15-5-5 15zM20 80h5v5h-5zM120 80h5v5h-5zM70 90h5v5h-5zM10 50l10-5-5 10zM110 50l10-5-5 10zM50 110l10-5-5 10z'/%3E%3C/g%3E%3C/svg%3E")`
+          }}
+        />
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
+          className="w-full max-w-[360px] relative z-10"
         >
-          <div className="bg-cream-offwhite rounded-3xl shadow-xl border border-deep-purple/10 overflow-hidden">
+          <div className="bg-cream-offwhite rounded-[24px] shadow-2xl border border-white/10 overflow-hidden">
 
             <AnimatePresence mode="wait">
               <motion.div
@@ -394,28 +383,23 @@ const Login: React.FC = () => {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: activeTab === 'login' ? 20 : -20 }}
                 transition={{ duration: 0.3 }}
-                className="p-8 pb-4"
+                className="pt-7 px-7 pb-2"
               >
-                <h1 className="text-3xl font-serif font-bold text-deep-purple">
+                <h1 className="text-[28px] font-serif font-bold text-deep-purple">
                   {activeTab === 'login' ? 'Welcome Back' : 'Create Account'}
                 </h1>
-                <p className="text-deep-purple/60 mt-2">
-                  {activeTab === 'login'
-                    ? 'Login to continue your creative journey'
-                    : 'Join our community of makers and learners'}
-                </p>
               </motion.div>
             </AnimatePresence>
 
-            <div className="px-8 pb-8">
+            <div className="px-7 pb-7">
 
               {successMessage && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700 text-sm"
+                  className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700 text-xs"
                 >
-                  <CheckCircle size={18} />
+                  <CheckCircle size={16} />
                   {successMessage}
                 </motion.div>
               )}
@@ -424,9 +408,9 @@ const Login: React.FC = () => {
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm"
+                  className="mb-3 p-2 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-xs"
                 >
-                  <XCircle size={18} />
+                  <XCircle size={16} />
                   {apiError}
                 </motion.div>
               )}
@@ -440,19 +424,21 @@ const Login: React.FC = () => {
                   transition={{ duration: 0.3 }}
                 >
                   {activeTab === 'login' && (
-                    <form onSubmit={handleLogin} className="space-y-4">
+                    <form onSubmit={handleLogin} className="space-y-3">
 
                       <div>
-                        <label className="block text-sm font-semibold text-deep-purple mb-2">Email</label>
+                        <label className="block text-sm font-semibold text-deep-purple mb-1">Email</label>
                         <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                           <input
                             type="email"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            onBlur={() => handleBlur('email', email)}
-                            className={`w-full pl-10 pr-4 py-3 rounded-lg border ${errors.email ? 'border-red-400' : 'border-deep-purple/20'
-                              } focus:outline-none focus:border-primary-orange transition-colors`}
+                            onChange={(e) => {
+                              setEmail(e.target.value);
+                              if (errors.email) setErrors(prev => ({ ...prev, email: undefined }));
+                            }}
+                            className={`w-full pl-9 pr-3 py-2 text-sm rounded-lg border ${errors.email ? 'border-red-400' : 'border-deep-purple/20'
+                              } bg-transparent focus:outline-none focus:border-primary-orange transition-colors`}
                             placeholder="your@email.com"
                           />
                         </div>
@@ -460,16 +446,18 @@ const Login: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-semibold text-deep-purple mb-2">Password</label>
+                        <label className="block text-sm font-semibold text-deep-purple mb-1">Password</label>
                         <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                           <input
                             type={showPassword ? 'text' : 'password'}
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            onBlur={() => handleBlur('password', password)}
-                            className={`w-full pl-10 pr-12 py-3 rounded-lg border ${errors.password ? 'border-red-400' : 'border-deep-purple/20'
-                              } focus:outline-none focus:border-primary-orange transition-colors`}
+                            onChange={(e) => {
+                              setPassword(e.target.value);
+                              if (errors.password) setErrors(prev => ({ ...prev, password: undefined }));
+                            }}
+                            className={`w-full pl-9 pr-10 py-2 text-sm rounded-lg border ${errors.password ? 'border-red-400' : 'border-deep-purple/20'
+                              } bg-transparent focus:outline-none focus:border-primary-orange transition-colors`}
                             placeholder="••••••••"
                           />
                           <button
@@ -477,14 +465,14 @@ const Login: React.FC = () => {
                             onClick={() => setShowPassword(!showPassword)}
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-deep-purple"
                           >
-                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                           </button>
                         </div>
                         {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
                       </div>
 
-                      <div className="flex items-center justify-between text-sm">
-                        <label className="flex items-center gap-2 cursor-pointer">
+                      <div className="flex items-center justify-between text-[13px] mt-1 pt-1">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
                           <input type="checkbox" className="rounded border-deep-purple/20" />
                           <span className="text-deep-purple/70">Remember me</span>
                         </label>
@@ -496,25 +484,25 @@ const Login: React.FC = () => {
                       <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3 bg-primary-orange text-white font-semibold rounded-lg hover:bg-primary-orange/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full py-2.5 mt-2 bg-primary-orange text-white font-semibold rounded-lg hover:bg-primary-orange/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                       >
                         {loading ? 'Logging in...' : 'Login'}
                       </button>
 
-                      <div className="relative my-6">
+                      <div className="relative my-4">
                         <div className="absolute inset-0 flex items-center">
                           <div className="w-full border-t border-deep-purple/10"></div>
                         </div>
-                        <div className="relative flex justify-center text-sm">
-                          <span className="px-4 bg-cream-offwhite text-gray-500">or</span>
+                        <div className="relative flex justify-center text-xs">
+                          <span className="px-3 bg-cream-offwhite text-gray-500">or</span>
                         </div>
                       </div>
 
-                      <div className="flex justify-center w-full min-h-[44px] my-4">
+                      <div className="flex justify-center w-full min-h-[44px] my-3">
                         <div id="google-button-login"></div>
                       </div>
 
-                      <div className="mt-6 text-center text-sm text-deep-purple/70">
+                      <div className="mt-4 text-center text-[13px] text-deep-purple/70">
                         Don't have an account?{' '}
                         <button
                           type="button"
@@ -532,19 +520,21 @@ const Login: React.FC = () => {
                   )}
 
                   {activeTab === 'signup' && (
-                    <form onSubmit={handleSignup} className="space-y-4">
+                    <form onSubmit={handleSignup} className="space-y-3">
 
                       <div>
-                        <label className="block text-sm font-semibold text-deep-purple mb-2">Full Name</label>
+                        <label className="block text-sm font-semibold text-deep-purple mb-1">Full Name</label>
                         <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                           <input
                             type="text"
                             value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            onBlur={() => handleBlur('fullName', fullName)}
-                            className={`w-full pl-10 pr-4 py-3 rounded-lg border ${errors.fullName ? 'border-red-400' : 'border-deep-purple/20'
-                              } focus:outline-none focus:border-primary-orange transition-colors`}
+                            onChange={(e) => {
+                              setFullName(e.target.value);
+                              if (errors.fullName) setErrors(prev => ({ ...prev, fullName: undefined }));
+                            }}
+                            className={`w-full pl-9 pr-3 py-2 text-sm rounded-lg border ${errors.fullName ? 'border-red-400' : 'border-deep-purple/20'
+                              } bg-transparent focus:outline-none focus:border-primary-orange transition-colors`}
                             placeholder="Your full name"
                           />
                         </div>
@@ -552,16 +542,18 @@ const Login: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-semibold text-deep-purple mb-2">Email</label>
+                        <label className="block text-sm font-semibold text-deep-purple mb-1">Email</label>
                         <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                           <input
                             type="email"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            onBlur={() => handleBlur('email', email)}
-                            className={`w-full pl-10 pr-4 py-3 rounded-lg border ${errors.email ? 'border-red-400' : 'border-deep-purple/20'
-                              } focus:outline-none focus:border-primary-orange transition-colors`}
+                            onChange={(e) => {
+                              setEmail(e.target.value);
+                              if (errors.email) setErrors(prev => ({ ...prev, email: undefined }));
+                            }}
+                            className={`w-full pl-9 pr-3 py-2 text-sm rounded-lg border ${errors.email ? 'border-red-400' : 'border-deep-purple/20'
+                              } bg-transparent focus:outline-none focus:border-primary-orange transition-colors`}
                             placeholder="your@email.com"
                           />
                         </div>
@@ -569,19 +561,19 @@ const Login: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-semibold text-deep-purple mb-2">Password</label>
+                        <label className="block text-sm font-semibold text-deep-purple mb-1">Password</label>
                         <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                           <input
                             type={showPassword ? 'text' : 'password'}
                             value={password}
                             onChange={(e) => {
                               setPassword(e.target.value);
                               checkPasswordStrength(e.target.value);
+                              if (errors.password) setErrors(prev => ({ ...prev, password: undefined }));
                             }}
-                            onBlur={() => handleBlur('password', password)}
-                            className={`w-full pl-10 pr-12 py-3 rounded-lg border ${errors.password ? 'border-red-400' : 'border-deep-purple/20'
-                              } focus:outline-none focus:border-primary-orange transition-colors`}
+                            className={`w-full pl-9 pr-10 py-2 text-sm rounded-lg border ${errors.password ? 'border-red-400' : 'border-deep-purple/20'
+                              } bg-transparent focus:outline-none focus:border-primary-orange transition-colors`}
                             placeholder="••••••••"
                           />
                           <button
@@ -589,13 +581,13 @@ const Login: React.FC = () => {
                             onClick={() => setShowPassword(!showPassword)}
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-deep-purple"
                           >
-                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                           </button>
                         </div>
                         {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
 
                         {password && (
-                          <div className="mt-2 space-y-1 text-xs">
+                          <div className="mt-1 space-y-0.5 text-[10px]">
                             <div className={passwordStrength.hasMinLength ? 'text-green-600' : 'text-gray-400'}>
                               {passwordStrength.hasMinLength ? '✓' : '○'} At least 8 characters
                             </div>
@@ -616,16 +608,18 @@ const Login: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-semibold text-deep-purple mb-2">Confirm Password</label>
+                        <label className="block text-sm font-semibold text-deep-purple mb-1">Confirm Password</label>
                         <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                           <input
                             type={showConfirmPassword ? 'text' : 'password'}
                             value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            onBlur={() => handleBlur('confirmPassword', confirmPassword)}
-                            className={`w-full pl-10 pr-12 py-3 rounded-lg border ${errors.confirmPassword ? 'border-red-400' : 'border-deep-purple/20'
-                              } focus:outline-none focus:border-primary-orange transition-colors`}
+                            onChange={(e) => {
+                              setConfirmPassword(e.target.value);
+                              if (errors.confirmPassword) setErrors(prev => ({ ...prev, confirmPassword: undefined }));
+                            }}
+                            className={`w-full pl-9 pr-10 py-2 text-sm rounded-lg border ${errors.confirmPassword ? 'border-red-400' : 'border-deep-purple/20'
+                              } bg-transparent focus:outline-none focus:border-primary-orange transition-colors`}
                             placeholder="••••••••"
                           />
                           <button
@@ -633,15 +627,15 @@ const Login: React.FC = () => {
                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-deep-purple"
                           >
-                            {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                           </button>
                         </div>
                         {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
                       </div>
 
-                      <label className="flex items-start gap-2 cursor-pointer text-sm">
+                      <label className="flex items-start gap-2 cursor-pointer text-xs mt-1">
                         <input type="checkbox" required className="mt-1 rounded border-deep-purple/20" />
-                        <span className="text-deep-purple/70">
+                        <span className="text-deep-purple/70 leading-relaxed">
                           I agree to the <Link to="/terms" className="text-primary-orange hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-primary-orange hover:underline">Privacy Policy</Link>
                         </span>
                       </label>
@@ -649,25 +643,25 @@ const Login: React.FC = () => {
                       <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3 bg-primary-orange text-white font-semibold rounded-lg hover:bg-primary-orange/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full py-2.5 mt-2 bg-primary-orange text-white font-semibold rounded-lg hover:bg-primary-orange/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                       >
-                        {loading ? 'Creating Account...' : 'Create Account'}
+                        {loading ? 'Creating...' : 'Create Account'}
                       </button>
 
-                      <div className="relative my-6">
+                      <div className="relative my-4">
                         <div className="absolute inset-0 flex items-center">
                           <div className="w-full border-t border-deep-purple/10"></div>
                         </div>
-                        <div className="relative flex justify-center text-sm">
-                          <span className="px-4 bg-cream-offwhite text-gray-500">or</span>
+                        <div className="relative flex justify-center text-xs">
+                          <span className="px-3 bg-cream-offwhite text-gray-500">or</span>
                         </div>
                       </div>
 
-                      <div className="flex justify-center w-full min-h-[44px] my-4">
+                      <div className="flex justify-center w-full min-h-[44px] my-3">
                         <div id="google-button-signup"></div>
                       </div>
 
-                      <div className="mt-6 text-center text-sm text-deep-purple/70">
+                      <div className="mt-4 text-center text-[13px] text-deep-purple/70">
                         Already have an account?{' '}
                         <button
                           type="button"
