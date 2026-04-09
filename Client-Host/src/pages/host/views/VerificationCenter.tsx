@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { 
     ShieldCheck, 
-    Upload, 
     CheckCircle2, 
     AlertCircle, 
     FileText, 
-    Search,
-    Loader2
+    Loader2,
+    Camera
 } from 'lucide-react';
 import type { ProviderProfile } from '../../../types/host';
 import { ProviderStatus } from '../../../types/host';
@@ -22,6 +21,7 @@ interface VerificationCenterProps {
 export const VerificationCenter: React.FC<VerificationCenterProps> = ({ profile, onUpdate }) => {
     const [uploadingId, setUploadingId] = useState(false);
     const [uploadingPan, setUploadingPan] = useState(false);
+    const [uploadingStudio, setUploadingStudio] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' as ToastType });
 
@@ -29,26 +29,29 @@ export const VerificationCenter: React.FC<VerificationCenterProps> = ({ profile,
         setToast({ isVisible: true, message, type });
     };
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'id' | 'pan') => {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'id' | 'pan' | 'studio') => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Basic validation
         if (file.size > 5 * 1024 * 1024) {
             showToast('File size exceeds 5MB limit.', 'error');
             return;
         }
 
-        const isId = type === 'id';
-        isId ? setUploadingId(true) : setUploadingPan(true);
+        if (type === 'id') setUploadingId(true);
+        else if (type === 'pan') setUploadingPan(true);
+        else setUploadingStudio(true);
 
         const formData = new FormData();
         formData.append('file', file);
 
         try {
             const token = localStorage.getItem('token');
-            const endpoint = isId ? API_ENDPOINTS.provider.uploadIdCard : API_ENDPOINTS.provider.uploadPanCard;
-            
+            let endpoint: string;
+            if (type === 'id') endpoint = API_ENDPOINTS.provider.uploadIdCard;
+            else if (type === 'pan') endpoint = API_ENDPOINTS.provider.uploadPanCard;
+            else endpoint = API_ENDPOINTS.provider.uploadStudioImage;
+
             const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
@@ -56,19 +59,22 @@ export const VerificationCenter: React.FC<VerificationCenterProps> = ({ profile,
             });
 
             if (response.ok) {
-                showToast(`${isId ? 'ID Card' : 'PAN Certificate'} uploaded successfully.`);
-                // Refresh profile to get updated file names
+                const label = type === 'id' ? 'ID Card' : type === 'pan' ? 'PAN Certificate' : 'Studio Image';
+                showToast(`${label} uploaded successfully.`);
                 const profileRes = await fetch(API_ENDPOINTS.provider.profile, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (profileRes.ok) onUpdate(await profileRes.json());
             } else {
-                showToast('Upload failed. Please try again.', 'error');
+                const errorData = await response.json().catch(() => ({}));
+                showToast(errorData.message || 'Upload failed. Please try again.', 'error');
             }
         } catch (err) {
             showToast('Network error during upload.', 'error');
         } finally {
-            isId ? setUploadingId(false) : setUploadingPan(false);
+            if (type === 'id') setUploadingId(false);
+            else if (type === 'pan') setUploadingPan(false);
+            else setUploadingStudio(false);
         }
     };
 
@@ -100,114 +106,155 @@ export const VerificationCenter: React.FC<VerificationCenterProps> = ({ profile,
 
     const isPending = profile.status === ProviderStatus.PendingReview;
     const isApproved = profile.status === ProviderStatus.Approved;
-    const canSubmit = profile.idCardUrl && profile.panCardUrl && !isPending && !isApproved;
+    const canSubmit = profile.idCardUrl && profile.panCardUrl && profile.studioImageUrl && !isPending && !isApproved;
 
     return (
-        <div className="max-w-4xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 bg-deep-purple p-2.5 rounded-2xl text-white shadow-xl rotate-3">
-                    <ShieldCheck className="w-full h-full" />
+        <div className="max-w-2xl mx-auto space-y-6">
+            <div className="flex items-center gap-4 mb-2">
+                <div className="w-10 h-10 bg-deep-purple/5 border border-deep-purple/10 flex items-center justify-center rounded-xl text-deep-purple">
+                    <ShieldCheck size={20} />
                 </div>
                 <div>
-                   <h2 className="text-3xl font-serif font-bold text-deep-purple">Security & Verification</h2>
-                   <p className="text-gray-500">Verify your identity to unlock marketplace publishing features.</p>
+                   <h2 className="text-2xl font-serif font-bold text-deep-purple">Security & Verification</h2>
+                   <p className="text-sm text-gray-500">Fast identity verification for marketplace access.</p>
                 </div>
             </div>
 
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Government ID Card */}
-                <div className={`p-8 bg-white border-2 rounded-[2.5rem] transition-all ${profile.idCardUrl ? 'border-emerald-100 bg-emerald-50/10' : 'border-gray-50'}`}>
-                    <div className="flex justify-between items-start mb-6">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${profile.idCardUrl ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400'}`}>
-                            <FileText size={24} />
-                        </div>
-                        {profile.isIdVerified && (
-                             <span className="px-3 py-1 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full">Approved</span>
-                        )}
-                    </div>
-                    <h3 className="text-lg font-bold text-deep-purple mb-2">Government ID</h3>
-                    <p className="text-xs text-gray-500 mb-6 leading-relaxed italic">
-                        <strong className="text-primary-orange block mb-1">Naming Policy:</strong>
-                        Document MUST be named <strong>{profile.contactPerson.replace(/\s+/g, '_')}_ID.jpg</strong> (or .pdf)
-                    </p>
-                    
-                    <div className="relative">
-                        {profile.idCardUrl ? (
-                            <div className="flex items-center gap-3 p-3 bg-white border border-emerald-100 rounded-xl">
-                                <Search size={16} className="text-emerald-500" />
-                                <span className="text-xs font-medium text-emerald-700 truncate max-w-[150px]">{profile.idFileName || 'Document-ID.jpg'}</span>
-                                <CheckCircle2 size={16} className="text-emerald-500 ml-auto" />
+            <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm">
+                <div className="p-6 space-y-1">
+                    {/* ID Card Item */}
+                    <div className="flex items-center justify-between p-4 rounded-2xl hover:bg-gray-50 transition-colors group">
+                        <div className="flex items-center gap-4">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${profile.idCardUrl ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400 group-hover:bg-deep-purple/10 group-hover:text-deep-purple'}`}>
+                                <FileText size={20} />
                             </div>
-                        ) : (
-                            <label className="flex items-center justify-center gap-3 w-full py-4 bg-deep-purple text-white rounded-xl font-bold text-sm cursor-pointer hover:bg-[#4A2946] transition-all">
-                                {uploadingId ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
-                                {uploadingId ? 'Uploading...' : 'Scan & Upload ID'}
+                            <div>
+                                <h4 className="text-sm font-bold text-deep-purple">Government ID</h4>
+                                <p className="text-xs text-gray-400">
+                                    {profile.idCardUrl ? (
+                                        <span className="flex items-center gap-1 text-emerald-600 font-medium"> <CheckCircle2 size={12}/> {profile.idFileName || 'Uploaded'}</span>
+                                    ) : (
+                                        `Rename to: ${profile.contactPerson.replace(/\s+/g, '_')}_ID.jpg`
+                                    )}
+                                </p>
+                            </div>
+                        </div>
+                        
+                        {!profile.idCardUrl && (
+                            <label className="cursor-pointer px-4 py-2 bg-deep-purple text-white text-xs font-bold rounded-lg hover:scale-105 transition-all active:scale-95 shadow-md">
+                                {uploadingId ? <Loader2 className="animate-spin" size={14} /> : 'Upload'}
                                 <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'id')} accept="image/*,.pdf" />
                             </label>
                         )}
+                        {profile.idCardUrl && !profile.isIdVerified && <span className="text-[10px] font-black uppercase text-amber-500 bg-amber-50 px-2 py-1 rounded-md">Pending</span>}
+                        {profile.isIdVerified && <span className="text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">Verified</span>}
                     </div>
-                </div>
 
-                {/* PAN Certificate */}
-                <div className={`p-8 bg-white border-2 rounded-[2.5rem] transition-all ${profile.panCardUrl ? 'border-emerald-100 bg-emerald-50/10' : 'border-gray-50'}`}>
-                    <div className="flex justify-between items-start mb-6">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${profile.panCardUrl ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400'}`}>
-                            <AlertCircle size={24} />
+                    <div className="h-px bg-gray-50 mx-4" />
+
+                    {/* PAN Card Item */}
+                    <div className="flex items-center justify-between p-4 rounded-2xl hover:bg-gray-50 transition-colors group">
+                        <div className="flex items-center gap-4">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${profile.panCardUrl ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400 group-hover:bg-deep-purple/10 group-hover:text-deep-purple'}`}>
+                                <AlertCircle size={20} />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-bold text-deep-purple">PAN Certificate</h4>
+                                <p className="text-xs text-gray-400">
+                                    {profile.panCardUrl ? (
+                                        <span className="flex items-center gap-1 text-emerald-600 font-medium"> <CheckCircle2 size={12}/> {profile.panFileName || 'Uploaded'}</span>
+                                    ) : (
+                                        `Rename to: ${profile.contactPerson.replace(/\s+/g, '_')}_PAN.jpg`
+                                    )}
+                                </p>
+                            </div>
                         </div>
-                        {profile.isPanVerified && (
-                             <span className="px-3 py-1 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full">Approved</span>
+                        
+                        {!profile.panCardUrl && (
+                            <label className="cursor-pointer px-4 py-2 bg-deep-purple text-white text-xs font-bold rounded-lg hover:scale-105 transition-all active:scale-95 shadow-md">
+                                {uploadingPan ? <Loader2 className="animate-spin" size={14} /> : 'Upload'}
+                                <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'pan')} accept="image/*,.pdf" />
+                            </label>
                         )}
+                        {profile.panCardUrl && !profile.isPanVerified && <span className="text-[10px] font-black uppercase text-amber-500 bg-amber-50 px-2 py-1 rounded-md">Pending</span>}
+                        {profile.isPanVerified && <span className="text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">Verified</span>}
                     </div>
-                    <h3 className="text-lg font-bold text-deep-purple mb-2">PAN Certificate</h3>
-                    <p className="text-xs text-gray-500 mb-6 leading-relaxed italic">
-                         <strong className="text-primary-orange block mb-1">Naming Policy:</strong>
-                         Document MUST be named <strong>{profile.contactPerson.replace(/\s+/g, '_')}_PAN.jpg</strong> (or .pdf)
-                    </p>
-                    
-                    <div className="relative">
-                        {profile.panCardUrl ? (
-                            <div className="flex items-center gap-3 p-3 bg-white border border-emerald-100 rounded-xl">
-                                <Search size={16} className="text-emerald-500" />
-                                <span className="text-xs font-medium text-emerald-700 truncate max-w-[150px]">{profile.panFileName || 'PAN-Cert.pdf'}</span>
-                                <CheckCircle2 size={16} className="text-emerald-500 ml-auto" />
+
+                    <div className="h-px bg-gray-50 mx-4" />
+
+                    {/* Studio Image Item */}
+                    <div className="flex items-center justify-between p-4 rounded-2xl hover:bg-gray-50 transition-colors group">
+                        <div className="flex items-center gap-4">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${profile.studioImageUrl ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400 group-hover:bg-deep-purple/10 group-hover:text-deep-purple'}`}>
+                                <Camera size={20} />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-bold text-deep-purple">Studio / Workspace Photo</h4>
+                                <p className="text-xs text-gray-400">
+                                    {profile.studioImageUrl ? (
+                                        <span className="flex items-center gap-1 text-emerald-600 font-medium"> <CheckCircle2 size={12}/> {profile.studioFileName || 'Uploaded'}</span>
+                                    ) : (
+                                        'A clear photo of your studio or workspace'
+                                    )}
+                                </p>
+                            </div>
+                        </div>
+
+                        {profile.studioImageUrl ? (
+                            <div className="relative group/img cursor-pointer">
+                                <img
+                                    src={profile.studioImageUrl}
+                                    alt="Studio"
+                                    className="w-16 h-11 object-cover rounded-lg border border-gray-200"
+                                />
+                                <label className="absolute inset-0 bg-black/40 rounded-lg opacity-0 group-hover/img:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
+                                    <Camera size={14} className="text-white" />
+                                    <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'studio')} accept="image/*" />
+                                </label>
                             </div>
                         ) : (
-                            <label className="flex items-center justify-center gap-3 w-full py-4 bg-deep-purple text-white rounded-xl font-bold text-sm cursor-pointer hover:bg-[#4A2946] transition-all">
-                                {uploadingPan ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
-                                {uploadingPan ? 'Uploading...' : 'Upload PAN Certificate'}
-                                <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'pan')} accept="image/*,.pdf" />
+                            <label className="cursor-pointer px-4 py-2 bg-deep-purple text-white text-xs font-bold rounded-lg hover:scale-105 transition-all active:scale-95 shadow-md">
+                                {uploadingStudio ? <Loader2 className="animate-spin" size={14} /> : 'Upload'}
+                                <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'studio')} accept="image/*" />
                             </label>
                         )}
                     </div>
                 </div>
-            </div>
 
-            {/* Submission Status */}
-            <div className="bg-[#1A1A1A] p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-primary-orange/20 rounded-full blur-[80px] -mr-32 -mt-32" />
-                
-                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-                    <div>
-                        <h3 className="text-2xl font-serif font-bold text-white mb-2">
-                            {isApproved ? 'You are fully verified!' : isPending ? 'Submission under review' : 'Seal your application'}
-                        </h3>
-                        <p className="text-white/50 text-sm max-w-md lead-relaxed">
-                            {isApproved ? 'Your studio is active and visible in the marketplace.' : 
-                             isPending ? 'Our team is carefully reviewing your identity documents. We will notify you via email shortly.' : 
-                             'Once both documents are uploaded, our Trust Engine will perform a consistency check before notifying our admin team.'}
-                        </p>
+                <div className="bg-[#FAF9F6] p-6 border-t border-gray-100">
+                    {/* Progress indicator */}
+                    <div className="flex gap-2 mb-4">
+                        {[
+                            { done: !!profile.idCardUrl, label: 'Gov ID' },
+                            { done: !!profile.panCardUrl, label: 'PAN' },
+                            { done: !!profile.studioImageUrl, label: 'Studio' },
+                        ].map((step) => (
+                            <div key={step.label} className="flex-1">
+                                <div className={`h-1.5 rounded-full transition-all duration-500 ${step.done ? 'bg-emerald-500' : 'bg-gray-100'}`} />
+                                <p className={`text-[9px] font-bold mt-1 uppercase tracking-widest ${step.done ? 'text-emerald-500' : 'text-gray-300'}`}>{step.label}</p>
+                            </div>
+                        ))}
                     </div>
 
-                    <button
-                        onClick={handleSubmitForReview}
-                        disabled={!canSubmit || submitting}
-                        className={`px-10 py-5 rounded-2xl font-bold tracking-widest uppercase text-xs transition-all ${
-                            canSubmit ? 'bg-primary-orange text-white hover:scale-105 shadow-xl' : 'bg-white/10 text-white/30 cursor-not-allowed'
-                        }`}
-                    >
-                        {submitting ? 'Authenticating...' : isPending ? 'Pending Review' : 'Submit Application'}
-                    </button>
+                    <div className="flex items-center justify-between gap-6">
+                        <div className="flex-1">
+                            <p className="text-[11px] font-bold text-deep-purple/40 uppercase tracking-widest mb-1">Final Step</p>
+                            <p className="text-xs text-deep-purple/60 leading-relaxed font-medium">
+                                {isApproved ? 'Your account is fully verified.' : isPending ? 'Documents under review.' : 'Submit all 3 documents for review.'}
+                            </p>
+                        </div>
+                        <button
+                            onClick={handleSubmitForReview}
+                            disabled={!canSubmit || submitting}
+                            className={`px-8 py-3 rounded-xl font-bold uppercase text-[11px] tracking-wider transition-all shadow-sm ${
+                                canSubmit 
+                                ? 'bg-primary-orange text-white hover:bg-orange-600 hover:shadow-lg hover:-translate-y-0.5' 
+                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            }`}
+                        >
+                            {submitting ? 'Submitting...' : isPending ? 'Pending Review' : 'Seal Application'}
+                        </button>
+                    </div>
                 </div>
             </div>
 

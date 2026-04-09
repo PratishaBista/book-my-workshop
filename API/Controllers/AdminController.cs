@@ -19,21 +19,26 @@ public class AdminController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IEmailService _emailService;
+    private readonly INotificationService _notificationService;
 
-    public AdminController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IEmailService emailService)
+    public AdminController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IEmailService emailService, INotificationService notificationService)
     {
         _context = context;
         _userManager = userManager;
         _emailService = emailService;
+        _notificationService = notificationService;
     }
 
     // GET: api/admin/providers/pending
     [HttpGet("providers/pending")]
     public async Task<IActionResult> GetPendingProviders()
     {
+        var admins = await _userManager.GetUsersInRoleAsync(UserRoles.Admin);
+        var adminIds = admins.Select(a => a.Id).ToList();
+
         var pendingProviders = await _context.Providers
             .Include(p => p.User)
-            .Where(p => p.Status == ProviderStatus.PendingReview)
+            .Where(p => p.Status == ProviderStatus.PendingReview && !adminIds.Contains(p.UserId))
             .Select(p => new
             {
                 p.Id,
@@ -50,7 +55,10 @@ public class AdminController : ControllerBase
                 Email = p.User.Email,
                 RegisteredAt = p.CreatedAt,
                 p.TrustScore,
-                p.TrustAnalysisJson
+                p.TrustAnalysisJson,
+                IdCardUrl = p.IdCardUrl,
+                PanCardUrl = p.PanCardUrl,
+                StudioImageUrl = p.StudioImageUrl
             })
             .ToListAsync();
 
@@ -80,6 +88,13 @@ public class AdminController : ControllerBase
             await _emailService.SendEmailAsync(user.Email, "Account Approved - BookMyWorkshop", emailBody);
         }
 
+        // Notify Host via SignalR
+        await _notificationService.CreateNotificationAsync(provider.UserId, 
+            "Profile Approved", 
+            "Congratulations! Your host profile has been approved. You can now publish workshops.", 
+            NotificationType.Success, 
+            "/host/dashboard");
+
         return Ok(new { Message = $"Provider '{provider.BusinessName}' approved successfully." });
     }
 
@@ -87,12 +102,15 @@ public class AdminController : ControllerBase
     [HttpGet("workshops/pending")]
     public async Task<IActionResult> GetPendingWorkshops()
     {
+        var admins = await _userManager.GetUsersInRoleAsync(UserRoles.Admin);
+        var adminIds = admins.Select(a => a.Id).ToList();
+
         var pendingWorkshops = await _context.Workshops
             .Include(w => w.Provider)
             .ThenInclude(p => p.User)
             .Include(w => w.Categories)
             .Include(w => w.Pricing)
-            .Where(w => w.Status == WorkshopStatus.PendingReview || w.HasPendingModifications)
+            .Where(w => (w.Status == WorkshopStatus.PendingReview || w.HasPendingModifications) && !adminIds.Contains(w.Provider.UserId))
             .Select(w => new
             {
                 w.Id,
@@ -153,12 +171,15 @@ public class AdminController : ControllerBase
     [HttpGet("workshops/live")]
     public async Task<IActionResult> GetLiveWorkshops()
     {
+        var admins = await _userManager.GetUsersInRoleAsync(UserRoles.Admin);
+        var adminIds = admins.Select(a => a.Id).ToList();
+
         var liveWorkshops = await _context.Workshops
             .Include(w => w.Provider)
             .ThenInclude(p => p.User)
             .Include(w => w.Categories)
             .Include(w => w.Pricing)
-            .Where(w => w.Status == WorkshopStatus.Published || (w.Status == WorkshopStatus.PendingReview && w.HasPendingModifications))
+            .Where(w => (w.Status == WorkshopStatus.Published || (w.Status == WorkshopStatus.PendingReview && w.HasPendingModifications)) && !adminIds.Contains(w.Provider.UserId))
             .Select(w => new
             {
                 w.Id,
@@ -197,6 +218,7 @@ public class AdminController : ControllerBase
             .Include(w => w.Categories)
             .Include(w => w.Pricing)
             .Include(w => w.Media)
+            .Include(w => w.Provider)
             .FirstOrDefaultAsync(w => w.Id == id);
         if (workshop == null) return NotFound("Workshop not found");
 
@@ -243,8 +265,9 @@ public class AdminController : ControllerBase
                     }
 
                     // Update Categories
+                    var categoryIds = pendingRequest.CategoryIds ?? new List<int>();
                     var newCategories = await _context.WorkshopCategories
-                        .Where(c => pendingRequest.CategoryIds.Contains(c.Id))
+                        .Where(c => categoryIds.Contains(c.Id))
                         .ToListAsync();
                     workshop.Categories.Clear();
                     foreach (var cat in newCategories) workshop.Categories.Add(cat);
@@ -286,6 +309,13 @@ public class AdminController : ControllerBase
         workshop.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
+        // Notify Host
+        await _notificationService.CreateNotificationAsync(workshop.Provider.UserId, 
+            "Workshop Approved", 
+            $"Your workshop '{workshop.Title}' has been approved and is now live.", 
+            NotificationType.Success, 
+            $"/host/workshops"); // Adjusted for host dashboard workshops list
+
         return Ok(new { Message = $"Workshop '{workshop.Title}' approved and published." });
     }
 
@@ -298,7 +328,9 @@ public class AdminController : ControllerBase
     [HttpPut("reject-workshop/{id}")]
     public async Task<IActionResult> RejectWorkshop(int id, [FromBody] RejectWorkshopRequest request)
     {
-        var workshop = await _context.Workshops.FindAsync(id);
+        var workshop = await _context.Workshops
+            .Include(w => w.Provider)
+            .FirstOrDefaultAsync(w => w.Id == id);
         if (workshop == null) return NotFound("Workshop not found");
 
         workshop.Status = WorkshopStatus.Rejected;
@@ -308,6 +340,13 @@ public class AdminController : ControllerBase
         workshop.HasPendingModifications = false;
         
         await _context.SaveChangesAsync();
+
+        // Notify Host
+        await _notificationService.CreateNotificationAsync(workshop.Provider.UserId, 
+            "Workshop Rejected", 
+            $"Your workshop '{workshop.Title}' requires changes. Reason: {request.Reason}", 
+            NotificationType.Alert, 
+            $"/host/workshops");
 
         return Ok(new { Message = $"Workshop '{workshop.Title}' has been rejected.", Reason = request.Reason });
     }
@@ -319,9 +358,12 @@ public class AdminController : ControllerBase
 
         if (role == "Provider")
         {
+            var admins = await _userManager.GetUsersInRoleAsync(UserRoles.Admin);
+            var adminIds = admins.Select(a => a.Id).ToList();
+
             var providers = await _context.Providers
                 .Include(p => p.User)
-                //.Where(p => p.IsApproved)
+                .Where(p => !adminIds.Contains(p.UserId))
                 .Select(p => new
                 {
                     Id = p.User.Id,

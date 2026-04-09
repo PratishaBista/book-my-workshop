@@ -145,7 +145,7 @@ const HostDashboard: React.FC = () => {
     }
 
     return (
-        <div className="flex flex-col h-screen bg-cream-base font-sans text-deep-purple overflow-hidden">
+        <div className="flex flex-col h-screen bg-cream-base font-sans text-deep-purple overflow-hidden border-none shadow-none">
             <HostHeader />
 
             <div className="flex flex-1 overflow-hidden">
@@ -156,7 +156,7 @@ const HostDashboard: React.FC = () => {
                     setIsOpen={setIsSidebarOpen}
                 />
 
-                <main className="flex-1 overflow-y-auto p-8 relative scrollbar-hide">
+                <main className="flex-1 overflow-y-auto overflow-x-hidden p-8 relative scrollbar-hide">
                     <div className="absolute top-0 right-0 w-96 h-96 bg-primary-orange/5 rounded-full blur-3xl -z-10 -mr-48 -mt-48" />
                     <div className="absolute bottom-0 left-0 w-96 h-96 bg-deep-purple/5 rounded-full blur-3xl -z-10 -ml-48 -mb-48" />
 

@@ -14,6 +14,9 @@ export interface PendingProvider {
     registeredAt: string;
     trustScore: number;
     trustAnalysisJson: string;
+    idCardUrl?: string;
+    panCardUrl?: string;
+    studioImageUrl?: string;
 }
 
 export interface PendingWorkshop {

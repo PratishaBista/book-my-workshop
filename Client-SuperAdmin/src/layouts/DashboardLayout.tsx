@@ -5,10 +5,14 @@ import {
     Percent,
     Wallet,
     LogOut,
+    BookOpen,
+    History
 } from 'lucide-react';
 
 const navItems = [
     { to: '/dashboard/overview', label: 'Overview', icon: LayoutDashboard },
+    { to: '/dashboard/journal', label: 'The Journal', icon: BookOpen },
+    { to: '/dashboard/transactions', label: 'Financial Ledger', icon: History },
     { to: '/dashboard/commission', label: 'Commission', icon: Percent },
     { to: '/dashboard/payouts', label: 'Host Payouts', icon: Wallet },
 ];

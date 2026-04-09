@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Search, Bell, ChevronRight, LogOut, User } from 'lucide-react';
+import { Search, ChevronRight, LogOut, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useUserProfile } from '../../../hooks/useUserProfile';
+import { NotificationCenter } from './NotificationCenter';
 
 export const HostHeader: React.FC = () => {
     const navigate = useNavigate();
@@ -31,10 +32,7 @@ export const HostHeader: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <button className="relative p-2.5 text-gray-400 hover:text-primary-orange transition-colors rounded-full hover:bg-orange-50">
-                        <Bell size={20} />
-                        <span className="absolute top-2 right-2.5 w-2 h-2 bg-primary-orange rounded-full border border-white"></span>
-                    </button>
+                    <NotificationCenter />
                     <div className="h-8 w-[1px] bg-gray-100 mx-2"></div>
 
                     <div className="relative">

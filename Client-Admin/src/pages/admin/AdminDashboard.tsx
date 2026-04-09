@@ -42,7 +42,7 @@ const AdminDashboard: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-[#FDFBF7] font-sans text-slate-800 overflow-hidden">
+        <div className="flex flex-col h-screen bg-[#050505] font-sans text-slate-100 overflow-hidden">
             <AdminHeader />
 
             <div className="flex flex-1 overflow-hidden">
@@ -53,7 +53,7 @@ const AdminDashboard: React.FC = () => {
                     setIsOpen={setIsSidebarOpen}
                 />
 
-                <main className="flex-1 overflow-y-auto p-8 bg-gradient-to-br from-orange-50/50 via-white to-orange-50/30 relative">
+                <main className="flex-1 overflow-y-auto p-8 bg-[#050505] relative">
                     <div className="max-w-7xl mx-auto h-full">
                         {renderContent()}
                     </div>

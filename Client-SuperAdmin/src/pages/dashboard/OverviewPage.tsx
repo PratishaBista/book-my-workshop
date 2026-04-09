@@ -7,6 +7,7 @@ interface DashboardStats {
     commissionRate: number;
     totalPlatformRevenue: number;
     pendingHostPayouts: number;
+    fundsInEscrow: number;
     totalBookingVolume: number;
     totalUsers: number;
     totalProviders: number;
@@ -86,6 +87,7 @@ const OverviewPage: React.FC = () => {
                     <div className="grid grid-cols-2 gap-x-12 gap-y-10">
                         <Stat label="Booking Volume" value={fmt(stats!.totalBookingVolume)} icon={<span className="font-bold text-xs top-px relative">Rs.</span>} />
                         <Stat label="Platform Revenue" value={fmt(stats!.totalPlatformRevenue)} icon={<span className="font-bold text-xs top-px relative">Rs.</span>} highlight/>
+                        <Stat label="Funds in Escrow" value={fmt(stats!.fundsInEscrow)} />
                         <Stat label="Pending Payouts" value={fmt(stats!.pendingHostPayouts)} />
                         <Stat label="Commission Rate" value={`${stats!.commissionRate}%`} />
                     </div>

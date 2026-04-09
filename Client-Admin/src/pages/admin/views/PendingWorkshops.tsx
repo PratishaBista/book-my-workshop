@@ -138,35 +138,35 @@ export const PendingWorkshops: React.FC = () => {
         <div className="relative h-full font-sans">
             <div className="mb-6 flex justify-between items-end">
                 <div>
-                    <h2 className="text-2xl font-bold text-slate-800">Pending Topology Review</h2>
-                    <p className="text-slate-500 text-sm mt-1">Classify and approve workshop submissions</p>
+                    <h2 className="text-2xl font-bold text-white tracking-tight leading-tight">Pending Review</h2>
+                    <p className="text-slate-500 text-xs mt-1 font-mono uppercase tracking-widest opacity-80">Classify and approve workshop submissions</p>
                 </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
-                <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-slate-50/80 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-widest">
+            <div className="bg-[#0D0D0D] rounded-2xl border border-[#1A1A1A] overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
+                <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-[#000] border-b border-[#1A1A1A] text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">
                     <div className="col-span-4">Workshop Identity</div>
                     <div className="col-span-4">Provider Agency</div>
                     <div className="col-span-3">Unit Price</div>
                     <div className="col-span-1"></div>
                 </div>
-                <div className="divide-y divide-slate-50">
+                <div className="divide-y divide-[#1A1A1A]">
                     {loading ? (
-                        <div className="p-12 text-center text-slate-300 animate-pulse font-bold uppercase tracking-widest text-xs">Synchronizing Buffer...</div>
+                        <div className="p-12 text-center text-slate-600 animate-pulse font-bold uppercase tracking-widest text-xs font-mono">Synchronizing Buffer...</div>
                     ) : workshops.length === 0 ? (
-                        <div className="p-12 text-center text-slate-400 font-medium italic">Queue empty. No pending taxonomy validations.</div>
+                        <div className="p-12 text-center text-slate-500 font-medium italic font-mono uppercase tracking-widest text-xs">Queue empty. No pending taxonomy validations.</div>
                     ) : (
                         workshops.map(w => (
-                            <div key={w.id} onClick={() => handleSelectWorkshop(w)} className={`grid grid-cols-12 gap-4 px-6 py-5 items-center cursor-pointer transition-all ${selectedItem?.id === w.id ? 'bg-indigo-50/50 border-l-4 border-l-indigo-500' : 'hover:bg-slate-50 border-l-4 border-l-transparent'}`}>
+                            <div key={w.id} onClick={() => handleSelectWorkshop(w)} className={`grid grid-cols-12 gap-4 px-6 py-5 items-center cursor-pointer transition-all border-l-4 ${selectedItem?.id === w.id ? 'bg-[#1D1B26] border-l-indigo-500' : 'hover:bg-[#111] border-l-transparent'}`}>
                                 <div className="col-span-4">
-                                    <div className="font-bold text-slate-900">{w.title}</div>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-[10px] font-bold uppercase bg-white border border-slate-200 text-slate-500 px-2 py-0.5 rounded-full">{w.categoryNames?.[0] || 'Uncategorized'}</span>
+                                    <div className="font-bold text-white tracking-tight">{w.title}</div>
+                                    <div className="flex items-center gap-2 mt-1.5 focus:outline-none">
+                                        <span className="text-[9px] font-bold uppercase bg-black/40 border border-[#222] text-slate-400 px-2 py-0.5 rounded font-mono tracking-widest">{w.categoryNames?.[0] || 'Uncategorized'}</span>
                                     </div>
                                 </div>
-                                <div className="col-span-4 text-sm text-slate-600 font-medium">{w.providerName}</div>
-                                <div className="col-span-3 text-sm font-bold text-slate-900">NPR {w.price.toLocaleString()}</div>
-                                <div className="col-span-1 text-right"><ChevronRight size={16} className="text-slate-300 ml-auto" /></div>
+                                <div className="col-span-4 text-xs text-slate-400 font-medium tracking-tight">{w.providerName}</div>
+                                <div className="col-span-3 text-sm font-bold text-white font-mono tracking-tighter">NPR {w.price.toLocaleString()}</div>
+                                <div className="col-span-1 text-right"><ChevronRight size={14} className="text-slate-600 ml-auto" /></div>
                             </div>
                         ))
                     )}
@@ -175,119 +175,119 @@ export const PendingWorkshops: React.FC = () => {
 
             <AnimatePresence>
                 {selectedItem && (
-                    <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 28, stiffness: 220 }} className="fixed top-0 right-0 h-screen w-[550px] bg-white shadow-[0_0_100px_rgba(0,0,0,0.1)] z-50 flex flex-col border-l border-slate-100">
+                    <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 28, stiffness: 220 }} className="fixed top-0 right-0 h-screen w-[550px] bg-[#0A0A0A] shadow-[-20px_0_100px_rgba(0,0,0,0.5)] z-50 flex flex-col border-l border-[#1A1A1A]">
                         {/* Header */}
-                        <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-white">
+                        <div className="p-8 border-b border-[#1A1A1A] flex justify-between items-center bg-[#000]">
                             <div>
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 mb-1 block">Classification Analysis</span>
-                                <h2 className="text-xl font-bold text-slate-900 leading-tight">{selectedItem.title}</h2>
+                                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-400 mb-2 block font-mono">Classification Analysis</span>
+                                <h2 className="text-xl font-bold text-white leading-tight tracking-tight">{selectedItem.title}</h2>
                             </div>
-                            <button onClick={() => setSelectedItem(null)} className="p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all font-bold">
+                            <button onClick={() => setSelectedItem(null)} className="p-2.5 rounded-xl bg-[#111] text-slate-500 hover:text-white transition-all font-bold border border-[#222]">
                                 <X size={20} />
                             </button>
                         </div>
 
                         {/* Content */}
-                        <div className="p-8 flex-grow overflow-y-auto space-y-8 custom-scrollbar">
+                        <div className="p-8 flex-grow overflow-y-auto space-y-10 custom-scrollbar">
                             {/* ML Insight Block */}
-                            <div className="relative overflow-hidden group">
-                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/5 to-purple-600/5 rounded-[2rem] -z-10" />
-                                <div className="p-6 border border-indigo-100 rounded-[2rem] space-y-4">
+                            <div className="relative overflow-hidden group font-mono">
+                                <div className="absolute inset-0 bg-indigo-500/[0.03] rounded-[2rem] -z-10" />
+                                <div className="p-6 border border-indigo-500/20 rounded-[2rem] space-y-5">
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2 text-indigo-600">
+                                        <div className="flex items-center gap-2 text-indigo-400">
                                             <BrainCircuit size={18} />
-                                            <span className="text-xs font-bold uppercase tracking-widest">System Logic Insight</span>
+                                            <span className="text-[10px] font-bold uppercase tracking-[0.2em]">System Logic Insight</span>
                                         </div>
-                                        {isMLAnalyzing && <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />}
+                                        {isMLAnalyzing && <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />}
                                     </div>
 
                                     {mlSuggestion ? (
                                         <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                                             <div className="flex items-baseline justify-between mb-2">
-                                                <h3 className="text-2xl font-bold text-slate-900 tracking-tight">
+                                                <h3 className="text-2xl font-bold text-white tracking-tighter">
                                                     {mlSuggestion.suggested_category === "Uncategorized" ? "Expansion Required" : mlSuggestion.suggested_category}
                                                 </h3>
-                                                <div className={`text-xs font-bold ${mlSuggestion.is_confident ? 'text-green-600' : 'text-orange-500'}`}>
+                                                <div className={`text-[10px] font-bold px-2 py-0.5 rounded ${mlSuggestion.is_confident ? 'bg-emerald-500/10 text-emerald-400' : 'bg-orange-500/10 text-orange-400'}`}>
                                                     {Math.round(mlSuggestion.confidence_score * 100)}% Match
                                                 </div>
                                             </div>
 
-                                            <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                                            <p className="text-[10px] text-slate-500 leading-relaxed font-medium uppercase tracking-wide">
                                                 {mlSuggestion.is_confident
-                                                    ? `High confidence match found. Based on taxonomy vectors, this workshop aligns perfectly with the "${mlSuggestion.suggested_category}" segment.`
-                                                    : `No precise taxonomy match. Title/Description patterns suggest this may be a new market segment or a legacy cluster.`}
+                                                    ? `High confidence match discovered. Taxonomy vectors aligned with "${mlSuggestion.suggested_category}" cluster.`
+                                                    : `Taxonomy collision detected. Suggesting manual node placement.`}
                                             </p>
 
                                             {!mlSuggestion.is_confident && (
-                                                <div className="mt-4 flex items-center gap-2 p-3 bg-orange-50 rounded-xl border border-orange-100">
-                                                    <AlertTriangle size={14} className="text-orange-500" />
-                                                    <span className="text-[10px] font-bold text-orange-700 uppercase tracking-wide">Anomaly Detected: Review Taxonomy Topology</span>
+                                                <div className="mt-4 flex items-center gap-2 p-3 bg-orange-500/5 rounded-xl border border-orange-500/20">
+                                                    <AlertTriangle size={14} className="text-orange-400" />
+                                                    <span className="text-[9px] font-bold text-orange-400 uppercase tracking-widest">Anomaly: Topology Conflict</span>
                                                 </div>
                                             )}
                                         </div>
                                     ) : !isMLAnalyzing && (
-                                        <p className="text-xs text-slate-400 font-medium italic">Click on a workshop to trigger AI classification...</p>
+                                        <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest italic opacity-50">Pulse trigger required for inference...</p>
                                     )}
 
                                     {/* Manual Override Dropdown */}
-                                    <div className="pt-2 border-t border-indigo-50">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
-                                            {mlSuggestion?.is_confident ? 'Verified Category' : 'Manual Classification Required'}
+                                    <div className="pt-4 border-t border-white/5">
+                                        <label className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] block mb-3">
+                                            {mlSuggestion?.is_confident ? 'Verified Cluster' : 'Manual Placement'}
                                         </label>
                                         <select
                                             value={manualCategoryId || ''}
                                             onChange={(e) => setManualCategoryId(Number(e.target.value))}
-                                            className={`w-full bg-slate-50 border rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-colors ${!mlSuggestion?.is_confident && !manualCategoryId ? 'border-orange-300 ring-2 ring-orange-100' : 'border-slate-200'}`}
+                                            className={`w-full bg-black border rounded-xl px-4 py-3 text-xs font-bold text-slate-300 outline-none focus:border-indigo-500 transition-colors ${!mlSuggestion?.is_confident && !manualCategoryId ? 'border-orange-500/50' : 'border-[#222]'}`}
                                         >
-                                            <option value="">-- Select Category --</option>
+                                            <option value="">-- SELECT TAXONOMY NODE --</option>
                                             {categories.map(c => (
-                                                <option key={c.id} value={c.id}>{c.name}</option>
+                                                <option key={c.id} value={c.id}>{c.name.toUpperCase()}</option>
                                             ))}
                                         </select>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-6">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Executive Summary</label>
-                                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 text-slate-600 text-sm leading-relaxed">
+                            <div className="space-y-8">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] font-mono">Executive Summary</label>
+                                    <div className="p-6 bg-[#000] rounded-2xl border border-[#1A1A1A] text-slate-400 text-[11px] leading-relaxed tracking-tight">
                                         {selectedItem.description}
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-4 bg-white border border-slate-100 rounded-2xl group hover:border-indigo-200 transition-colors">
-                                        <div className="text-[10px] text-slate-400 font-bold uppercase mb-1 tracking-wider">Unit Value</div>
-                                        <div className="text-xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">NPR {selectedItem.price.toLocaleString()}</div>
+                                    <div className="p-5 bg-[#000] border border-[#1A1A1A] rounded-2xl group hover:border-indigo-500/30 transition-colors">
+                                        <div className="text-[9px] text-slate-500 font-bold uppercase mb-2 tracking-[0.2em] font-mono">Unit Value</div>
+                                        <div className="text-xl font-bold text-white group-hover:text-indigo-400 transition-colors font-mono tracking-tighter">NPR {selectedItem.price.toLocaleString()}</div>
                                     </div>
-                                    <div className="p-4 bg-white border border-slate-100 rounded-2xl">
-                                        <div className="text-[10px] text-slate-400 font-bold uppercase mb-1 tracking-wider">Cohort Limit</div>
-                                        <div className="text-xl font-bold text-slate-900">{selectedItem.maxCapacity} Per Slot</div>
+                                    <div className="p-5 bg-[#000] border border-[#1A1A1A] rounded-2xl font-mono">
+                                        <div className="text-[9px] text-slate-500 font-bold uppercase mb-2 tracking-[0.2em]">Cohort Size</div>
+                                        <div className="text-xl font-bold text-white tracking-tighter">{selectedItem.maxCapacity} UX</div>
                                     </div>
                                 </div>
 
-                                <div className="p-4 bg-white border border-slate-100 rounded-2xl">
-                                    <div className="text-[10px] text-slate-400 font-bold uppercase mb-1 tracking-wider">Logistic Anchor</div>
-                                    <div className="text-sm font-bold text-slate-700">{selectedItem.locationName}</div>
-                                    <div className="text-xs text-slate-400 mt-1">{selectedItem.locationAddress}</div>
+                                <div className="p-5 bg-[#000] border border-[#1A1A1A] rounded-2xl">
+                                    <div className="text-[9px] text-slate-500 font-bold uppercase mb-2 tracking-[0.2em] font-mono">Logistic Anchor</div>
+                                    <div className="text-xs font-bold text-slate-200 tracking-tight">{selectedItem.locationName}</div>
+                                    <div className="text-[10px] text-slate-500 mt-1 font-mono uppercase opacity-60 tracking-wider">{selectedItem.locationAddress}</div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Actions */}
-                        <div className="p-8 border-t border-slate-50 bg-white grid grid-cols-2 gap-4">
+                        <div className="p-8 border-t border-[#1A1A1A] bg-[#000] grid grid-cols-2 gap-4">
                             <button
                                 onClick={() => setConfirmAction({ type: 'reject', itemId: selectedItem.id })}
-                                className="py-4 bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 font-bold rounded-2xl border border-slate-200 hover:border-red-200 transition-all text-xs uppercase tracking-widest flex items-center justify-center gap-2"
+                                className="py-4 bg-transparent hover:bg-red-500/10 text-slate-500 hover:text-red-400 font-bold rounded-2xl border border-[#1A1A1A] hover:border-red-500/30 transition-all text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-2 font-mono"
                             >
-                                <X size={16} /> Mark Rejected
+                                <X size={14} /> Reject
                             </button>
                             <button
                                 onClick={() => setConfirmAction({ type: 'approve', itemId: selectedItem.id })}
-                                className="py-4 bg-[#0E0E0C] hover:bg-[#1a1a17] text-white font-bold rounded-2xl shadow-xl shadow-slate-200 transition-all text-xs uppercase tracking-widest flex items-center justify-center gap-2"
+                                className="py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-[0_10px_30px_rgba(79,70,229,0.3)] transition-all text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-2 font-mono"
                             >
-                                <CheckCircle size={16} /> Approve Entry
+                                <CheckCircle size={14} /> Commit Entry
                             </button>
                         </div>
                     </motion.div>
@@ -297,29 +297,29 @@ export const PendingWorkshops: React.FC = () => {
             {/* Confirm Modal */}
             <AnimatePresence>
                 {confirmAction && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl relative border border-white/50 space-y-6">
-                            <div className="text-center space-y-2">
-                                <h3 className="text-xl font-bold text-slate-900 font-sans tracking-tight">
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-[#0D0D0D] rounded-3xl p-8 max-w-sm w-full shadow-2xl relative border border-[#1A1A1A] space-y-6">
+                            <div className="text-center space-y-3">
+                                <h3 className="text-xl font-bold text-white font-sans tracking-tight">
                                     {confirmAction.type === 'approve' ? 'Authorize Submission?' : 'Confirm Rejection?'}
                                 </h3>
-                                <p className="text-xs font-medium text-slate-400">This action will propagate to the public marketplace topology.</p>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Marketplace Propagation Imminent</p>
 
                                 {confirmAction.type === 'approve' && (
-                                    <div className="text-left pt-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Final Classification</p>
-                                        <p className="text-sm font-bold text-indigo-600">
-                                            {categories.find(c => c.id === manualCategoryId)?.name || <span className="text-red-500">No Category Selected</span>}
+                                    <div className="text-left pt-4 p-5 bg-[#000] rounded-xl border border-[#1A1A1A]">
+                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-2 font-mono">Final Taxonomy Node</p>
+                                        <p className="text-sm font-bold text-indigo-400 font-mono">
+                                            {categories.find(c => c.id === manualCategoryId)?.name.toUpperCase() || <span className="text-red-500 font-bold">UNDEFINED_CLUSTER</span>}
                                         </p>
                                         {!manualCategoryId && (
-                                            <p className="text-[10px] text-red-500 mt-2 font-bold">⚠️ Please go back and select a category.</p>
+                                            <p className="text-[9px] text-red-500 mt-2 font-bold font-mono tracking-widest">⚠️ REQUIRES NODE ATTACHMENT</p>
                                         )}
                                     </div>
                                 )}
                             </div>
                             <div className="grid grid-cols-2 gap-3">
-                                <button onClick={() => setConfirmAction(null)} className="py-3.5 rounded-2xl border border-slate-200 text-slate-400 font-bold hover:bg-slate-50 text-xs uppercase tracking-widest">Abort</button>
-                                <button onClick={executeAction} disabled={confirmAction.type === 'approve' && !manualCategoryId} className={`py-3.5 rounded-2xl font-bold text-white shadow-lg text-xs uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed ${confirmAction.type === 'approve' ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-100' : 'bg-red-500 hover:bg-red-600 shadow-red-100'}`}>Execute</button>
+                                <button onClick={() => setConfirmAction(null)} className="py-4 rounded-xl border border-[#1A1A1A] text-slate-400 font-bold hover:bg-[#111] text-[10px] uppercase tracking-[0.2em] font-mono">Abort</button>
+                                <button onClick={executeAction} disabled={confirmAction.type === 'approve' && !manualCategoryId} className={`py-4 rounded-xl font-bold text-white shadow-lg text-[10px] uppercase tracking-[0.2em] font-mono disabled:opacity-20 disabled:cursor-not-allowed ${confirmAction.type === 'approve' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'}`}>Execute</button>
                             </div>
                         </motion.div>
                     </motion.div>

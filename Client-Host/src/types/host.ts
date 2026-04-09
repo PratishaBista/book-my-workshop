@@ -35,6 +35,8 @@ export interface ProviderProfile {
     idFileName?: string;
     panCardUrl?: string;
     panFileName?: string;
+    studioImageUrl?: string;
+    studioFileName?: string;
     isIdVerified: boolean;
     isPanVerified: boolean;
     trustScore: number;

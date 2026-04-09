@@ -34,7 +34,7 @@ export const HostSidebar: React.FC<HostSidebarProps> = ({ activeTab, setActiveTa
         <aside
             className={`${isOpen ? 'w-64' : 'w-20'} bg-deep-purple transition-all duration-300 ease-in-out flex flex-col shadow-inner z-30 h-[calc(100vh-80px)]`}
         >
-            <nav className="flex-1 w-full px-3 py-6 space-y-1.5 flex flex-col items-center custom-scrollbar overflow-y-auto">
+            <nav className="flex-1 w-full px-3 py-6 space-y-1.5 flex flex-col items-center scrollbar-hide overflow-y-auto">
                 {navItems.map((item: any, idx) => (
                     item.type === 'divider' ? (
                         isOpen && (
