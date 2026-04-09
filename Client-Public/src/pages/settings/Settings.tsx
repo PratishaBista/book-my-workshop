@@ -24,13 +24,6 @@ const Settings: React.FC = () => {
         { label: 'Security', path: '/settings/security' },
     ];
 
-    const handleSave = () => {
-        window.dispatchEvent(new CustomEvent('settings-save'));
-    };
-
-    const handleReset = () => {
-        window.dispatchEvent(new CustomEvent('settings-reset'));
-    };
 
     return (
         <div className="min-h-screen bg-cream-base flex flex-col font-sans text-deep-purple">
@@ -38,7 +31,7 @@ const Settings: React.FC = () => {
 
             <div className="h-28" />
 
-            <div className="flex flex-1 pb-32">
+            <div className="flex flex-1">
                 <div className="w-full max-w-7xl mx-auto flex px-4 md:px-8 gap-12">
 
                     <aside className="w-64 flex-shrink-0 sticky top-32 h-fit">
@@ -81,22 +74,6 @@ const Settings: React.FC = () => {
                 </div>
             </div>
 
-            <footer className="fixed bottom-0 left-0 right-0 h-24 bg-white/80 backdrop-blur-md flex items-center justify-center border-t border-deep-purple/5 z-50">
-                <div className="flex gap-4">
-                    <button
-                        className="px-8 py-3 bg-gray-100 text-deep-purple font-bold rounded-full hover:bg-gray-200 transition-colors"
-                        onClick={handleReset}
-                    >
-                        Reset
-                    </button>
-                    <button
-                        className="px-8 py-3 bg-deep-purple text-white font-bold rounded-full hover:shadow-lg transition-all active:scale-95"
-                        onClick={handleSave}
-                    >
-                        Save
-                    </button>
-                </div>
-            </footer>
         </div>
     );
 };

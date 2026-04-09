@@ -162,6 +162,17 @@ const InterestsSettings: React.FC = () => {
                 ))}
             </div>
 
+            <div className="mt-8 flex justify-end">
+                <button
+                    onClick={handleSave}
+                    disabled={saving || JSON.stringify([...selectedIds].sort()) === JSON.stringify([...initialSelectedIds].sort())}
+                    className="px-8 py-3 bg-deep-purple text-white font-bold rounded-xl hover:bg-deep-purple/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {saving ? 'Saving...' : 'Save Interests'}
+                </button>
+            </div>
+
             <div className="mt-12 p-8 bg-primary-orange/5 rounded-[2.5rem] border border-primary-orange/10 flex items-center gap-6">
                 <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center text-primary-orange shadow-sm border border-primary-orange/10">
                     <Sparkles size={32} />

@@ -25,6 +25,17 @@ public class ProviderProfileResponse
     public ProviderStatus Status { get; set; }
     public bool IsApproved { get; set; }
 
+    // Verification Documents
+    public string? IdCardUrl { get; set; }
+    public string? PanCardUrl { get; set; }
+    public string? StudioImageUrl { get; set; }
+    public string? IdFileName { get; set; }
+    public string? PanFileName { get; set; }
+    public string? StudioFileName { get; set; }
+    public bool IsIdVerified { get; set; }
+    public bool IsPanVerified { get; set; }
+    public float TrustScore { get; set; }
+
     public List<VenueResponse> Venues { get; set; } = new();
 
     public string ContactPerson { get; set; } = string.Empty;

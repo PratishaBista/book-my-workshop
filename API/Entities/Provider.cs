@@ -34,8 +34,10 @@ public class Provider
     // Trust & Safety Fields
     public string? IdCardUrl { get; set; } // Path to Identity Document in S3 (Private)
     public string? PanCardUrl { get; set; } // Path to PAN Certificate in S3 (Private)
+    public string? StudioImageUrl { get; set; } // Host's Studio/Workspace image
     public string? IdFileName { get; set; } // Original file name for reference
     public string? PanFileName { get; set; } // Original file name for reference
+    public string? StudioFileName { get; set; } 
     public string? ExtractedPanNumber { get; set; } // Set by AI OCR Simulation
     public string? ExtractedIdName { get; set; } // Set by AI OCR Simulation
     

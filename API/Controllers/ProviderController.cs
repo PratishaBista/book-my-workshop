@@ -25,8 +25,9 @@ public class ProviderController : ControllerBase
     private readonly IMediaService _mediaService;
     private readonly IStorageService _storageService;
     private readonly IMLService _mlService;
+    private readonly INotificationService _notificationService;
 
-    public ProviderController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IMapper mapper, IMediaService mediaService, IStorageService storageService, IMLService mlService)
+    public ProviderController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IMapper mapper, IMediaService mediaService, IStorageService storageService, IMLService mlService, INotificationService notificationService)
     {
         _context = context;
         _userManager = userManager;
@@ -34,6 +35,7 @@ public class ProviderController : ControllerBase
         _mediaService = mediaService;
         _storageService = storageService;
         _mlService = mlService;
+        _notificationService = notificationService;
     }
 
     [HttpGet("profile")]
@@ -106,7 +108,7 @@ public class ProviderController : ControllerBase
     }
 
     [HttpPost("upload-logo")]
-    public async Task<IActionResult> UploadLogo(IFormFile file)
+    public async Task<IActionResult> UploadLogo([FromForm] IFormFile file)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var provider = await _context.Providers.FirstOrDefaultAsync(p => p.UserId == userId);
@@ -126,7 +128,7 @@ public class ProviderController : ControllerBase
     }
 
     [HttpPost("upload-banner")]
-    public async Task<IActionResult> UploadBanner(IFormFile file)
+    public async Task<IActionResult> UploadBanner([FromForm] IFormFile file)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var provider = await _context.Providers.FirstOrDefaultAsync(p => p.UserId == userId);
@@ -147,7 +149,7 @@ public class ProviderController : ControllerBase
 
     // Trust & Safety - Private S3 Uploads
     [HttpPost("upload-id-card")]
-    public async Task<IActionResult> UploadIdCard(IFormFile file)
+    public async Task<IActionResult> UploadIdCard([FromForm] IFormFile file)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var provider = await _context.Providers.FirstOrDefaultAsync(p => p.UserId == userId);
@@ -155,24 +157,23 @@ public class ProviderController : ControllerBase
 
         try 
         {
-            using var stream = file.OpenReadStream();
-            var url = await _storageService.UploadFileAsync(stream, file.FileName, file.ContentType, isPrivate: true);
+            var url = await _mediaService.UploadImageAsync(file, "providers/verification");
             
             provider.IdCardUrl = url;
             provider.IdFileName = file.FileName;
             provider.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
-            return Ok(new { message = "ID Card uploaded securely to vault", fileName = file.FileName });
+            return Ok(new { url, message = "ID Card uploaded successfully" });
         }
         catch (Exception ex)
         {
-            return BadRequest(new { message = "Secure upload failed.", detail = ex.Message });
+            return BadRequest(new { message = "Upload failed.", detail = ex.Message });
         }
     }
 
     [HttpPost("upload-pan-card")]
-    public async Task<IActionResult> UploadPanCard(IFormFile file)
+    public async Task<IActionResult> UploadPanCard([FromForm] IFormFile file)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var provider = await _context.Providers.FirstOrDefaultAsync(p => p.UserId == userId);
@@ -180,19 +181,42 @@ public class ProviderController : ControllerBase
 
         try 
         {
-            using var stream = file.OpenReadStream();
-            var url = await _storageService.UploadFileAsync(stream, file.FileName, file.ContentType, isPrivate: true);
+            var url = await _mediaService.UploadImageAsync(file, "providers/verification");
             
             provider.PanCardUrl = url;
             provider.PanFileName = file.FileName;
             provider.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
-            return Ok(new { message = "PAN Certificate uploaded securely to vault", fileName = file.FileName });
+            return Ok(new { url, message = "PAN Certificate uploaded successfully" });
         }
         catch (Exception ex)
         {
-            return BadRequest(new { message = "Secure upload failed.", detail = ex.Message });
+            return BadRequest(new { message = "Upload failed.", detail = ex.Message });
+        }
+    }
+
+    [HttpPost("upload-studio-image")]
+    public async Task<IActionResult> UploadStudioImage([FromForm] IFormFile file)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var provider = await _context.Providers.FirstOrDefaultAsync(p => p.UserId == userId);
+        if (provider == null) return NotFound();
+
+        try 
+        {
+            var url = await _mediaService.UploadImageAsync(file, "providers/studio");
+            
+            provider.StudioImageUrl = url;
+            provider.StudioFileName = file.FileName;
+            provider.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return Ok(new { url, message = "Studio image uploaded successfully" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = "Upload failed.", detail = ex.Message });
         }
     }
 
@@ -203,16 +227,16 @@ public class ProviderController : ControllerBase
         var provider = await _context.Providers.FirstOrDefaultAsync(p => p.UserId == userId);
         if (provider == null) return NotFound();
 
-        if (string.IsNullOrEmpty(provider.IdCardUrl) || string.IsNullOrEmpty(provider.PanCardUrl))
+        if (string.IsNullOrEmpty(provider.IdCardUrl) || string.IsNullOrEmpty(provider.PanCardUrl) || string.IsNullOrEmpty(provider.StudioImageUrl))
         {
-            return BadRequest(new { message = "Please upload both ID Card and PAN Certificate." });
+            return BadRequest(new { message = "Please upload your Government ID, PAN Certificate, and Studio Image." });
         }
 
         // Trigger AI Consistency Check (NLP Fraud Detection)
         try 
         {
-            var regText = $"{provider.BusinessName}. {provider.Tagline}. {provider.Description}";
-            var docText = $"{provider.User.FullName} {provider.IdFileName} {provider.PanFileName}";
+            var regText = $"Name: {provider.User.FullName}. Business: {provider.BusinessName}. Tagline: {provider.Tagline}. Bio: {provider.Description}. Website: {provider.Website}. Location: {provider.State}.";
+            var docText = $"Owner: {provider.User.FullName}. DocName1: {provider.IdFileName}. DocName2: {provider.PanFileName}.";
             
             var analysis = await _mlService.VerifyInformationConsistencyAsync(regText, docText, provider.Website);
             
@@ -234,6 +258,14 @@ public class ProviderController : ControllerBase
         provider.UpdatedAt = DateTime.UtcNow;
         
         await _context.SaveChangesAsync();
+
+        // Notify Admins
+        await _notificationService.NotifyRoleAsync("Admin", 
+            "New Host Application", 
+            $"{provider.BusinessName} has submitted their profile for verification.", 
+            NotificationType.Info, 
+            "/admin/pending-hosts");
+
         return Ok(new { message = "Profile submitted for review. Admin will verify shortly." });
     }
 
@@ -255,7 +287,11 @@ public class ProviderController : ControllerBase
             .ToListAsync();
 
         var totalEarnings = bookings.Where(b => b.PaymentStatus == PaymentStatus.Paid).Sum(b => b.HostEarnings);
-        var pendingPayouts = bookings.Where(b => b.PayoutStatus == PayoutStatus.Pending && b.PaymentStatus == PaymentStatus.Paid).Sum(b => b.HostEarnings);
+        
+        // "Pending" currently maps to funds in Escrow for the Host
+        var pendingPayouts = bookings.Where(b => b.PayoutStatus == PayoutStatus.Escrow && b.PaymentStatus == PaymentStatus.Paid).Sum(b => b.HostEarnings);
+        
+        // "PaidOut" maps to what the platform has settled to the host bank
         var paidOut = bookings.Where(b => b.PayoutStatus == PayoutStatus.Paid).Sum(b => b.HostEarnings);
 
         var transactions = bookings.Select(b => new EarningTransactionResponse

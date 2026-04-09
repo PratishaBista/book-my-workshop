@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Camera, MapPin, Globe, Star } from 'lucide-react';
+import { Camera, MapPin, Globe, Star, Loader2 } from 'lucide-react';
 import { API_ENDPOINTS } from '../../config/api';
 import Toast from '../../components/ui/Toast';
 import type { ToastType } from '../../components/ui/Toast';
@@ -45,20 +45,6 @@ const EditProfile: React.FC = () => {
         fetchProfile();
     }, []); // Only fetch on mount
 
-    useEffect(() => {
-        const handleSaveEvent = () => handleSave();
-        const handleResetEvent = () => {
-            if (initialProfile) setProfile(initialProfile);
-        };
-
-        window.addEventListener('settings-save', handleSaveEvent);
-        window.addEventListener('settings-reset', handleResetEvent);
-
-        return () => {
-            window.removeEventListener('settings-save', handleSaveEvent);
-            window.removeEventListener('settings-reset', handleResetEvent);
-        };
-    }, [initialProfile]);
 
     const fetchProfile = async () => {
         try {
@@ -321,6 +307,16 @@ const EditProfile: React.FC = () => {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div className="flex justify-start mt-8">
+                <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="px-8 py-3 bg-deep-purple text-white rounded-xl font-bold text-sm hover:opacity-90 transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95"
+                >
+                    {saving ? <Loader2 className="animate-spin" size={16} /> : 'Save Changes'}
+                </button>
             </div>
 
             <div className="h-20" />
