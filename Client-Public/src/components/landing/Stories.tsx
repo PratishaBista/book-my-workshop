@@ -1,31 +1,42 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { API_ENDPOINTS } from '../../config/api';
 
-const stories = [
-    {
-        id: 1,
-        title: 'The ancient art of potting soil',
-        excerpt: "Why getting your hands in the earth is the best therapy money can't buy.",
-        category: 'Philosophy',
-        image: 'https://images.unsplash.com/photo-1493106641515-6b5631de4bb9?auto=format&fit=crop&q=80&w=800'
-    },
-    {
-        id: 2,
-        title: 'Kathmandu’s hidden makers',
-        excerpt: "Exploring the back-alleys of Thamel to find the masters of metal and wood.",
-        category: 'Culture',
-        image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&q=80&w=800'
-    },
-    {
-        id: 3,
-        title: 'A beginner’s guide to failure',
-        excerpt: "You will make something ugly. And that is perfectly okay.",
-        category: 'Opinion',
-        image: 'https://images.unsplash.com/photo-1504198458649-3128b932f49e?auto=format&fit=crop&q=80&w=800'
-    },
-];
+interface Article {
+    id: number;
+    title: string;
+    slug: string;
+    excerpt: string;
+    category: string;
+    coverImageUrl: string;
+}
 
 const Stories: React.FC = () => {
+    const navigate = useNavigate();
+    const [articles, setArticles] = useState<Article[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchArticles = async () => {
+            try {
+                const response = await fetch(API_ENDPOINTS.journal.all);
+                if (response.ok) {
+                    const data = await response.json();
+                    setArticles(data);
+                }
+            } catch (error) {
+                console.error('Error fetching journal:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchArticles();
+    }, []);
+
+    if (loading) return null; // Or a subtle skeleton
+    if (articles.length === 0) return null;
+
     return (
         <section className="py-32 px-6 bg-[#F9F9F5] border-t-2 border-deep-purple">
             <div className="max-w-7xl mx-auto">
@@ -42,21 +53,22 @@ const Stories: React.FC = () => {
 
                 {/* Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-16">
-                    {stories.map((story, i) => (
+                    {articles.slice(0, 3).map((article, i) => (
                         <motion.article
-                            key={story.id}
+                            key={article.id}
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             transition={{ delay: i * 0.1, duration: 0.6 }}
+                            onClick={() => navigate(`/${article.slug}`)}
                             className="group cursor-pointer flex flex-col"
                         >
                             {/* Image Frame */}
                             <div className="overflow-hidden mb-8 aspect-[4/5] border border-deep-purple/10 bg-gray-100 relative">
-                                <div className="absolute inset-0 bg-deep-purple/0 group-hover:bg-deep-purple/5 transition-colors duration-500 z-10 transition-colors"></div>
+                                <div className="absolute inset-0 bg-deep-purple/0 group-hover:bg-deep-purple/5 transition-colors duration-500 z-10"></div>
                                 <img
-                                    src={story.image}
-                                    alt={story.title}
+                                    src={article.coverImageUrl}
+                                    alt={article.title}
                                     className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 ease-out"
                                 />
                             </div>
@@ -64,16 +76,16 @@ const Stories: React.FC = () => {
                             {/* Meta */}
                             <div className="flex justify-between items-center border-t border-deep-purple/20 pt-4 mb-3">
                                 <span className="text-xs font-bold uppercase tracking-widest text-primary-orange">
-                                    {story.category}
+                                    {article.category}
                                 </span>
                             </div>
 
                             {/* Content */}
                             <h3 className="text-3xl font-serif text-deep-purple leading-tight mb-4 group-hover:underline decoration-1 underline-offset-4 transition-all">
-                                {story.title}
+                                {article.title}
                             </h3>
                             <p className="text-deep-purple/60 text-base leading-relaxed mb-6 font-sans">
-                                {story.excerpt}
+                                {article.excerpt}
                             </p>
 
                             <div className="mt-auto">
@@ -84,6 +96,15 @@ const Stories: React.FC = () => {
 
                         </motion.article>
                     ))}
+                </div>
+
+                <div className="mt-20 flex justify-center">
+                    <button 
+                        onClick={() => navigate('/articles')}
+                        className="px-8 py-4 border-2 border-deep-purple text-deep-purple font-bold uppercase tracking-widest hover:bg-deep-purple hover:text-white transition-all duration-300"
+                    >
+                        Find more articles
+                    </button>
                 </div>
 
             </div>
