@@ -27,6 +27,9 @@ export const API_ENDPOINTS = {
         delete: `${API_URL}/api/profile/delete`,
         deactivate: `${API_URL}/api/profile/deactivate`,
         reactivate: `${API_URL}/api/profile/reactivate`,
+        setPassword: `${API_URL}/api/profile/set-password`,
+        disconnectGoogle: `${API_URL}/api/profile/disconnect-google`,
+        linkGoogle: `${API_URL}/api/profile/link-google`,
     },
     provider: {
         profile: `${API_URL}/api/provider/profile`,
@@ -34,8 +37,9 @@ export const API_ENDPOINTS = {
         uploadBanner: `${API_URL}/api/provider/upload-banner`,
     },
     workshop: {
-        base: `${API_URL}/api/workshop`,
+        base: `${API_URL}/api/workshops/public`,
         public: `${API_URL}/api/workshops/public`,
+        all: `${API_URL}/api/workshops/public`,
         featured: `${API_URL}/api/workshops/public/featured`,
         userRecommendations: `${API_URL}/api/workshops/public/recommendations`,
         search: (query: string, location: string) => 
@@ -64,7 +68,12 @@ export const API_ENDPOINTS = {
     },
     newsletter: {
         subscribe: `${API_URL}/api/newsletter/subscribe`,
-    }
+    },
+    journal: {
+        all: `${API_URL}/api/journal`,
+        bySlug: (slug: string) => `${API_URL}/api/journal/${slug}`,
+    },
+    contact: `${API_URL}/api/contact`,
 };
 
 export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';

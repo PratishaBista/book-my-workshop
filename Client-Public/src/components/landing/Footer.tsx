@@ -29,7 +29,7 @@ const Footer: React.FC = () => {
     };
 
     return (
-        <footer className="bg-[#FAF8E7] text-deep-purple pt-32 px-6 md:px-12 pb-6 overflow-hidden relative border-t border-deep-purple/10">
+        <footer className="bg-[#FAF8E7] text-deep-purple pt-8 px-6 md:px-12 pb-6 overflow-hidden relative border-t border-deep-purple/10">
             <div className="max-w-[1600px] mx-auto flex flex-col xl:flex-row justify-between items-start gap-24 mb-24 relative z-10">
 
                 <div className="flex-1 w-full xl:pr-12">
@@ -73,12 +73,13 @@ const Footer: React.FC = () => {
                                     placeholder="(Enter your email)"
                                     className="w-full bg-transparent py-4 text-deep-purple placeholder:text-deep-purple/30 focus:outline-none font-medium text-lg"
                                 />
-                                <button
-                                    onClick={handleSubscribe}
-                                    className="absolute right-0 top-1/2 -translate-y-1/2 text-primary-orange font-serif italic text-xl hover:text-deep-purple transition-colors disabled:opacity-50"
-                                >
-                                    Subscribe
-                                </button>
+                                    <button
+                                        onClick={handleSubscribe}
+                                        disabled={loading}
+                                        className="absolute right-0 top-1/2 -translate-y-1/2 text-primary-orange font-serif italic text-xl hover:text-deep-purple transition-colors disabled:opacity-50"
+                                    >
+                                        {loading ? '...' : 'Subscribe'}
+                                    </button>
                             </div>
                         )}
                     </div>
@@ -87,7 +88,7 @@ const Footer: React.FC = () => {
                 <div className="xl:w-6/12 w-full flex flex-col md:flex-row gap-16 md:gap-24 items-start pt-4">
                     <div className="flex-1">
                         <h4 className="font-mono text-xs uppercase tracking-[0.2em] text-deep-purple/40 mb-8 font-bold">(Explore)</h4>
-                        <ul className="space-y-6 font-serif text-5xl md:text-6xl text-deep-purple tracking-tight">
+                        <ul className="space-y-6 font-serif text-4xl md:text-5xl text-deep-purple tracking-tight">
                             {['Workshops', 'Gift Cards', 'Stories', 'Calendar'].map(item => (
                                 <li key={item}>
                                     <Link to="#" className="hover:text-primary-orange hover:italic transition-all duration-300 transform origin-left inline-block">{item}</Link>
@@ -98,8 +99,8 @@ const Footer: React.FC = () => {
 
                     <div className="flex-1">
                         <h4 className="font-mono text-xs uppercase tracking-[0.2em] text-deep-purple/40 mb-8 font-bold">(Company)</h4>
-                        <ul className="space-y-6 font-serif text-5xl md:text-6xl text-deep-purple tracking-tight">
-                            <li><Link to="/mission" className="hover:text-primary-orange hover:italic transition-all duration-300 transform origin-left inline-block">About Us</Link></li>
+                        <ul className="space-y-6 font-serif text-4xl md:text-5xl text-deep-purple tracking-tight">
+                            <li><Link to="/about" className="hover:text-primary-orange hover:italic transition-all duration-300 transform origin-left inline-block">About Us</Link></li>
                             <li><Link to="/contact" className="hover:text-primary-orange hover:italic transition-all duration-300 transform origin-left inline-block">Contact Us</Link></li>
                             <li><Link to="/host-workshop" className="hover:text-primary-orange hover:italic transition-all duration-300 transform origin-left inline-block">Become a Host</Link></li>
                         </ul>
@@ -126,7 +127,7 @@ const Footer: React.FC = () => {
 
             </div>
 
-            <div className="border-t border-deep-purple/10 mt-16 pt-8 pb-4">
+            <div className="border-t border-deep-purple/10 mt-16 pt-6 pb-4">
                 <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-end gap-8 relative z-10">
 
                     <div className="flex items-center gap-6 bg-transparent px-2">

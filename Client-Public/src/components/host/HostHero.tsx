@@ -156,7 +156,9 @@ const HostHero: React.FC = () => {
             localStorage.removeItem('token');
             localStorage.removeItem('isApproved');
 
-            setTimeout(() => navigate('/login'), 2000);
+            setTimeout(() => {
+                window.location.href = 'http://localhost:5174/login';
+            }, 2000);
 
         } catch (err) {
             console.error(err);

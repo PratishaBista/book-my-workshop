@@ -66,7 +66,7 @@ const PaymentSuccess = () => {
         <div className="min-h-screen bg-[#FDFBF7] text-deep-purple font-sans flex flex-col selection:bg-orange-100">
             <Navbar />
 
-            <main className="flex-grow flex items-center justify-center pt-20 pb-32 px-6">
+            <main className="flex-grow flex items-center justify-center pt-32 pb-32 px-6">
                 <div className="max-w-xl w-full text-center">
                     {status === 'verifying' && (
                         <motion.div

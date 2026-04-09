@@ -5,6 +5,8 @@ import DashboardLayout from './layouts/DashboardLayout';
 import OverviewPage from './pages/dashboard/OverviewPage';
 import CommissionPage from './pages/dashboard/CommissionPage';
 import PayoutsPage from './pages/dashboard/PayoutsPage';
+import JournalPage from './pages/dashboard/JournalPage';
+import TransactionsPage from './pages/dashboard/TransactionsPage';
 
 const isAuthenticated = () => !!localStorage.getItem('superadmin_token');
 
@@ -58,6 +60,28 @@ const App: React.FC = () => {
                         <ProtectedRoute>
                             <DashboardLayout>
                                 <PayoutsPage />
+                            </DashboardLayout>
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/dashboard/journal"
+                    element={
+                        <ProtectedRoute>
+                            <DashboardLayout>
+                                <JournalPage />
+                            </DashboardLayout>
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/dashboard/transactions"
+                    element={
+                        <ProtectedRoute>
+                            <DashboardLayout>
+                                <TransactionsPage />
                             </DashboardLayout>
                         </ProtectedRoute>
                     }

@@ -33,6 +33,7 @@ export const API_ENDPOINTS = {
         earnings: `${API_URL}/api/provider/earnings`,
         uploadIdCard: `${API_URL}/api/provider/upload-id-card`,
         uploadPanCard: `${API_URL}/api/provider/upload-pan-card`,
+        uploadStudioImage: `${API_URL}/api/provider/upload-studio-image`,
         submitVerification: `${API_URL}/api/provider/submit-verification`,
     },
     workshop: {
@@ -47,7 +48,15 @@ export const API_ENDPOINTS = {
         initiate: `${API_URL}/api/payment/initiate`,
         verify: `${API_URL}/api/payment/verify`,
     },
-    venues: `${API_URL}/api/venues`
+    venues: `${API_URL}/api/venues`,
+    notifications: {
+        base: `${API_URL}/api/notification`,
+        read: (id: number) => `${API_URL}/api/notification/${id}/read`,
+        readAll: `${API_URL}/api/notification/read-all`,
+    },
+    hubs: {
+        notifications: `${API_URL}/hubs/notifications`
+    }
 };
 
 export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';

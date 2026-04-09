@@ -44,6 +44,14 @@ export const API_ENDPOINTS = {
     },
     ml: {
         suggestCategory: `${API_URL}/api/ml/suggest-category`,
+    },
+    notifications: {
+        base: `${API_URL}/api/notification`,
+        read: (id: number) => `${API_URL}/api/notification/${id}/read`,
+        readAll: `${API_URL}/api/notification/read-all`,
+    },
+    hubs: {
+        notifications: `${API_URL}/hubs/notifications`
     }
 };
 
