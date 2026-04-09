@@ -479,4 +479,66 @@ public static class EmailTemplates
 </body>
 </html>";
     }
+
+    public static string GetContactNotificationEmail(string name, string email, string message)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>New Contact Message</title>
+</head>
+<body style='margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, ""Helvetica Neue"", Arial, sans-serif; background-color: #f5f5f5;'>
+    <table role='presentation' style='width: 100%; border-collapse: collapse;'>
+        <tr>
+            <td align='center' style='padding: 40px 20px;'>
+                <table role='presentation' style='width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff;'>
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style='padding: 40px; text-align: center; border-bottom: 1px solid #e5e7eb;'>
+                            <img src='https://res.cloudinary.com/daaysxdli/image/upload/v1767434247/Badge_hjkzju.png' alt='BookMyWorkshop' style='height: 50px; margin-bottom: 16px;' />
+                            <h2 style='margin: 0; color: #111827; font-size: 20px; font-weight: 600;'>New Message from Contact Form</h2>
+                        </td>
+                    </tr>
+                    
+                    <!-- Body -->
+                    <tr>
+                        <td style='padding: 40px;'>
+                            <div style='margin-bottom: 24px;'>
+                                <p style='margin: 0 0 8px 0; color: #6B7280; font-size: 14px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;'>From</p>
+                                <p style='margin: 0; color: #111827; font-size: 16px;'>{name} ({email})</p>
+                            </div>
+                            
+                            <div style='margin-bottom: 24px;'>
+                                <p style='margin: 0 0 8px 0; color: #6B7280; font-size: 14px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;'>Message</p>
+                                <div style='margin: 0; padding: 16px; background-color: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 6px; color: #374151; font-size: 16px; line-height: 1.6; white-space: pre-wrap;'>
+                                    {message}
+                                </div>
+                            </div>
+                            
+                            <div style='text-align: center; margin-top: 32px;'>
+                                <a href='mailto:{email}' style='background-color: #6B46C1; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 12px 24px; border-radius: 6px; display: inline-block;'>Reply to {name}</a>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style='background-color: #F9FAFB; padding: 32px; border-top: 1px solid #E5E7EB; text-align: center;'>
+                            <p style='margin: 0; color: #9CA3AF; font-size: 12px;'>
+                                This message was sent via the contact form on BookMyWorkshop.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>";
+    }
 }

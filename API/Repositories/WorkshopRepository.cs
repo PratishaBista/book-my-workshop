@@ -25,6 +25,8 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
             .Include(w => w.Media.OrderBy(m => m.DisplayOrder))
             .Where(w => (w.Status == WorkshopStatus.Published || (w.Status == WorkshopStatus.PendingReview && w.HasPendingModifications)) && w.IsActive)
             .OrderByDescending(w => w.CreatedAt)
+            .AsNoTracking()
+            .AsSplitQuery()
             .ToListAsync();
     }
 
@@ -40,6 +42,8 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
                      && (w.Status == WorkshopStatus.Published || (w.Status == WorkshopStatus.PendingReview && w.HasPendingModifications)) 
                      && w.IsActive)
             .OrderByDescending(w => w.CreatedAt)
+            .AsNoTracking()
+            .AsSplitQuery()
             .ToListAsync();
     }
 
@@ -53,6 +57,8 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
             .Include(w => w.Schedules)
             .Where(w => w.ProviderId == providerId && w.IsActive)
             .OrderByDescending(w => w.CreatedAt)
+            .AsNoTracking()
+            .AsSplitQuery()
             .ToListAsync();
     }
 
@@ -68,6 +74,8 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
             .Include(w => w.Schedules.Where(s => s.Status != ScheduleStatus.Cancelled))
             .Include(w => w.Reviews)
                 .ThenInclude(r => r.User)
+            .AsNoTracking()
+            .AsSplitQuery()
             .FirstOrDefaultAsync(w => w.Id == id && w.IsActive);
     }
 
@@ -110,6 +118,8 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
 
         return await query
             .OrderByDescending(w => w.CreatedAt)
+            .AsNoTracking()
+            .AsSplitQuery()
             .ToListAsync();
     }
 
@@ -131,6 +141,8 @@ public class WorkshopRepository : GenericRepository<Workshop>, IWorkshopReposito
             .OrderByDescending(w => w.Reviews.Average(r => (double?)r.Rating) ?? 0)
             .ThenByDescending(w => w.CreatedAt)
             .Take(count)
+            .AsNoTracking()
+            .AsSplitQuery()
             .ToListAsync();
     }
 

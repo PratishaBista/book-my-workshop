@@ -26,6 +26,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<UserPreference> UserPreferences { get; set; }
     public DbSet<PlatformSettings> PlatformSettings { get; set; }
     public DbSet<NewsletterSubscription> NewsletterSubscriptions { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
+    public DbSet<JournalArticle> JournalArticles { get; set; }
+    public DbSet<ContactMessage> ContactMessages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -41,6 +44,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         // Workshop Category
         builder.Entity<WorkshopCategory>()
             .HasIndex(c => c.Name)
+            .IsUnique();
+
+        // Journal Article Slug unique constraint
+        builder.Entity<JournalArticle>()
+            .HasIndex(j => j.Slug)
             .IsUnique();
 
         // Workshop - Provider relationship

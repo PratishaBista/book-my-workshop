@@ -141,3 +141,44 @@ WHERE Slug = 'momo-cooking' AND NOT EXISTS (SELECT 1 FROM WorkshopPricings WHERE
 INSERT INTO WorkshopPricings (WorkshopId, PricingType, BasePrice, Currency, CreatedAt, UpdatedAt)
 SELECT Id, 0, 3000.00, 'NPR', GETUTCDATE(), GETUTCDATE() FROM Workshops w 
 WHERE Slug = 'doc-photography' AND NOT EXISTS (SELECT 1 FROM WorkshopPricings WHERE WorkshopId = w.Id);
+
+-- 6. Add Images
+INSERT INTO WorkshopMedia (WorkshopId, Url, DisplayOrder, MediaType, UploadedAt, IsPrimary)
+SELECT Id, 'https://images.unsplash.com/photo-1610701596007-11502861dcfa?q=80&w=800&auto=format&fit=crop', 1, 0, GETUTCDATE(), 1 FROM Workshops w 
+WHERE Slug = 'newari-pottery' AND NOT EXISTS (SELECT 1 FROM WorkshopMedia WHERE WorkshopId = w.Id);
+
+INSERT INTO WorkshopMedia (WorkshopId, Url, DisplayOrder, MediaType, UploadedAt, IsPrimary)
+SELECT Id, 'https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?q=80&w=800&auto=format&fit=crop', 1, 0, GETUTCDATE(), 1 FROM Workshops w 
+WHERE Slug = 'momo-cooking' AND NOT EXISTS (SELECT 1 FROM WorkshopMedia WHERE WorkshopId = w.Id);
+
+INSERT INTO WorkshopMedia (WorkshopId, Url, DisplayOrder, MediaType, UploadedAt, IsPrimary)
+SELECT Id, 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=800&auto=format&fit=crop', 1, 0, GETUTCDATE(), 1 FROM Workshops w 
+WHERE Slug = 'sunset-yoga' AND NOT EXISTS (SELECT 1 FROM WorkshopMedia WHERE WorkshopId = w.Id);
+
+INSERT INTO WorkshopMedia (WorkshopId, Url, DisplayOrder, MediaType, UploadedAt, IsPrimary)
+SELECT Id, 'https://images.unsplash.com/photo-1526379095098-d400fd0bfce8?q=80&w=800&auto=format&fit=crop', 1, 0, GETUTCDATE(), 1 FROM Workshops w 
+WHERE Slug = 'python-ai-basics' AND NOT EXISTS (SELECT 1 FROM WorkshopMedia WHERE WorkshopId = w.Id);
+
+INSERT INTO WorkshopMedia (WorkshopId, Url, DisplayOrder, MediaType, UploadedAt, IsPrimary)
+SELECT Id, 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?q=80&w=800&auto=format&fit=crop', 1, 0, GETUTCDATE(), 1 FROM Workshops w 
+WHERE Slug = 'doc-photography' AND NOT EXISTS (SELECT 1 FROM WorkshopMedia WHERE WorkshopId = w.Id);
+
+INSERT INTO WorkshopMedia (WorkshopId, Url, DisplayOrder, MediaType, UploadedAt, IsPrimary)
+SELECT Id, 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=800&auto=format&fit=crop', 1, 0, GETUTCDATE(), 1 FROM Workshops w 
+WHERE Slug = 'madal-music' AND NOT EXISTS (SELECT 1 FROM WorkshopMedia WHERE WorkshopId = w.Id);
+
+INSERT INTO WorkshopMedia (WorkshopId, Url, DisplayOrder, MediaType, UploadedAt, IsPrimary)
+SELECT Id, 'https://images.unsplash.com/photo-1559136555-e46be1855a8f?q=80&w=800&auto=format&fit=crop', 1, 0, GETUTCDATE(), 1 FROM Workshops w 
+WHERE Slug = 'startup-strategy' AND NOT EXISTS (SELECT 1 FROM WorkshopMedia WHERE WorkshopId = w.Id);
+
+INSERT INTO WorkshopMedia (WorkshopId, Url, DisplayOrder, MediaType, UploadedAt, IsPrimary)
+SELECT Id, 'https://images.unsplash.com/photo-1543269664-76bc3997d9ea?q=80&w=800&auto=format&fit=crop', 1, 0, GETUTCDATE(), 1 FROM Workshops w 
+WHERE Slug = 'nepali-language' AND NOT EXISTS (SELECT 1 FROM WorkshopMedia WHERE WorkshopId = w.Id);
+
+INSERT INTO WorkshopMedia (WorkshopId, Url, DisplayOrder, MediaType, UploadedAt, IsPrimary)
+SELECT Id, 'https://images.unsplash.com/photo-1594912959825-961fa1c5d9bd?q=80&w=800&auto=format&fit=crop', 1, 0, GETUTCDATE(), 1 FROM Workshops w 
+WHERE Slug = 'bamboo-furniture' AND NOT EXISTS (SELECT 1 FROM WorkshopMedia WHERE WorkshopId = w.Id);
+
+INSERT INTO WorkshopMedia (WorkshopId, Url, DisplayOrder, MediaType, UploadedAt, IsPrimary)
+SELECT Id, 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?q=80&w=800&auto=format&fit=crop', 1, 0, GETUTCDATE(), 1 FROM Workshops w 
+WHERE Slug = 'science-kids' AND NOT EXISTS (SELECT 1 FROM WorkshopMedia WHERE WorkshopId = w.Id);

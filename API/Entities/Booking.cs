@@ -78,5 +78,5 @@ public class Booking
     [Column(TypeName = "decimal(18,2)")]
     public decimal HostEarnings { get; set; } // The amount the host receives (Total - Fee)
 
-    public PayoutStatus PayoutStatus { get; set; } = PayoutStatus.Pending; // Pending, Paid
+    public PayoutStatus PayoutStatus { get; set; } = PayoutStatus.Escrow; // Escrow -> Ready -> Paid
 }

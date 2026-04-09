@@ -223,7 +223,8 @@ public class BookingService : IBookingService
             booking.PaymentStatus = refundPct > 0 ? PaymentStatus.Refunded : PaymentStatus.Paid;
             booking.BookingStatus = refundPct > 0 ? BookingStatus.Refunded : BookingStatus.Cancelled;
 
-            if (refundPct > 0 && booking.HostEarnings > 0)
+            // Only claw back if it was already released to the wallet
+            if (refundPct > 0 && booking.HostEarnings > 0 && booking.PayoutStatus != PayoutStatus.Escrow)
             {
                 var hostClawback = Math.Round(booking.HostEarnings * refundPct / 100, 2);
                 var scheduleWithProvider = await _context.WorkshopSchedules
@@ -235,6 +236,8 @@ public class BookingService : IBookingService
                     scheduleWithProvider.Workshop.Provider.WalletBalance -= hostClawback;
                 }
             }
+            
+            booking.PayoutStatus = PayoutStatus.Cancelled;
         }
 
         _bookingRepository.Update(booking);
@@ -247,16 +250,17 @@ public class BookingService : IBookingService
             RefundPercentage = refundPct,
             RefundAmount = refundAmount,
             HoursNotice = hoursUntilWorkshop,
-            Message = refundPct == 100 ? "Full refund will be processed within 3–5 business days."
-                    : refundPct == 50  ? "A 50% partial refund will be processed within 3–5 business days."
+            Message = refundPct == 100 ? "A full refund of the booking amount has been processed."
                     : "No refund is applicable as the cancellation was made less than 24 hours before the workshop."
         };
     }
 
     private static int CalculateRefundPercentage(double hoursUntilWorkshop)
     {
-        if (hoursUntilWorkshop > 48) return 100;
-        if (hoursUntilWorkshop > 24) return 50;
+        // 100% refund if cancelled more than 24 hours before the event
+        if (hoursUntilWorkshop > 24) return 100;
+        
+        // No refund if less than 24 hours notice
         return 0;
     }
 
@@ -284,18 +288,7 @@ public class BookingService : IBookingService
 
         booking.PlatformFee = Math.Round(booking.TotalAmount * commissionRate / 100, 2);
         booking.HostEarnings = booking.TotalAmount - booking.PlatformFee;
-        booking.PayoutStatus = PayoutStatus.Pending;
-
-        // Credit the host wallet
-        var schedule = await _context.WorkshopSchedules
-            .Include(s => s.Workshop)
-                .ThenInclude(w => w.Provider)
-            .FirstOrDefaultAsync(s => s.Id == booking.WorkshopScheduleId);
-
-        if (schedule?.Workshop?.Provider != null)
-        {
-            schedule.Workshop.Provider.WalletBalance += booking.HostEarnings;
-        }
+        booking.PayoutStatus = PayoutStatus.Escrow;
 
         _bookingRepository.Update(booking);
         await _bookingRepository.SaveChangesAsync();

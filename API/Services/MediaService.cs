@@ -15,7 +15,7 @@ public class MediaService : IMediaService
     private const long MaxImageSizeBytes = 10 * 1024 * 1024; // 10MB
     private const long MaxVideoSizeBytes = 100 * 1024 * 1024; // 100MB
 
-    private static readonly string[] AllowedImageTypes = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+    private static readonly string[] AllowedImageTypes = { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf" };
     private static readonly string[] AllowedVideoTypes = { ".mp4", ".mov", ".avi", ".webm" };
 
     public MediaService(IConfiguration configuration, ILogger<MediaService> logger)
@@ -32,6 +32,20 @@ public class MediaService : IMediaService
     public async Task<string> UploadImageAsync(IFormFile file, string folder = "workshops")
     {
         ValidateFile(file, AllowedImageTypes, MaxImageSizeBytes);
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+
+        if (extension == ".pdf")
+        {
+            var rawParams = new RawUploadParams
+            {
+                File = new FileDescription(file.FileName, file.OpenReadStream()),
+                Folder = folder
+            };
+
+            var res = await _cloudinary.UploadAsync(rawParams);
+            if (res.Error != null) throw new Exception($"Cloudinary error: {res.Error.Message}");
+            return res.SecureUrl.ToString();
+        }
 
         var uploadParams = new ImageUploadParams
         {

@@ -58,7 +58,8 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
         return await _dbSet.AnyAsync(b => 
             b.UserId == userId 
             && b.WorkshopScheduleId == scheduleId
-            && b.BookingStatus != BookingStatus.Cancelled);
+            && b.BookingStatus != BookingStatus.Cancelled
+            && b.BookingStatus != BookingStatus.Refunded);
     }
 
     public async Task<List<int>> GetBookedScheduleIdsForUserAsync(string userId, int workshopId)
@@ -66,7 +67,8 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
         return await _context.Bookings
             .Where(b => b.UserId == userId 
                      && b.WorkshopSchedule.WorkshopId == workshopId
-                     && b.BookingStatus != BookingStatus.Cancelled)
+                     && b.BookingStatus != BookingStatus.Cancelled
+                     && b.BookingStatus != BookingStatus.Refunded)
             .Select(b => b.WorkshopScheduleId)
             .Distinct()
             .ToListAsync();
@@ -76,7 +78,8 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
     {
         return await _dbSet
             .Where(b => b.WorkshopScheduleId == scheduleId 
-                     && b.BookingStatus != BookingStatus.Cancelled)
+                     && b.BookingStatus != BookingStatus.Cancelled
+                     && b.BookingStatus != BookingStatus.Refunded)
             .SumAsync(b => b.NumberOfSeats);
     }
 
