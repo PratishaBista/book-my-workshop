@@ -28,7 +28,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 <motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="relative z-10 -mt-16 md:-mt-24"
+                    className="relative z-10 mt-6 md:mt-10"
                 >
                     <div className="w-32 h-32 md:w-44 md:h-44 rounded-full bg-cream-base p-1.5 shadow-2xl overflow-hidden border border-white/40">
                         <div className="w-full h-full rounded-full overflow-hidden bg-primary-orange/5 relative group">
@@ -43,22 +43,17 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                     </div>
                 </motion.div>
 
-                <div className="flex-1 pt-3 md:pt-6 space-y-4">
-                    <div className="flex flex-wrap items-center gap-4 md:gap-6">
-                        <motion.div
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="flex items-center gap-3 text-primary-orange font-bold text-xs tracking-[0.2em] uppercase whitespace-nowrap"
-                        >
-                            <div className="w-10 h-[2px] bg-primary-orange/60" />
-                            <span>{profile?.fullName || '[empty]'}</span>
-                        </motion.div>
+                <div className="flex-1 pt-3 md:pt-12 space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-4 md:gap-6">
+                        <h2 className="text-3xl md:text-5xl font-serif font-bold text-deep-purple tracking-tight leading-tight">
+                            {profile?.fullName || '[empty]'}
+                        </h2>
 
                         <div className="flex items-center gap-3">
                             {isOwnProfile && (
                                 <Link
                                     to="/settings/edit-profile"
-                                    className="px-4 py-1.5 bg-deep-purple text-cream-base hover:bg-deep-purple/90 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-md active:scale-95"
+                                    className="px-4 py-2 bg-deep-purple text-cream-base hover:bg-deep-purple/90 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-95"
                                 >
                                     Edit Profile
                                 </Link>

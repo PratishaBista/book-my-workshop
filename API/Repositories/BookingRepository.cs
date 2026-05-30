@@ -18,6 +18,7 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
     public async Task<IEnumerable<Booking>> GetUserBookingsAsync(string userId)
     {
         return await _dbSet
+            .Include(b => b.Review)
             .Include(b => b.WorkshopSchedule)
                 .ThenInclude(s => s.Workshop)
                     .ThenInclude(w => w.Categories)
@@ -33,6 +34,7 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
     {
         return await _dbSet
             .Include(b => b.User)
+            .Include(b => b.Review)
             .Include(b => b.WorkshopSchedule)
                 .ThenInclude(s => s.Workshop)
                     .ThenInclude(w => w.Categories)
@@ -48,27 +50,57 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
     public async Task<Booking?> GetBookingByConfirmationCodeAsync(string confirmationCode)
     {
         return await _dbSet
+            .Include(b => b.User)
+            .Include(b => b.Review)
             .Include(b => b.WorkshopSchedule)
                 .ThenInclude(s => s.Workshop)
+                    .ThenInclude(w => w.Media.OrderBy(m => m.DisplayOrder))
             .FirstOrDefaultAsync(b => b.ConfirmationCode == confirmationCode);
     }
 
     public async Task<bool> HasUserBookedScheduleAsync(string userId, int scheduleId)
     {
-        return await _dbSet.AnyAsync(b => 
-            b.UserId == userId 
+        return await _dbSet.AnyAsync(b =>
+            b.UserId == userId
             && b.WorkshopScheduleId == scheduleId
             && b.BookingStatus != BookingStatus.Cancelled
-            && b.BookingStatus != BookingStatus.Refunded);
+            && b.BookingStatus != BookingStatus.Refunded
+            && !(b.BookingStatus == BookingStatus.Pending && b.PaymentStatus == PaymentStatus.Pending));
+    }
+
+    public async Task<Booking?> GetPendingUnpaidBookingAsync(string userId, int scheduleId)
+    {
+        return await _dbSet
+            .Include(b => b.WorkshopSchedule)
+                .ThenInclude(s => s.Workshop)
+                    .ThenInclude(w => w.Media.OrderBy(m => m.DisplayOrder))
+            .FirstOrDefaultAsync(b =>
+                b.UserId == userId
+                && b.WorkshopScheduleId == scheduleId
+                && b.BookingStatus == BookingStatus.Pending
+                && b.PaymentStatus == PaymentStatus.Pending);
     }
 
     public async Task<List<int>> GetBookedScheduleIdsForUserAsync(string userId, int workshopId)
     {
         return await _context.Bookings
-            .Where(b => b.UserId == userId 
+            .Where(b => b.UserId == userId
                      && b.WorkshopSchedule.WorkshopId == workshopId
                      && b.BookingStatus != BookingStatus.Cancelled
-                     && b.BookingStatus != BookingStatus.Refunded)
+                     && b.BookingStatus != BookingStatus.Refunded
+                     && !(b.BookingStatus == BookingStatus.Pending && b.PaymentStatus == PaymentStatus.Pending))
+            .Select(b => b.WorkshopScheduleId)
+            .Distinct()
+            .ToListAsync();
+    }
+
+    public async Task<List<int>> GetPendingPaymentScheduleIdsForUserAsync(string userId, int workshopId)
+    {
+        return await _context.Bookings
+            .Where(b => b.UserId == userId
+                     && b.WorkshopSchedule.WorkshopId == workshopId
+                     && b.BookingStatus == BookingStatus.Pending
+                     && b.PaymentStatus == PaymentStatus.Pending)
             .Select(b => b.WorkshopScheduleId)
             .Distinct()
             .ToListAsync();
@@ -92,6 +124,7 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
             .AnyAsync(b => b.UserId == userId
                         && b.WorkshopSchedule.WorkshopId == workshopId
                         && b.BookingStatus == BookingStatus.Confirmed
+                        && b.AttendanceStatus == AttendanceStatus.CheckedIn
                         && b.WorkshopSchedule.Status == ScheduleStatus.Completed);
     }
 }

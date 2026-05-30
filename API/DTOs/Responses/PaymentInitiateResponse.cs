@@ -14,4 +14,5 @@ public class PaymentInitiateResponse
     public string SignedFieldNames { get; set; } = string.Empty;
     public string Signature { get; set; } = string.Empty;
     public string EsewaUrl { get; set; } = string.Empty;
+    public bool IsFullyPaid { get; set; } = false;
 }

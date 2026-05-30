@@ -10,4 +10,6 @@ public class CreateBookingRequest
     [Required]
     [Range(1, 100)]
     public int NumberOfSeats { get; set; } = 1;
+
+    public bool UseWallet { get; set; } = false;
 }

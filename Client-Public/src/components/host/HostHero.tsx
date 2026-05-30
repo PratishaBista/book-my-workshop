@@ -95,7 +95,7 @@ const HostHero: React.FC = () => {
         e.preventDefault();
         setLoading(true);
 
-        // 1. Client-side Validation
+        // Client-side Validation
         const validationError = validateForm();
         if (validationError) {
             showToast(validationError, 'error');

@@ -1,22 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { API_ENDPOINTS } from '../../config/api';
-
-interface Workshop {
-    id: number;
-    title: string;
-    slug: string;
-    locationName: string;
-    locationAddress: string;
-    categoryName: string;
-    basePrice: number;
-    currency: string;
-    primaryImageUrl: string;
-    averageRating: number | null;
-    reviewCount: number;
-    recommendationScore?: number;
-}
+import { ChevronRight } from 'lucide-react';
+import { useFeaturedWorkshops, useAllPublishedWorkshops, useRecommendedWorkshops } from '../../hooks/useWorkshopQueries';
+import type { Workshop } from '../../hooks/useWorkshopQueries';
+import WorkshopCard from '../workshops/WorkshopCard';
 
 interface WorkshopSectionProps {
     title: string;
@@ -24,10 +12,21 @@ interface WorkshopSectionProps {
     workshops: Workshop[];
     loading: boolean;
     onWorkshopClick: (slugOrId: string) => void;
+    scrollable?: boolean;
 }
 
-const WorkshopSection: React.FC<WorkshopSectionProps> = ({ title, subtitle, workshops, loading, onWorkshopClick }) => {
-    const [wishlist, setWishlist] = useState<number[]>([]);
+const WorkshopSection: React.FC<WorkshopSectionProps> = ({
+    title,
+    subtitle,
+    workshops,
+    loading,
+    onWorkshopClick,
+    scrollable = true,
+}) => {
+    const [wishlist, setWishlist] = useState<number[]>(() => {
+        const stored = localStorage.getItem('wishlist');
+        return stored ? JSON.parse(stored) : [];
+    });
     const [showLoginToast, setShowLoginToast] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
@@ -42,106 +41,82 @@ const WorkshopSection: React.FC<WorkshopSectionProps> = ({ title, subtitle, work
             }, 1500);
             return;
         }
-        
-        setWishlist(prev =>
-            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-        );
+
+        setWishlist((prev) => {
+            const next = prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id];
+            localStorage.setItem('wishlist', JSON.stringify(next));
+            return next;
+        });
     };
 
     if (loading) {
         return (
-            <div className="py-20 flex justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-orange"></div>
+            <div className="py-16 flex justify-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary-orange/20 border-t-primary-orange" />
             </div>
         );
     }
 
     if (workshops.length === 0) return null;
 
-    return (
-        <div className="mb-24">
-            <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 border-b border-deep-purple/10 pb-8">
-                <div>
-                    <h2 className="text-4xl md:text-6xl font-serif text-deep-purple leading-none tracking-tight mb-2">
-                        {title}
-                    </h2>
-                    {subtitle && <p className="text-deep-purple/60 font-sans text-lg italic">{subtitle}</p>}
-                </div>
-            </div>
+    const cardProps = (workshop: Workshop) => ({
+        workshop,
+        layout: 'compact' as const,
+        onClick: () => onWorkshopClick(workshop.slug || workshop.id.toString()),
+        wishlisted: wishlist.includes(workshop.id),
+        onToggleWishlist: (e: React.MouseEvent) => {
+            e.stopPropagation();
+            toggleWishlist(workshop.id);
+        },
+    });
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-16">
-                <AnimatePresence mode="popLayout">
+    return (
+        <div className="mb-20">
+            {(title || subtitle) && (
+                <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+                    <div>
+                        {title && (
+                            <h2 className="text-3xl md:text-4xl font-serif text-deep-purple leading-tight tracking-tight">
+                                {title}
+                            </h2>
+                        )}
+                        {subtitle && (
+                            <p className="text-deep-purple/55 font-sans text-base mt-1">{subtitle}</p>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {scrollable ? (
+                <div className="relative -mx-6 px-6 md:-mx-0 md:px-0">
+                    <div className="flex gap-4 md:gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth hide-scrollbar">
+                        {workshops.map((workshop) => (
+                            <motion.div
+                                key={workshop.id}
+                                initial={{ opacity: 0, y: 12 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true, margin: '-40px' }}
+                                className="snap-start shrink-0 w-[72vw] sm:w-[42vw] md:w-[calc(25%-15px)] lg:w-[calc(20%-16px)] min-w-[200px] max-w-[260px]"
+                            >
+                                <WorkshopCard {...cardProps(workshop)} />
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+            ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-10 md:gap-x-5 md:gap-y-12">
                     {workshops.map((workshop) => (
                         <motion.div
                             key={workshop.id}
-                            layout
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.5 }}
-                            className="group cursor-pointer"
-                            onClick={() => onWorkshopClick(workshop.slug || workshop.id.toString())}
+                            initial={{ opacity: 0, y: 12 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
                         >
-                            <div className="relative aspect-[4/3] mb-6 overflow-hidden bg-gray-200 rounded-sm shadow-sm">
-                                {workshop.primaryImageUrl ? (
-                                    <img
-                                        src={workshop.primaryImageUrl}
-                                        alt={workshop.title}
-                                        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full bg-gradient-to-br from-deep-purple/10 to-primary-orange/10 flex items-center justify-center">
-                                        <span className="text-deep-purple/20 font-serif text-4xl">Image</span>
-                                    </div>
-                                )}
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); toggleWishlist(workshop.id); }}
-                                    className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-full hover:bg-white transition-colors z-10"
-                                >
-                                    <svg
-                                        viewBox="0 0 24 24"
-                                        className={`w-5 h-5 transition-colors ${wishlist.includes(workshop.id) ? 'fill-primary-orange stroke-primary-orange' : 'fill-transparent stroke-gray-900'}`}
-                                        strokeWidth="2"
-                                    >
-                                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                                    </svg>
-                                </button>
-                            </div>
-
-                            <div className="flex flex-col gap-3">
-                                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-deep-purple/40 border-b border-deep-purple/5 pb-3">
-                                    <span>{workshop.categoryName}</span>
-                                    <div className='flex items-center gap-1.5'>
-                                        <span className={workshop.averageRating ? "text-primary-orange" : "text-gray-300"}>★</span>
-                                        <span className="text-deep-purple font-bold">
-                                            {workshop.averageRating ? (
-                                                <>
-                                                    {workshop.averageRating.toFixed(1)}
-                                                    <span className="text-gray-400 font-normal ml-1">({workshop.reviewCount})</span>
-                                                </>
-                                            ) : (
-                                                <span className="text-gray-300 font-normal">New</span>
-                                            )}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <h3 className="text-2xl font-serif text-deep-purple leading-tight group-hover:text-primary-orange transition-colors line-clamp-2">
-                                    {workshop.title}
-                                </h3>
-
-                                <div className="flex items-center justify-between mt-2">
-                                    <span className="text-deep-purple/50 text-xs font-sans tracking-wide">{workshop.locationName}</span>
-                                    <span className="font-bold text-deep-purple text-xl">
-                                        <span className="text-xs font-normal opacity-50 mr-1">{workshop.currency}</span>
-                                        {workshop.basePrice}
-                                    </span>
-                                </div>
-                            </div>
+                            <WorkshopCard {...cardProps(workshop)} />
                         </motion.div>
                     ))}
-                </AnimatePresence>
-            </div>
+                </div>
+            )}
 
             <AnimatePresence>
                 {showLoginToast && (
@@ -149,9 +124,11 @@ const WorkshopSection: React.FC<WorkshopSectionProps> = ({ title, subtitle, work
                         initial={{ y: 50, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 50, opacity: 0 }}
-                        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-deep-purple text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-4"
+                        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-deep-purple text-white px-8 py-4 rounded-full shadow-2xl"
                     >
-                        <span className="font-sans font-bold text-sm uppercase tracking-widest">Please log in to save your wishlist.</span>
+                        <span className="font-sans font-bold text-sm uppercase tracking-widest">
+                            Please log in to save your wishlist.
+                        </span>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -161,112 +138,65 @@ const WorkshopSection: React.FC<WorkshopSectionProps> = ({ title, subtitle, work
 
 const WorkshopListing: React.FC = () => {
     const navigate = useNavigate();
-    const [personalized, setPersonalized] = useState<Workshop[]>([]);
-    const [featured, setFeatured] = useState<Workshop[]>([]);
-    const [latest, setLatest] = useState<Workshop[]>([]);
-    const [loading, setLoading] = useState({ personalized: true, featured: true, latest: true });
-
     const token = localStorage.getItem('token');
 
-    useEffect(() => {
-        const fetchPersonalized = async () => {
-            try {
-                const response = await fetch(API_ENDPOINTS.workshop.userRecommendations, {
-                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    setPersonalized(data);
-                }
-            } catch (error) {
-                console.error('Error fetching recommendations:', error);
-            } finally {
-                setLoading(prev => ({ ...prev, personalized: false }));
-            }
-        };
+    const { data: personalized = [], isLoading: loadingPersonalized } = useRecommendedWorkshops(token);
+    const { data: featured = [], isLoading: loadingFeatured } = useFeaturedWorkshops();
+    const { data: allWorkshops = [], isLoading: loadingLatest } = useAllPublishedWorkshops();
 
-        const fetchFeatured = async () => {
-            try {
-                const response = await fetch(API_ENDPOINTS.workshop.featured);
-                if (response.ok) {
-                    const data = await response.json();
-                    setFeatured(data);
-                }
-            } catch (error) {
-                console.error('Error fetching featured:', error);
-            } finally {
-                setLoading(prev => ({ ...prev, featured: false }));
-            }
-        };
-
-        const fetchLatest = async () => {
-            try {
-                const response = await fetch(API_ENDPOINTS.workshop.public);
-                if (response.ok) {
-                    const data = await response.json();
-                    let filtered = data.filter((w: Workshop) =>
-                        !personalized.some(p => p.id === w.id)
-                    );
-                    
-                    for (let i = filtered.length - 1; i > 0; i--) {
-                        const j = Math.floor(Math.random() * (i + 1));
-                        [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
-                    }
-                    
-                    setLatest(filtered.slice(0, 6));
-                }
-            } catch (error) {
-                console.error('Error fetching latest:', error);
-            } finally {
-                setLoading(prev => ({ ...prev, latest: false }));
-            }
-        };
-
-        fetchPersonalized();
-        fetchFeatured();
-        fetchLatest();
-    }, [token]);
+    const latest = useMemo(() => {
+        const filtered = allWorkshops.filter(
+            (w: Workshop) => !personalized.some((p) => p.id === w.id) && !featured.some((f) => f.id === w.id)
+        );
+        const shuffled = [...filtered];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled.slice(0, 12);
+    }, [allWorkshops, personalized, featured]);
 
     const handleWorkshopClick = (slugOrId: string) => {
         navigate(`/workshop/${slugOrId}`);
     };
 
     return (
-        <section className="py-24 md:py-32 px-6 bg-[#F9F9F5]">
-            <div className="max-w-7xl mx-auto">
-                {token && (
+        <section id="explore-workshops" className="py-20 md:py-28 px-6 bg-[#F9F9F5]">
+            <div className="max-w-[1600px] mx-auto">
+                {token && personalized.length > 0 && (
                     <WorkshopSection
-                        title="Handpicked for You"
-                        subtitle="Based on your unique interests"
+                        title="Picked for you"
+                        subtitle="Based on your interests"
                         workshops={personalized}
-                        loading={loading.personalized}
+                        loading={loadingPersonalized}
                         onWorkshopClick={handleWorkshopClick}
                     />
                 )}
 
                 <WorkshopSection
-                    title="Trending Sessions"
-                    subtitle="Most popular and highly rated experiences"
+                    title="Trending sessions"
+                    subtitle="Popular experiences near you"
                     workshops={featured}
-                    loading={loading.featured}
+                    loading={loadingFeatured}
                     onWorkshopClick={handleWorkshopClick}
                 />
 
                 <WorkshopSection
-                    title="Explore More"
-                    subtitle="Discover new workshops happening around you"
+                    title="Explore more"
+                    subtitle="Fresh workshops to book"
                     workshops={latest}
-                    loading={loading.latest}
+                    loading={loadingLatest}
                     onWorkshopClick={handleWorkshopClick}
                 />
 
-                <div className="mt-20 border-t border-deep-purple/10 pt-8 flex justify-end">
+                <div className="mt-4 pt-8 border-t border-deep-purple/10 flex justify-end">
                     <button
+                        type="button"
                         onClick={() => navigate('/workshops')}
-                        className="text-xl font-serif italic text-deep-purple transition-colors flex items-center gap-2 group"
+                        className="text-lg font-serif text-deep-purple transition-colors flex items-center gap-2 group"
                     >
-                        See all workshops
-                        <span className="group-hover:translate-x-2 transition-transform duration-300">→</span>
+                        Browse all workshops
+                        <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
                     </button>
                 </div>
             </div>

@@ -65,6 +65,9 @@ export interface WorkshopPricing {
 export interface ProviderResponse {
     id: number;
     businessName: string;
+    slug?: string;
+    tagline?: string;
+    description?: string;
     address?: string;
     logoUrl?: string;
     coverImageUrl?: string;
@@ -117,6 +120,7 @@ export interface WorkshopDetail {
     averageRating?: number;
     reviewCount: number;
     bookedScheduleIds?: number[];
+    pendingPaymentScheduleIds?: number[];
     whatToBring?: string;
     skillLevel?: string;
     suitability?: string;

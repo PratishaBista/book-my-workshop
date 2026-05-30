@@ -73,13 +73,13 @@ const Footer: React.FC = () => {
                                     placeholder="(Enter your email)"
                                     className="w-full bg-transparent py-4 text-deep-purple placeholder:text-deep-purple/30 focus:outline-none font-medium text-lg"
                                 />
-                                    <button
-                                        onClick={handleSubscribe}
-                                        disabled={loading}
-                                        className="absolute right-0 top-1/2 -translate-y-1/2 text-primary-orange font-serif italic text-xl hover:text-deep-purple transition-colors disabled:opacity-50"
-                                    >
-                                        {loading ? '...' : 'Subscribe'}
-                                    </button>
+                                <button
+                                    onClick={handleSubscribe}
+                                    disabled={loading}
+                                    className="absolute right-0 top-1/2 -translate-y-1/2 text-primary-orange font-serif italic text-xl hover:text-deep-purple transition-colors disabled:opacity-50"
+                                >
+                                    {loading ? '...' : 'Subscribe'}
+                                </button>
                             </div>
                         )}
                     </div>
@@ -89,35 +89,33 @@ const Footer: React.FC = () => {
                     <div className="flex-1">
                         <h4 className="font-mono text-xs uppercase tracking-[0.2em] text-deep-purple/40 mb-8 font-bold">(Explore)</h4>
                         <ul className="space-y-6 font-serif text-4xl md:text-5xl text-deep-purple tracking-tight">
-                            {['Workshops', 'Gift Cards', 'Stories', 'Calendar'].map(item => (
-                                <li key={item}>
-                                    <Link to="#" className="hover:text-primary-orange hover:italic transition-all duration-300 transform origin-left inline-block">{item}</Link>
-                                </li>
-                            ))}
+                            <li><Link to="/workshops">Workshops</Link></li>
+                            <li><Link to="/reviews">Reviews</Link></li>
+                            <li><Link to="/articles">Stories</Link></li>
                         </ul>
                     </div>
 
                     <div className="flex-1">
                         <h4 className="font-mono text-xs uppercase tracking-[0.2em] text-deep-purple/40 mb-8 font-bold">(Company)</h4>
                         <ul className="space-y-6 font-serif text-4xl md:text-5xl text-deep-purple tracking-tight">
-                            <li><Link to="/about" className="hover:text-primary-orange hover:italic transition-all duration-300 transform origin-left inline-block">About Us</Link></li>
-                            <li><Link to="/contact" className="hover:text-primary-orange hover:italic transition-all duration-300 transform origin-left inline-block">Contact Us</Link></li>
-                            <li><Link to="/host-workshop" className="hover:text-primary-orange hover:italic transition-all duration-300 transform origin-left inline-block">Become a Host</Link></li>
+                            <li><Link to="/about" className="">About Us</Link></li>
+                            <li><Link to="/contact" className="">Contact Us</Link></li>
+                            <li><Link to="/host-workshop" className="">Become a Host</Link></li>
                         </ul>
 
                         <div className="mt-20">
                             <h4 className="font-mono text-xs uppercase tracking-[0.2em] text-deep-purple/40 mb-8 font-bold">(Connect with us)</h4>
                             <div className="flex gap-8">
-                                <a href="#" className="text-deep-purple/60 hover:text-primary-orange transition-all duration-300 hover:scale-110">
+                                <a href="#" className="text-deep-purple/60">
                                     <Instagram size={36} strokeWidth={1} />
                                 </a>
-                                <a href="#" className="text-deep-purple/60 hover:text-primary-orange transition-all duration-300 hover:scale-110">
+                                <a href="#" className="text-deep-purple/60">
                                     <Facebook size={36} strokeWidth={1} />
                                 </a>
-                                <a href="#" className="text-deep-purple/60 hover:text-primary-orange transition-all duration-300 hover:scale-110">
+                                <a href="#" className="text-deep-purple/60">
                                     <Youtube size={36} strokeWidth={1} />
                                 </a>
-                                <a href="#" className="text-deep-purple/60 hover:text-primary-orange transition-all duration-300 hover:scale-110">
+                                <a href="#" className="text-deep-purple/60">
                                     <Twitter size={36} strokeWidth={1} />
                                 </a>
                             </div>
@@ -145,8 +143,8 @@ const Footer: React.FC = () => {
                     </div>
 
                     <div className="flex gap-8 text-[11px] font-mono text-deep-purple/40 font-bold uppercase tracking-[0.2em] pb-2">
-                        <Link to="#" className='hover:text-primary-orange transition-colors'>Terms</Link>
-                        <Link to="#" className='hover:text-primary-orange transition-colors'>Privacy</Link>
+                        <Link to="/terms" className='hover:text-primary-orange transition-colors'>Terms</Link>
+                        <Link to="/privacy" className='hover:text-primary-orange transition-colors'>Privacy</Link>
                     </div>
                 </div>
             </div>

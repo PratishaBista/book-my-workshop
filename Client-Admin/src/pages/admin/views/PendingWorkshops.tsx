@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, X, BrainCircuit, AlertTriangle, CheckCircle } from 'lucide-react';
+import { ChevronRight, X, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { PendingWorkshop } from '../../../types/admin';
 import { API_ENDPOINTS } from '../../../config/api';
 
-interface MLSuggestion {
-    suggested_category: string;
-    confidence_score: number;
-    is_confident: boolean;
-}
+
 
 export const PendingWorkshops: React.FC = () => {
     const [workshops, setWorkshops] = useState<PendingWorkshop[]>([]);
@@ -16,11 +12,9 @@ export const PendingWorkshops: React.FC = () => {
     const [selectedItem, setSelectedItem] = useState<PendingWorkshop | null>(null);
     const [confirmAction, setConfirmAction] = useState<{ type: 'approve' | 'reject'; itemId: number; } | null>(null);
 
-    // ML Specific State
-    const [isMLAnalyzing, setIsMLAnalyzing] = useState(false);
-    const [mlSuggestion, setMLSuggestion] = useState<MLSuggestion | null>(null);
     const [categories, setCategories] = useState<any[]>([]);
     const [manualCategoryId, setManualCategoryId] = useState<number | undefined>();
+    const [rejectReason, setRejectReason] = useState('');
 
     const fetchCategories = async () => {
         try {
@@ -45,65 +39,18 @@ export const PendingWorkshops: React.FC = () => {
         fetchCategories();
     }, []);
 
-    const fetchMLSuggestion = async (workshop: PendingWorkshop) => {
-        setIsMLAnalyzing(true);
-        setMLSuggestion(null);
-        const token = localStorage.getItem('token');
-
-        try {
-            const res = await fetch(API_ENDPOINTS.ml.suggestCategory, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    title: workshop.title,
-                    description: workshop.description
-                })
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                setMLSuggestion(data);
-            }
-        } catch (e) {
-            console.error('ML Inference Error:', e);
-        } finally {
-            setIsMLAnalyzing(false);
-        }
-    };
-
     const handleSelectWorkshop = (workshop: PendingWorkshop) => {
         setSelectedItem(workshop);
-
-        // Auto-populate from stored AI data if available
-        if (workshop.aiSuggestedCategory) {
-            setMLSuggestion({
-                suggested_category: workshop.aiSuggestedCategory,
-                confidence_score: workshop.aiConfidenceScore || 0,
-                is_confident: workshop.aiIsConfident || false
-            });
-            setIsMLAnalyzing(false);
-
-            // Auto-select if confident
-            const match = categories.find(c => c.name === workshop.aiSuggestedCategory);
-            if (match && workshop.aiIsConfident) setManualCategoryId(match.id);
+        
+        // Auto-select existing category if present
+        if (workshop.categoryNames && workshop.categoryNames.length > 0) {
+            const match = categories.find(c => c.name === workshop.categoryNames[0]);
+            if (match) setManualCategoryId(match.id);
             else setManualCategoryId(undefined);
-
         } else {
-            // Fallback for legacy records without AI data
-            fetchMLSuggestion(workshop);
+            setManualCategoryId(undefined);
         }
     };
-
-    // Auto-select ML suggestion when it arrives
-    useEffect(() => {
-        if (mlSuggestion && mlSuggestion.is_confident) {
-            const match = categories.find(c => c.name === mlSuggestion.suggested_category);
-            if (match) setManualCategoryId(match.id);
-        }
-    }, [mlSuggestion, categories]);
 
     const executeAction = async () => {
         if (!confirmAction) return;
@@ -121,12 +68,16 @@ export const PendingWorkshops: React.FC = () => {
             if (confirmAction.type === 'approve') {
                 options.headers = { ...options.headers, 'Content-Type': 'application/json' };
                 options.body = JSON.stringify({ categoryId: manualCategoryId });
+            } else if (confirmAction.type === 'reject') {
+                options.headers = { ...options.headers, 'Content-Type': 'application/json' };
+                options.body = JSON.stringify({ reason: rejectReason });
             }
 
             const res = await fetch(endpoint, options);
             if (res.ok) {
                 setSelectedItem(null);
                 setConfirmAction(null);
+                setRejectReason('');
                 fetchWorkshops();
             } else {
                 alert("Failed: " + (await res.text()));
@@ -154,7 +105,7 @@ export const PendingWorkshops: React.FC = () => {
                     {loading ? (
                         <div className="p-12 text-center text-slate-600 animate-pulse font-bold uppercase tracking-widest text-xs font-mono">Synchronizing Buffer...</div>
                     ) : workshops.length === 0 ? (
-                        <div className="p-12 text-center text-slate-500 font-medium italic font-mono uppercase tracking-widest text-xs">Queue empty. No pending taxonomy validations.</div>
+                        <div className="p-12 text-center text-slate-500 font-medium italic font-mono uppercase tracking-widest text-xs">Queue empty.</div>
                     ) : (
                         workshops.map(w => (
                             <div key={w.id} onClick={() => handleSelectWorkshop(w)} className={`grid grid-cols-12 gap-4 px-6 py-5 items-center cursor-pointer transition-all border-l-4 ${selectedItem?.id === w.id ? 'bg-[#1D1B26] border-l-indigo-500' : 'hover:bg-[#111] border-l-transparent'}`}>
@@ -189,57 +140,19 @@ export const PendingWorkshops: React.FC = () => {
 
                         {/* Content */}
                         <div className="p-8 flex-grow overflow-y-auto space-y-10 custom-scrollbar">
-                            {/* ML Insight Block */}
-                            <div className="relative overflow-hidden group font-mono">
-                                <div className="absolute inset-0 bg-indigo-500/[0.03] rounded-[2rem] -z-10" />
-                                <div className="p-6 border border-indigo-500/20 rounded-[2rem] space-y-5">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2 text-indigo-400">
-                                            <BrainCircuit size={18} />
-                                            <span className="text-[10px] font-bold uppercase tracking-[0.2em]">System Logic Insight</span>
-                                        </div>
-                                        {isMLAnalyzing && <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />}
-                                    </div>
-
-                                    {mlSuggestion ? (
-                                        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                            <div className="flex items-baseline justify-between mb-2">
-                                                <h3 className="text-2xl font-bold text-white tracking-tighter">
-                                                    {mlSuggestion.suggested_category === "Uncategorized" ? "Expansion Required" : mlSuggestion.suggested_category}
-                                                </h3>
-                                                <div className={`text-[10px] font-bold px-2 py-0.5 rounded ${mlSuggestion.is_confident ? 'bg-emerald-500/10 text-emerald-400' : 'bg-orange-500/10 text-orange-400'}`}>
-                                                    {Math.round(mlSuggestion.confidence_score * 100)}% Match
-                                                </div>
-                                            </div>
-
-                                            <p className="text-[10px] text-slate-500 leading-relaxed font-medium uppercase tracking-wide">
-                                                {mlSuggestion.is_confident
-                                                    ? `High confidence match discovered. Taxonomy vectors aligned with "${mlSuggestion.suggested_category}" cluster.`
-                                                    : `Taxonomy collision detected. Suggesting manual node placement.`}
-                                            </p>
-
-                                            {!mlSuggestion.is_confident && (
-                                                <div className="mt-4 flex items-center gap-2 p-3 bg-orange-500/5 rounded-xl border border-orange-500/20">
-                                                    <AlertTriangle size={14} className="text-orange-400" />
-                                                    <span className="text-[9px] font-bold text-orange-400 uppercase tracking-widest">Anomaly: Topology Conflict</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : !isMLAnalyzing && (
-                                        <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest italic opacity-50">Pulse trigger required for inference...</p>
-                                    )}
-
-                                    {/* Manual Override Dropdown */}
-                                    <div className="pt-4 border-t border-white/5">
+                            {/* Manual Override Dropdown */}
+                            <div className="font-mono">
+                                <div className="p-6 border border-[#222] rounded-[2rem] space-y-5 bg-[#0D0D0D]">
+                                    <div>
                                         <label className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] block mb-3">
-                                            {mlSuggestion?.is_confident ? 'Verified Cluster' : 'Manual Placement'}
+                                            Workshop Category Placement
                                         </label>
                                         <select
                                             value={manualCategoryId || ''}
                                             onChange={(e) => setManualCategoryId(Number(e.target.value))}
-                                            className={`w-full bg-black border rounded-xl px-4 py-3 text-xs font-bold text-slate-300 outline-none focus:border-indigo-500 transition-colors ${!mlSuggestion?.is_confident && !manualCategoryId ? 'border-orange-500/50' : 'border-[#222]'}`}
+                                            className={`w-full bg-black border rounded-xl px-4 py-3 text-xs font-bold text-slate-300 outline-none focus:border-indigo-500 transition-colors ${!manualCategoryId ? 'border-orange-500/50' : 'border-[#222]'}`}
                                         >
-                                            <option value="">-- SELECT TAXONOMY NODE --</option>
+                                            <option value="">-- SELECT CATEGORY --</option>
                                             {categories.map(c => (
                                                 <option key={c.id} value={c.id}>{c.name.toUpperCase()}</option>
                                             ))}
@@ -303,11 +216,11 @@ export const PendingWorkshops: React.FC = () => {
                                 <h3 className="text-xl font-bold text-white font-sans tracking-tight">
                                     {confirmAction.type === 'approve' ? 'Authorize Submission?' : 'Confirm Rejection?'}
                                 </h3>
-                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Marketplace Propagation Imminent</p>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Marketplace</p>
 
                                 {confirmAction.type === 'approve' && (
                                     <div className="text-left pt-4 p-5 bg-[#000] rounded-xl border border-[#1A1A1A]">
-                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-2 font-mono">Final Taxonomy Node</p>
+                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-2 font-mono">Final</p>
                                         <p className="text-sm font-bold text-indigo-400 font-mono">
                                             {categories.find(c => c.id === manualCategoryId)?.name.toUpperCase() || <span className="text-red-500 font-bold">UNDEFINED_CLUSTER</span>}
                                         </p>
@@ -316,10 +229,25 @@ export const PendingWorkshops: React.FC = () => {
                                         )}
                                     </div>
                                 )}
+
+                                {confirmAction.type === 'reject' && (
+                                    <div className="text-left pt-4">
+                                        <textarea
+                                            value={rejectReason}
+                                            onChange={(e) => setRejectReason(e.target.value)}
+                                            placeholder="Provide a reason for rejection..."
+                                            className="w-full p-4 rounded-xl border border-[#222] bg-[#0D0D0D] text-slate-300 text-sm focus:border-red-500 focus:ring-1 focus:ring-red-500 focus:outline-none"
+                                            rows={4}
+                                        />
+                                    </div>
+                                )}
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <button onClick={() => setConfirmAction(null)} className="py-4 rounded-xl border border-[#1A1A1A] text-slate-400 font-bold hover:bg-[#111] text-[10px] uppercase tracking-[0.2em] font-mono">Abort</button>
-                                <button onClick={executeAction} disabled={confirmAction.type === 'approve' && !manualCategoryId} className={`py-4 rounded-xl font-bold text-white shadow-lg text-[10px] uppercase tracking-[0.2em] font-mono disabled:opacity-20 disabled:cursor-not-allowed ${confirmAction.type === 'approve' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'}`}>Execute</button>
+                                <button 
+                                    onClick={executeAction} 
+                                    disabled={(confirmAction.type === 'approve' && !manualCategoryId) || (confirmAction.type === 'reject' && !rejectReason.trim())} 
+                                    className={`py-4 rounded-xl font-bold text-white shadow-lg text-[10px] uppercase tracking-[0.2em] font-mono disabled:opacity-20 disabled:cursor-not-allowed ${confirmAction.type === 'approve' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'}`}>Execute</button>
                             </div>
                         </motion.div>
                     </motion.div>

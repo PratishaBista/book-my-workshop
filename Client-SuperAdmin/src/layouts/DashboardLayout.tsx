@@ -6,15 +6,17 @@ import {
     Wallet,
     LogOut,
     BookOpen,
-    History
+    History,
+    Terminal
 } from 'lucide-react';
 
 const navItems = [
     { to: '/dashboard/overview', label: 'Overview', icon: LayoutDashboard },
-    { to: '/dashboard/journal', label: 'The Journal', icon: BookOpen },
+    { to: '/dashboard/journal', label: 'Publish Stories', icon: BookOpen },
     { to: '/dashboard/transactions', label: 'Financial Ledger', icon: History },
     { to: '/dashboard/commission', label: 'Commission', icon: Percent },
     { to: '/dashboard/payouts', label: 'Host Payouts', icon: Wallet },
+    { to: '/dashboard/logs', label: 'System Logs', icon: Terminal },
 ];
 
 const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {

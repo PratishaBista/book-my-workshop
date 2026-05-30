@@ -7,7 +7,6 @@ const NotFoundPage: React.FC = () => {
     return (
         <div className="bg-[#FDFCF8] min-h-screen flex flex-col items-center justify-center p-6 md:p-12 font-mono text-black selection:bg-black selection:text-white">
             <div className="w-full max-w-lg flex flex-col items-center">
-                {/* Simplified Mascot Container */}
                 <div className="w-40 h-40 bg-gray-100 border-4 border-black relative shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] mb-12 flex items-center justify-center">
                      <motion.div
                         animate={{ y: [0, -10, 0] }}

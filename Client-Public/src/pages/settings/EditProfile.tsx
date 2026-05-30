@@ -9,7 +9,6 @@ const EditProfile: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
-    const [uploadingCover, setUploadingCover] = useState(false);
 
     // Toast State
     const [toast, setToast] = useState({
@@ -22,7 +21,6 @@ const EditProfile: React.FC = () => {
         setToast({ message, type, isVisible: true });
     };
 
-    const [initialProfile, setInitialProfile] = useState<any>(null);
     const [profile, setProfile] = useState({
         fullName: '',
         bio: '',
@@ -31,7 +29,6 @@ const EditProfile: React.FC = () => {
         website: '',
         funFact: '',
         profilePictureUrl: '',
-        coverImageUrl: '',
         profileUsername: ''
     });
 
@@ -62,11 +59,9 @@ const EditProfile: React.FC = () => {
                     website: data.website || '',
                     funFact: data.funFact || '',
                     profilePictureUrl: data.profilePictureUrl || '',
-                    coverImageUrl: data.coverImageUrl || '',
                     profileUsername: data.profileUsername || ''
                 };
                 setProfile(fetchedProfile);
-                setInitialProfile(fetchedProfile);
             }
         } catch (error) {
             console.error('Error fetching profile:', error);
@@ -75,21 +70,17 @@ const EditProfile: React.FC = () => {
         }
     };
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'cover') => {
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        if (type === 'avatar') setUploadingAvatar(true);
-        else setUploadingCover(true);
-
+        setUploadingAvatar(true);
         const formData = new FormData();
         formData.append('file', file);
 
         try {
             const token = localStorage.getItem('token');
-            const endpoint = type === 'avatar' ? API_ENDPOINTS.profile.uploadAvatar : API_ENDPOINTS.profile.uploadCover;
-
-            const response = await fetch(endpoint, {
+            const response = await fetch(API_ENDPOINTS.profile.uploadAvatar, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
@@ -97,14 +88,8 @@ const EditProfile: React.FC = () => {
 
             if (response.ok) {
                 const data = await response.json();
-                setProfile(prev => ({
-                    ...prev,
-                    [type === 'avatar' ? 'profilePictureUrl' : 'coverImageUrl']: data.url
-                }));
-
-                if (type === 'avatar') {
-                    window.dispatchEvent(new CustomEvent('profile-updated'));
-                }
+                setProfile(prev => ({ ...prev, profilePictureUrl: data.url }));
+                window.dispatchEvent(new CustomEvent('profile-updated'));
             } else {
                 const text = await response.text();
                 try {
@@ -120,7 +105,6 @@ const EditProfile: React.FC = () => {
             showToast('An error occurred during upload', 'error');
         } finally {
             setUploadingAvatar(false);
-            setUploadingCover(false);
         }
     };
 
@@ -146,7 +130,6 @@ const EditProfile: React.FC = () => {
             });
 
             if (response.ok) {
-                setInitialProfile(currentProfile);
                 showToast('Profile updated successfully', 'success');
                 window.dispatchEvent(new CustomEvent('profile-updated'));
             } else {
@@ -177,49 +160,30 @@ const EditProfile: React.FC = () => {
         >
             <div className="mb-10">
                 <h1 className="text-4xl font-serif font-bold text-deep-purple mb-3">Edit Profile</h1>
-                <p className="text-deep-purple/60 text-lg">
+                {/* <p className="text-deep-purple/60 text-lg">
                     Information you add here will be shown on your public profile.
-                </p>
+                </p> */}
             </div>
 
             <div className="space-y-12">
-                <div className="relative mb-24">
-                    <div className="h-48 w-full bg-deep-purple/5 rounded-3xl overflow-hidden relative group border border-deep-purple/5">
-                        {profile.coverImageUrl ? (
-                            <img src={profile.coverImageUrl} alt="Cover" className="w-full h-full object-cover" />
+                <div className="flex flex-col items-start gap-4">
+                    <label className="text-xs font-bold uppercase tracking-widest text-deep-purple/40 ml-1">Profile Photo</label>
+                    <div className="relative group w-32 h-32 rounded-full overflow-hidden bg-cream-base border-2 border-deep-purple/10 shadow-md">
+                        {profile.profilePictureUrl ? (
+                            <img src={profile.profilePictureUrl} alt="Avatar" className="w-full h-full object-cover" />
                         ) : (
-                            <div className="w-full h-full flex items-center justify-center text-deep-purple/20 font-sans italic">
-                                Add a cover photo
+                            <div className="w-full h-full flex items-center justify-center bg-[#73A757] text-white text-4xl font-bold">
+                                {profile.fullName ? profile.fullName[0].toUpperCase() : 'U'}
                             </div>
                         )}
-                        <label className="absolute bottom-4 right-4 p-2 bg-white/80 backdrop-blur-md rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white cursor-pointer hover:scale-110 active:scale-95">
-                            {uploadingCover ? (
-                                <div className="animate-spin h-5 w-5 border-2 border-primary-orange border-t-transparent rounded-full" />
+                        <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                            {uploadingAvatar ? (
+                                <div className="animate-spin h-8 w-8 border-4 border-white border-t-transparent rounded-full" />
                             ) : (
-                                <Camera size={18} className="text-deep-purple" />
+                                <Camera size={24} className="text-white" />
                             )}
-                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'cover')} />
+                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e)} />
                         </label>
-                    </div>
-
-                    <div className="absolute -bottom-16 left-8 group">
-                        <div className="w-32 h-32 rounded-full bg-cream-base border-4 border-white shadow-xl overflow-hidden relative">
-                            {profile.profilePictureUrl ? (
-                                <img src={profile.profilePictureUrl} alt="Avatar" className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-[#73A757] text-white text-4xl font-bold">
-                                    {profile.fullName ? profile.fullName[0].toUpperCase() : 'U'}
-                                </div>
-                            )}
-                            <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                                {uploadingAvatar ? (
-                                    <div className="animate-spin h-8 w-8 border-4 border-white border-t-transparent rounded-full" />
-                                ) : (
-                                    <Camera size={24} className="text-white" />
-                                )}
-                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'avatar')} />
-                            </label>
-                        </div>
                     </div>
                 </div>
 
@@ -259,7 +223,7 @@ const EditProfile: React.FC = () => {
                                     placeholder="yourusername"
                                 />
                             </div>
-                            <p className="text-[10px] text-deep-purple/40 ml-1">Unique handle for your public profile link</p>
+                            {/* <p className="text-[10px] text-deep-purple/40 ml-1">Unique handle for your public profile link</p> */}
                         </div>
                     </div>
 

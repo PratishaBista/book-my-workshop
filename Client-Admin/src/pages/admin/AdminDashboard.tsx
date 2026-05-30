@@ -8,6 +8,7 @@ import { PendingWorkshops } from './views/PendingWorkshops';
 import { UsersView } from './views/AllUsers';
 import { CategoriesView } from './views/CategoriesView';
 import { LiveWorkshops } from './views/LiveWorkshops';
+import { FlaggedReviews } from './views/FlaggedReviews';
 import type { AdminTab } from '../../types/admin';
 
 const AdminDashboard: React.FC = () => {
@@ -21,7 +22,8 @@ const AdminDashboard: React.FC = () => {
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
             const roles = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role;
-            if (roles !== 'Admin') navigate('/');
+            const roleList = Array.isArray(roles) ? roles : [roles];
+            if (!roleList.includes('Admin') && !roleList.includes('SuperAdmin')) navigate('/');
         } catch { navigate('/login'); }
     }, [navigate]);
 
@@ -31,6 +33,7 @@ const AdminDashboard: React.FC = () => {
             case 'providers': return <PendingProviders />;
             case 'workshops': return <PendingWorkshops />;
             case 'live_workshops': return <LiveWorkshops />;
+            case 'reviews': return <FlaggedReviews />;
             case 'users': return <UsersView />;
             case 'categories': return <CategoriesView />;
             default: return (

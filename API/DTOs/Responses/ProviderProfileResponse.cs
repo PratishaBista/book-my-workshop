@@ -34,7 +34,6 @@ public class ProviderProfileResponse
     public string? StudioFileName { get; set; }
     public bool IsIdVerified { get; set; }
     public bool IsPanVerified { get; set; }
-    public float TrustScore { get; set; }
 
     public List<VenueResponse> Venues { get; set; } = new();
 

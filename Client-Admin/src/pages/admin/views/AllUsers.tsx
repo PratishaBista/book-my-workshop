@@ -3,6 +3,7 @@ import { Check, AlertCircle, ChevronRight } from 'lucide-react';
 import type { SimpleUser } from '../../../types/admin';
 import { AnimatePresence } from 'framer-motion';
 import { UserDetailDrawer } from '../components/drawers/UserDetailDrawer';
+import { API_ENDPOINTS } from '../../../config/api';
 
 export const UsersView: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'Customer' | 'Provider'>('Customer');
@@ -14,7 +15,7 @@ export const UsersView: React.FC = () => {
         setLoading(true);
         const token = localStorage.getItem('token');
         try {
-            const res = await fetch(`https://localhost:7166/api/admin/users?role=${role}`, {
+            const res = await fetch(`${API_ENDPOINTS.admin.users}?role=${role}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) setUsers(await res.json());
@@ -43,7 +44,7 @@ export const UsersView: React.FC = () => {
                                 : 'text-slate-500 hover:text-slate-300 hover:bg-[#111]'
                                 }`}
                         >
-                            {role === 'Customer' ? 'Clients' : 'Nodes'}
+                            {role === 'Customer' ? 'Clients' : 'Workshops'}
                         </button>
                     ))}
                 </div>
@@ -99,17 +100,23 @@ export const UsersView: React.FC = () => {
                                             }
                                         </div>
 
-                                        {activeTab === 'Provider' && (
-                                            <div className="flex items-center gap-2">
-                                                {u.status === 'Active' ? (
+                                        <div className="flex items-center gap-2">
+                                            {u.status === 'Suspended' ? (
+                                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-red-500/20 bg-red-500/5 text-red-400 text-[9px] font-bold uppercase tracking-widest font-mono">⊘ Suspended</span>
+                                            ) : activeTab === 'Provider' ? (
+                                                u.status === 'Active' ? (
                                                     <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-indigo-500/20 bg-indigo-500/5 text-indigo-400 text-[9px] font-bold uppercase tracking-widest font-mono">Live Node</span>
                                                 ) : u.status === 'Pending' ? (
                                                     <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-orange-500/20 bg-orange-500/5 text-orange-400 text-[9px] font-bold uppercase tracking-widest font-mono animate-pulse">Pending Auth</span>
                                                 ) : (
                                                     <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-slate-700 bg-slate-800/5 text-slate-600 text-[9px] font-bold uppercase tracking-widest font-mono opacity-50">Inert Node</span>
-                                                )}
-                                            </div>
-                                        )}
+                                                )
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/5 text-emerald-500 text-[9px] font-bold uppercase tracking-widest font-mono">
+                                                    <span className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse inline-block" /> Active
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div className="col-span-1 text-right">

@@ -54,7 +54,6 @@ const JournalArticle: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#FDFCF8] text-[#111111] font-serif overflow-hidden">
-            {/* Minimalist Top Nav - Isolated Magazine style */}
             <header className="w-full pt-16 pb-8 text-center flex flex-col items-center justify-center relative">
                <Link to="/" className="absolute left-8 top-12 p-3 hover:bg-black/5 rounded-full transition-colors hidden md:block">
                   <ArrowLeft size={24} className="text-[#111]/40" />
@@ -63,7 +62,7 @@ const JournalArticle: React.FC = () => {
                    BookMyWorkshop
                </div>
                <h1 className="text-5xl md:text-7xl font-serif text-[#00CDB5] tracking-tight mx-auto" style={{ fontVariant: 'small-caps', letterSpacing: '-0.02em' }}>
-                   THE JOURNAL
+                   STORIES
                </h1>
             </header>
 

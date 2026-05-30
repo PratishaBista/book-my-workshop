@@ -12,7 +12,9 @@ public interface IBookingRepository : IGenericRepository<Booking>
     Task<Booking?> GetBookingWithDetailsAsync(int bookingId);
     Task<Booking?> GetBookingByConfirmationCodeAsync(string confirmationCode);
     Task<bool> HasUserBookedScheduleAsync(string userId, int scheduleId);
+    Task<Booking?> GetPendingUnpaidBookingAsync(string userId, int scheduleId);
     Task<List<int>> GetBookedScheduleIdsForUserAsync(string userId, int workshopId);
+    Task<List<int>> GetPendingPaymentScheduleIdsForUserAsync(string userId, int workshopId);
     Task<int> GetBookedSeatsForScheduleAsync(int scheduleId);
     Task<bool> CanUserReviewWorkshopAsync(string userId, int workshopId);
 }

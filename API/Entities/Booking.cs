@@ -68,15 +68,33 @@ public class Booking
     // Audit
     public DateTime BookingDate { get; set; } = DateTime.UtcNow;
 
+    public AttendanceStatus AttendanceStatus { get; set; } = AttendanceStatus.Pending;
+
+    public DateTime? CheckedInAt { get; set; }
+
     // Navigation Property
     public WorkshopReview? Review { get; set; }
 
     // --- Financials ---
     [Column(TypeName = "decimal(18,2)")]
-    public decimal PlatformFee { get; set; } // The commission taken by the platform
+    public decimal PlatformFee { get; set; } // Gross commission taken by the platform (before VAT)
+
+    /// <summary>
+    /// 13% VAT deducted from PlatformFee. This is a cost to the platform, not the host.
+    /// NetPlatformRevenue = PlatformFee - VatOnCommission
+    /// </summary>
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal VatOnCommission { get; set; } = 0;
 
     [Column(TypeName = "decimal(18,2)")]
-    public decimal HostEarnings { get; set; } // The amount the host receives (Total - Fee)
+    public decimal HostEarnings { get; set; } // The amount the host receives (Total - PlatformFee)
 
     public PayoutStatus PayoutStatus { get; set; } = PayoutStatus.Escrow; // Escrow -> Ready -> Paid
+
+    // --- Wallet / Gift Card ---
+    /// <summary>
+    /// Amount paid from the user's wallet (gift card balance). 0 if fully paid via eSewa.
+    /// </summary>
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal WalletAmountUsed { get; set; } = 0;
 }

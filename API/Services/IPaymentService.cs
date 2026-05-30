@@ -7,5 +7,6 @@ namespace API.Services;
 public interface IPaymentService
 {
     Task<PaymentInitiateResponse> InitiatePaymentAsync(int bookingId, decimal amount);
+    Task<PaymentInitiateResponse> InitiateGiftCardPaymentAsync(int giftCardId, decimal amount);
     bool VerifySignature(string data, string signature);
 }

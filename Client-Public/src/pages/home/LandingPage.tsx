@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Lenis from 'lenis';
 import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/landing/Navbar';
 import Hero from '../../components/landing/Hero';
 import IntroOverlay from '../../components/landing/IntroOverlay';
@@ -16,6 +17,7 @@ import BecomeHost from '../../components/landing/BecomeHost';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [introFinished, setIntroFinished] = useState(() => {
     return sessionStorage.getItem('introShown') === 'true';
   });
@@ -98,7 +100,7 @@ const LandingPage: React.FC = () => {
       </div>
 
       <AnimatePresence>
-        {showFloatingCta && !hasDismissedCta && (
+        {showFloatingCta && !hasDismissedCta && !isAuthenticated && (
             <motion.div
                 initial={{ opacity: 0, y: 50, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}

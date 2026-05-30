@@ -30,11 +30,16 @@ export const API_ENDPOINTS = {
         uploadLogo: `${API_URL}/api/provider/upload-logo`,
         uploadBanner: `${API_URL}/api/provider/upload-banner`,
         schedule: `${API_URL}/api/provider/schedule`,
+        scheduleWithBookings: `${API_URL}/api/provider/schedule/with-bookings`,
+        markScheduleComplete: (id: number) => `${API_URL}/api/provider/schedule/${id}/complete`,
+        checkInBooking: `${API_URL}/api/provider/booking/check-in`,
+        markNoShow: (bookingId: number) => `${API_URL}/api/provider/booking/${bookingId}/no-show`,
         earnings: `${API_URL}/api/provider/earnings`,
         uploadIdCard: `${API_URL}/api/provider/upload-id-card`,
         uploadPanCard: `${API_URL}/api/provider/upload-pan-card`,
         uploadStudioImage: `${API_URL}/api/provider/upload-studio-image`,
         submitVerification: `${API_URL}/api/provider/submit-verification`,
+        stats: `${API_URL}/api/provider/stats`,
     },
     workshop: {
         base: `${API_URL}/api/workshop`,
@@ -56,7 +61,10 @@ export const API_ENDPOINTS = {
     },
     hubs: {
         notifications: `${API_URL}/hubs/notifications`
-    }
+    },
+    newsletter: {
+        subscribe: `${API_URL}/api/newsletter/subscribe`,
+    },
 };
 
 export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';

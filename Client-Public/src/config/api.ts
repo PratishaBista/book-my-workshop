@@ -36,6 +36,10 @@ export const API_ENDPOINTS = {
         uploadLogo: `${API_URL}/api/provider/upload-logo`,
         uploadBanner: `${API_URL}/api/provider/upload-banner`,
     },
+    providers: {
+        public: (slugOrId: string) =>
+            `${API_URL}/api/providers/public/${encodeURIComponent(slugOrId)}`,
+    },
     workshop: {
         base: `${API_URL}/api/workshops/public`,
         public: `${API_URL}/api/workshops/public`,
@@ -46,6 +50,12 @@ export const API_ENDPOINTS = {
             `${API_URL}/api/workshops/public/search?q=${encodeURIComponent(query)}${location && location !== 'All Locations' ? `&location=${encodeURIComponent(location)}` : ''}`,
         byProvider: (id: number) => `${API_URL}/api/workshops/public/provider/${id}`,
         related: (id: number) => `${API_URL}/api/workshops/public/${id}/related`,
+        review: (id: number) => `${API_URL}/api/workshop/${id}/review`,
+    },
+    reviews: {
+        feed: (page = 1, pageSize = 20) =>
+            `${API_URL}/api/reviews?page=${page}&pageSize=${pageSize}`,
+        topHosts: (count = 6) => `${API_URL}/api/reviews/top-hosts?count=${count}`,
     },
     media: {
         base: `${API_URL}/api/media`,
@@ -54,6 +64,9 @@ export const API_ENDPOINTS = {
     payment: {
         initiate: `${API_URL}/api/payment/initiate`,
         verify: `${API_URL}/api/payment/verify`,
+        initiateStripe: `${API_URL}/api/payment/initiate/stripe`,
+        initiateStripeGiftCard: `${API_URL}/api/payment/initiate/stripe/giftcard`,
+        verifyStripe: `${API_URL}/api/payment/verify/stripe`,
     },
     preferences: {
         categories: `${API_URL}/api/preferences/categories`,
@@ -64,7 +77,17 @@ export const API_ENDPOINTS = {
         my: `${API_URL}/api/booking/my-bookings`,
         byId: (id: number) => `${API_URL}/api/booking/${id}`,
         byCode: (code: string) => `${API_URL}/api/booking/confirmation/${code}`,
+        ticket: (id: number) => `${API_URL}/api/booking/${id}/ticket`,
+        ticketByCode: (code: string) => `${API_URL}/api/booking/ticket/${encodeURIComponent(code)}`,
         cancel: (id: number) => `${API_URL}/api/booking/${id}/cancel`,
+    },
+    giftCard: {
+        purchase: `${API_URL}/api/giftcard/purchase`,
+        claim: `${API_URL}/api/giftcard/claim`,
+        getByCode: (code: string) => `${API_URL}/api/giftcard/code/${code}`,
+    },
+    wallet: {
+        get: `${API_URL}/api/wallet`,
     },
     newsletter: {
         subscribe: `${API_URL}/api/newsletter/subscribe`,

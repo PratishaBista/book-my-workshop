@@ -54,4 +54,15 @@ public class ScheduleRepository : GenericRepository<WorkshopSchedule>, ISchedule
             .OrderBy(s => s.StartDateTime)
             .ToListAsync();
     }
+
+    public async Task<IEnumerable<WorkshopSchedule>> GetProviderSchedulesWithBookingsAsync(int providerId)
+    {
+        return await _dbSet
+            .Include(s => s.Workshop)
+            .Include(s => s.Bookings)
+                .ThenInclude(b => b.User)
+            .Where(s => s.Workshop.ProviderId == providerId)
+            .OrderByDescending(s => s.StartDateTime)
+            .ToListAsync();
+    }
 }

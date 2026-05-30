@@ -55,6 +55,45 @@ public class EsewaPaymentService : IPaymentService
         });
     }
 
+    public Task<PaymentInitiateResponse> InitiateGiftCardPaymentAsync(int giftCardId, decimal amount)
+    {
+        // Get Config
+        var baseUrl = _configuration["Esewa:BaseUrl"];
+        var productCode = _configuration["Esewa:ProductCode"];
+        var secretKey = _configuration["Esewa:SecretKey"];
+        var successUrl = _configuration["Esewa:SuccessUrl"];
+        var failureUrl = _configuration["Esewa:FailureUrl"];
+
+        // Prepare Data
+        var totalAmount = amount; 
+        var transactionUuid = $"giftcard-{giftCardId}-{DateTime.UtcNow.Ticks}"; 
+        
+        var taxAmount = "0";
+        var serviceCharge = "0";
+        var deliveryCharge = "0";
+
+        // Generate Signature
+        // Format: total_amount=100,transaction_uuid=giftcard-11-200,product_code=EPAYTEST
+        var signatureData = $"total_amount={totalAmount},transaction_uuid={transactionUuid},product_code={productCode}";
+        var signature = GenerateSignature(signatureData, secretKey!);
+
+        return Task.FromResult(new PaymentInitiateResponse
+        {
+            Amount = amount.ToString(),
+            TotalAmount = totalAmount.ToString(),
+            TaxAmount = taxAmount,
+            ProductServiceCharge = serviceCharge,
+            ProductDeliveryCharge = deliveryCharge,
+            TransactionUuid = transactionUuid,
+            ProductCode = productCode!,
+            SuccessUrl = successUrl!,
+            FailureUrl = failureUrl!,
+            SignedFieldNames = "total_amount,transaction_uuid,product_code",
+            Signature = signature,
+            EsewaUrl = baseUrl!
+        });
+    }
+
     public bool VerifySignature(string data, string signature)
     {
         var secretKey = _configuration["Esewa:SecretKey"];

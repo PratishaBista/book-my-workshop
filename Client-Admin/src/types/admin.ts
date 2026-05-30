@@ -12,8 +12,7 @@ export interface PendingProvider {
     slug?: string;
     referralSource: string;
     registeredAt: string;
-    trustScore: number;
-    trustAnalysisJson: string;
+
     idCardUrl?: string;
     panCardUrl?: string;
     studioImageUrl?: string;
@@ -34,9 +33,7 @@ export interface PendingWorkshop {
     submittedAt: string;
     categoryNames: string[];
     price: number;
-    aiSuggestedCategory?: string;
-    aiConfidenceScore?: number;
-    aiIsConfident?: boolean;
+
 }
 
 export interface SimpleUser {
@@ -47,7 +44,8 @@ export interface SimpleUser {
     emailConfirmed: boolean;
     role: string;
     status: string;
+    isSuspended?: boolean;
     providerId?: number;
 }
 
-export type AdminTab = 'overview' | 'providers' | 'workshops' | 'live_workshops' | 'active_hosts' | 'users' | 'categories' | 'settings' | 'notifications' | 'help';
+export type AdminTab = 'overview' | 'providers' | 'workshops' | 'live_workshops' | 'reviews' | 'active_hosts' | 'users' | 'categories' | 'settings' | 'notifications' | 'help';

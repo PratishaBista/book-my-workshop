@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, ChevronRight, Check, X, FileText, Eye, Info, MapPin } from 'lucide-react';
+import { ChevronRight, Check, X, FileText, Eye, Info, MapPin, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { PendingProvider } from '../../../types/admin';
+import { API_ENDPOINTS } from '../../../config/api';
 
 export const PendingProviders: React.FC = () => {
     const [providers, setProviders] = useState<PendingProvider[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedItem, setSelectedItem] = useState<PendingProvider | null>(null);
-    const [confirmAction, setConfirmAction] = useState<{ type: 'approve'; itemId: number; } | null>(null);
+    const [confirmAction, setConfirmAction] = useState<{ type: 'approve' | 'reject'; itemId: number; } | null>(null);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [rejectReason, setRejectReason] = useState('');
 
     const fetchProviders = async () => {
         setLoading(true);
@@ -32,23 +34,26 @@ export const PendingProviders: React.FC = () => {
     const executeAction = async () => {
         if (!confirmAction) return;
         const token = localStorage.getItem('token');
+        const endpoint = confirmAction.type === 'approve' 
+            ? API_ENDPOINTS.admin.approveProvider(confirmAction.itemId)
+            : API_ENDPOINTS.admin.rejectProvider(confirmAction.itemId);
+            
         try {
-            const res = await fetch(`https://localhost:7166/api/admin/approve-provider/${confirmAction.itemId}`, {
+            const res = await fetch(endpoint, {
                 method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: confirmAction.type === 'reject' ? JSON.stringify({ reason: rejectReason }) : undefined
             });
             if (res.ok) {
                 setSelectedItem(null);
                 setConfirmAction(null);
+                setRejectReason('');
                 fetchProviders();
             }
         } catch (e) { console.error(e); }
-    };
-
-    const getTrustColor = (score: number) => {
-        if (score >= 80) return 'text-emerald-500 bg-emerald-50 border-emerald-100';
-        if (score >= 50) return 'text-amber-500 bg-amber-50 border-amber-100';
-        return 'text-slate-400 bg-slate-50 border-slate-100';
     };
 
     return (
@@ -59,17 +64,16 @@ export const PendingProviders: React.FC = () => {
             </div>
 
             <div className="bg-[#0D0D0D] rounded-2xl border border-[#1A1A1A] overflow-hidden">
-                <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-[#000] border-b border-[#1A1A1A] text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">
-                    <div className="col-span-4">Business & Identity</div>
+                <div className="grid grid-cols-10 gap-4 px-6 py-3 bg-[#000] border-b border-[#1A1A1A] text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">
+                    <div className="col-span-5">Business & Identity</div>
                     <div className="col-span-3">Contact</div>
-                    <div className="col-span-2 text-center">AI Integrity</div>
-                    <div className="col-span-2">Submitted</div>
+                    <div className="col-span-1">Submitted</div>
                     <div className="col-span-1"></div>
                 </div>
 
                 <div className="divide-y divide-[#1A1A1A]">
                     {loading ? (
-                        <div className="p-10 text-center text-slate-500 text-sm font-mono">Loading telemetry...</div>
+                        <div className="p-10 text-center text-slate-500 text-sm font-mono">Loading...</div>
                     ) : providers.length === 0 ? (
                         <div className="p-10 text-center text-slate-500 text-sm italic font-mono uppercase tracking-widest">No pending applications found.</div>
                     ) : (
@@ -77,9 +81,9 @@ export const PendingProviders: React.FC = () => {
                             <div 
                                 key={p.id} 
                                 onClick={() => setSelectedItem(p)} 
-                                className={`grid grid-cols-12 gap-4 px-6 py-4 items-center cursor-pointer transition-all ${selectedItem?.id === p.id ? 'bg-[#1A1A1A]' : 'hover:bg-[#111111]'}`}
+                                className={`grid grid-cols-10 gap-4 px-6 py-4 items-center cursor-pointer transition-all ${selectedItem?.id === p.id ? 'bg-[#1A1A1A]' : 'hover:bg-[#111111]'}`}
                             >
-                                <div className="col-span-4 flex items-center gap-3">
+                                <div className="col-span-5 flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-lg bg-[#000] border border-[#222] flex items-center justify-center text-slate-500 font-bold text-[10px] uppercase">
                                         {p.businessName.charAt(0)}
                                     </div>
@@ -94,17 +98,7 @@ export const PendingProviders: React.FC = () => {
                                     <div className="text-xs font-semibold text-slate-200 tracking-tight">{p.contactPerson}</div>
                                     <div className="text-[10px] text-slate-500 truncate font-mono">{p.email}</div>
                                 </div>
-                                <div className="col-span-2 flex justify-center">
-                                    {p.trustScore > 0 ? (
-                                        <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded border text-[10px] font-bold font-mono ${getTrustColor(p.trustScore)}`}>
-                                            <ShieldCheck size={12} />
-                                            {Math.round(p.trustScore)}%
-                                        </div>
-                                    ) : (
-                                        <div className="text-[10px] text-slate-600 font-bold font-mono uppercase tracking-widest">Unverified</div>
-                                    )}
-                                </div>
-                                <div className="col-span-2 text-[11px] text-slate-400 font-mono">
+                                <div className="col-span-1 text-[11px] text-slate-400 font-mono">
                                     {new Date(p.registeredAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                 </div>
                                 <div className="col-span-1 text-right">
@@ -125,11 +119,6 @@ export const PendingProviders: React.FC = () => {
                         <div className="flex justify-between items-start mb-8">
                             <div>
                                 <h3 className="text-xl font-bold text-white tracking-tight">{selectedItem.businessName}</h3>
-                                <div className="flex items-center gap-2 mt-2">
-                                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded border uppercase tracking-[0.1em] font-mono ${getTrustColor(selectedItem.trustScore)}`}>
-                                        Integrity Score: {Math.round(selectedItem.trustScore)}%
-                                    </span>
-                                </div>
                             </div>
                             <button onClick={() => setSelectedItem(null)} className="p-2 hover:bg-[#1A1A1A] rounded-full transition-colors"><X size={20} className="text-slate-600" /></button>
                         </div>
@@ -243,10 +232,16 @@ export const PendingProviders: React.FC = () => {
                             )}
                         </div>
 
-                        <div className="pt-8 border-t border-[#1A1A1A]">
+                        <div className="pt-8 border-t border-[#1A1A1A] flex gap-3">
+                            <button 
+                                onClick={() => setConfirmAction({ type: 'reject', itemId: selectedItem.id })}
+                                className="flex-1 py-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl active:scale-95 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
+                            >
+                                <X size={18} /> Decline
+                            </button>
                             <button 
                                 onClick={() => setConfirmAction({ type: 'approve', itemId: selectedItem.id })}
-                                className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-[0_10px_30px_rgba(79,70,229,0.3)] active:scale-95 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
+                                className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-[0_10px_30px_rgba(79,70,229,0.3)] active:scale-95 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
                             >
                                 <Check size={18} /> Approve Host
                             </button>
@@ -259,14 +254,38 @@ export const PendingProviders: React.FC = () => {
                 {confirmAction && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
                         <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white rounded-[32px] p-8 max-w-sm w-full shadow-2xl relative border border-white/50 text-center">
-                            <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Check size={32} />
+                            <div className={`w-16 h-16 ${confirmAction.type === 'approve' ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500'} rounded-full flex items-center justify-center mx-auto mb-4`}>
+                                {confirmAction.type === 'approve' ? <Check size={32} /> : <X size={32} />}
                             </div>
-                            <h3 className="text-xl font-bold text-slate-800 mb-2">Confirm Approval</h3>
-                            <p className="text-slate-500 mb-8 text-sm leading-relaxed">By approving this host, they will gain full access to publish workshops on the marketplace.</p>
+                            <h3 className="text-xl font-bold text-slate-800 mb-2">
+                                {confirmAction.type === 'approve' ? 'Confirm Approval' : 'Decline Host Application'}
+                            </h3>
+                            <p className="text-slate-500 mb-6 text-sm leading-relaxed">
+                                {confirmAction.type === 'approve' 
+                                    ? 'By approving this host, they will gain full access to publish workshops on the marketplace.'
+                                    : 'Please provide a reason for declining this application. This will be emailed to the host.'}
+                            </p>
+                            
+                            {confirmAction.type === 'reject' && (
+                                <textarea
+                                    value={rejectReason}
+                                    onChange={(e) => setRejectReason(e.target.value)}
+                                    placeholder="e.g. Please provide a clearer picture of your ID."
+                                    className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm mb-6 focus:ring-2 focus:ring-red-500 focus:outline-none"
+                                    rows={3}
+                                />
+                            )}
+
                             <div className="grid grid-cols-2 gap-3">
                                 <button onClick={() => setConfirmAction(null)} className="py-3 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 text-sm">Cancel</button>
-                                <button onClick={executeAction} className="py-3 rounded-xl font-bold text-white shadow-lg bg-emerald-500 hover:bg-emerald-600 shadow-emerald-100 text-sm">Confirm</button>
+                                <button 
+                                    onClick={executeAction} 
+                                    disabled={confirmAction.type === 'reject' && !rejectReason.trim()}
+                                    className={`py-3 rounded-xl font-bold text-white shadow-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed
+                                    ${confirmAction.type === 'approve' ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-100' : 'bg-red-500 hover:bg-red-600 shadow-red-100'}`}
+                                >
+                                    Confirm
+                                </button>
                             </div>
                         </motion.div>
                     </motion.div>

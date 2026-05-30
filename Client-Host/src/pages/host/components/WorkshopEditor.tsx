@@ -262,8 +262,8 @@ export const WorkshopEditor: React.FC<WorkshopEditorProps> = ({ onClose, onSucce
     };
 
     const steps = [
-        { id: 1, label: 'The Vision', description: 'Basic details and theme', icon: Sparkles },
-        { id: 2, label: 'The Experience', description: 'Curriculum and benefits', icon: BookOpen },
+        { id: 1, label: 'Vision', description: 'Basic details and theme', icon: Sparkles },
+        { id: 2, label: 'Experience', description: 'Curriculum and benefits', icon: BookOpen },
         { id: 3, label: 'Visuals', description: 'Workshop gallery and media', icon: ImageIcon },
         { id: 4, label: 'Logistics', description: 'Timing and location', icon: MapPin },
         { id: 5, label: 'Investment', description: 'Pricing and requirements', icon: DollarSign },
@@ -404,7 +404,7 @@ export const WorkshopEditor: React.FC<WorkshopEditorProps> = ({ onClose, onSucce
                                     className="space-y-12"
                                 >
                                     <div className="space-y-3">
-                                        <h2 className="text-4xl font-serif font-bold text-deep-purple">The Experience</h2>
+                                        <h2 className="text-4xl font-serif font-bold text-deep-purple">What you'll be doing</h2>
                                         <p className="text-gray-500 text-lg">Help guests imagine exactly what they'll be doing.</p>
                                     </div>
 

@@ -14,7 +14,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
 builder.Services.AddSignalR();
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
@@ -116,10 +120,17 @@ builder.Services.AddScoped<IMediaService, MediaService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IPaymentService, EsewaPaymentService>();
+builder.Services.AddScoped<StripePaymentService>();
 builder.Services.AddScoped<IMLService, MLService>();
+builder.Services.AddScoped<IReviewModerationService, ReviewModerationService>();
+builder.Services.AddScoped<IBookingTicketService, BookingTicketService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<WorkshopChangeDetector>();
+builder.Services.AddScoped<IGiftCardService, GiftCardService>();
+builder.Services.AddScoped<ISystemLogService, SystemLogService>();
+builder.Services.AddScoped<IReviewSeedService, ReviewSeedService>();
+builder.Services.AddScoped<IProviderPublicService, ProviderPublicService>();
 
 // AWS S3 / MinIO Configuration
 var s3Config = new AmazonS3Config
@@ -167,6 +178,17 @@ app.Use(async (context, next) =>
     {
         Console.WriteLine($"[GLOBAL ERROR]: {ex.Message}");
         Console.WriteLine(ex.StackTrace);
+
+        try
+        {
+            var logService = context.RequestServices.GetRequiredService<ISystemLogService>();
+            await logService.LogErrorAsync("System", ex.Message, ex.StackTrace, context.User?.Identity?.Name);
+        }
+        catch (Exception logEx)
+        {
+            Console.WriteLine($"[FAILED TO LOG TO DATABASE]: {logEx.Message}");
+        }
+
         context.Response.StatusCode = 500;
         await context.Response.WriteAsJsonAsync(new { message = "Internal Server Error", detail = ex.Message });
     }
@@ -205,6 +227,17 @@ using (var scope = app.Services.CreateScope())
 
         await DbInitializer.SeedAsync(userManager, roleManager, context);
         Console.WriteLine("[STARTUP]: Database seeding completed.");
+
+        var configuration = services.GetRequiredService<IConfiguration>();
+        var seedReviews = configuration.GetValue<bool>("SeedSettings:SeedSampleReviews");
+        if (seedReviews)
+        {
+            var reviewSeeder = services.GetRequiredService<IReviewSeedService>();
+            var seedResult = await reviewSeeder.SeedSampleReviewsAsync();
+            Console.WriteLine(seedResult.Skipped
+                ? $"[STARTUP]: Review seed skipped — {seedResult.Message}"
+                : $"[STARTUP]: Review seed — {seedResult.Message}");
+        }
     }
     catch (Exception ex)
     {

@@ -13,7 +13,7 @@ const AboutPage: React.FC = () => {
                     <div className="mb-16">
                         <div className="flex items-baseline justify-between border-b-4 border-black pb-2">
                             <h1 className="text-7xl md:text-9xl font-bold tracking-tighter flex items-center gap-4">
-                                ABOUT
+                                ABOUT US
                                 <span className="hidden md:inline-block">
                                     <svg width="120" height="60" viewBox="0 0 120 60" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <path d="M10 30C10 15 25 5 45 5C65 5 80 15 80 30M10 30C10 45 25 55 45 55C65 55 80 45 80 30M80 30C80 30 85 30 90 30M110 30C110 15 95 5 75 5C55 5 40 15 40 30M110 30C110 45 95 55 75 55C55 55 40 45 40 30" stroke="black" strokeWidth="3"/>
@@ -23,9 +23,9 @@ const AboutPage: React.FC = () => {
                                 </span>
                             </h1>
                         </div>
-                        <p className="mt-4 text-xs font-bold tracking-widest uppercase">
+                        {/* <p className="mt-4 text-xs font-bold tracking-widest uppercase">
                             BookMyWorkshop Corp: Notes on our origins, vision, and the founder.
-                        </p>
+                        </p> */}
                     </div>
 
                     {/* Founder Section */}

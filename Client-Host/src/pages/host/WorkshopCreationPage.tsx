@@ -13,9 +13,9 @@ import Toast, { type ToastType } from '../../components/ui/Toast';
 
 const SECTIONS = [
     { id: 'overview', label: 'Overview', icon: Sparkles },
-    { id: 'media', label: 'The Storyteller', icon: ImageIcon },
+    { id: 'media', label: 'Storyteller', icon: ImageIcon },
     { id: 'pricing', label: 'Pricing & Capacity', icon: DollarSign },
-    { id: 'content', label: 'The Experience', icon: BookOpen },
+    { id: 'content', label: 'Experience', icon: BookOpen },
     { id: 'logistics', label: 'Logistics', icon: Clock },
     { id: 'location', label: 'Location', icon: MapPin },
     { id: 'additional', label: 'Additional Details', icon: Info },
@@ -73,7 +73,7 @@ export const WorkshopCreationPage: React.FC = () => {
     // Workshop status tracking
     const [workshopStatus, setWorkshopStatus] = useState<number>(0); // 0=Draft, 1=PendingReview, 2=Published, 3=Rejected
     const [rejectionReason, setRejectionReason] = useState<string | undefined>();
-    const [hasPendingModifications, setHasPendingModifications] = useState(false);
+    const [_hasPendingModifications, setHasPendingModifications] = useState(false);
     const [showModificationWarning, setShowModificationWarning] = useState(false);
 
     // Refs for scrolling
@@ -424,11 +424,24 @@ export const WorkshopCreationPage: React.FC = () => {
 
             if (response.ok) {
                 const data = await response.json();
+                if (data.unchanged || data.enhanced_text?.trim() === textToEnhance) {
+                    setToast({
+                        message: 'AI did not change the text. Add more detail or configure an LLM provider (see Microservice/.env.example).',
+                        type: 'error',
+                        isVisible: true
+                    });
+                    return;
+                }
                 setFormData((prev: any) => ({ ...prev, description: data.enhanced_text }));
             } else {
                 const errorData = await response.json().catch(() => ({ detail: 'Failed to enhance description.' }));
+                const detail = typeof errorData.detail === 'string'
+                    ? errorData.detail
+                    : Array.isArray(errorData.detail)
+                        ? errorData.detail.map((d: { msg?: string }) => d.msg).join(', ')
+                        : 'Failed to enhance description. Try again.';
                 setToast({
-                    message: errorData.detail || 'Failed to enhance description. Try again.',
+                    message: detail,
                     type: 'error',
                     isVisible: true
                 });
@@ -523,10 +536,9 @@ export const WorkshopCreationPage: React.FC = () => {
                     {/* Section: Overview */}
                     <section ref={sectionRefs.overview} className="scroll-mt-32">
                         <div className="flex items-center gap-2 text-[#FF6B35] mb-4">
-                            <Sparkles size={16} />
                             <span className="text-sm font-medium tracking-wider uppercase">Overview</span>
                         </div>
-                        <h2 className="text-5xl font-semibold tracking-tight mb-12">The Essence</h2>
+                        <h2 className="text-5xl font-semibold tracking-tight mb-12">Essence</h2>
 
                         <div className="space-y-12">
                             <div className="group">
@@ -563,7 +575,7 @@ export const WorkshopCreationPage: React.FC = () => {
                     <section ref={sectionRefs.media} className="scroll-mt-32">
                         <div className="flex items-center gap-2 text-[#FF6B35] mb-4">
                             <ImageIcon size={16} />
-                            <span className="text-sm font-medium tracking-wider uppercase">The Storyteller</span>
+                            <span className="text-sm font-medium tracking-wider uppercase">Storyteller</span>
                         </div>
                         <h2 className="text-5xl font-semibold tracking-tight mb-4">Visual Narrative</h2>
                         <p className="text-[#707070] font-light mb-16 max-w-lg leading-relaxed">
@@ -778,14 +790,14 @@ export const WorkshopCreationPage: React.FC = () => {
                                         onClick={handleEnhanceText}
                                         disabled={isEnhancing || !formData.description}
                                         className="flex items-center gap-2 text-xs font-medium bg-[#1a0b2e]/5 hover:bg-[#1a0b2e]/10 text-[#6b4c9a] px-3 py-1.5 rounded-full transition-all disabled:opacity-50"
-                                        title="Enhance with AI"
+                                        title="Expand and fix grammar — plain tone, no sales fluff"
                                     >
                                         {isEnhancing ? (
                                             <div className="w-3 h-3 border-2 border-[#6b4c9a]/30 border-t-[#6b4c9a] rounded-full animate-spin" />
                                         ) : (
                                             <Sparkles size={14} />
                                         )}
-                                        {isEnhancing ? 'Enhancing...' : 'Enhance writing'}
+                                        {isEnhancing ? 'Writing...' : 'Expand description'}
                                     </button>
                                 </div>
                                 <textarea
@@ -897,7 +909,7 @@ export const WorkshopCreationPage: React.FC = () => {
                             <MapPin size={16} />
                             <span className="text-sm font-medium tracking-wider uppercase">Location</span>
                         </div>
-                        <h2 className="text-5xl font-semibold tracking-tight mb-12">The Neighborhood</h2>
+                        <h2 className="text-5xl font-semibold tracking-tight mb-12">Neighborhood</h2>
 
                         <div className="space-y-8">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

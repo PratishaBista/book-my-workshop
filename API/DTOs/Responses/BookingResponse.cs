@@ -28,6 +28,7 @@ public class BookingResponse
     public string? PaymentGateway { get; set; }
     public string? TransactionId { get; set; }
     public DateTime? PaymentCompletedAt { get; set; }
+    public decimal WalletAmountUsed { get; set; }
     
     // Cancellation
     public DateTime? CancelledAt { get; set; }
@@ -36,6 +37,9 @@ public class BookingResponse
     public int? RefundPercentage { get; set; }
     public string? CancelledBy { get; set; }
     
+    public AttendanceStatus AttendanceStatus { get; set; }
+    public DateTime? CheckedInAt { get; set; }
+
     // Review status
     public bool CanReview { get; set; }
     public bool HasReviewed { get; set; }

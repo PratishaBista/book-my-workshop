@@ -13,15 +13,18 @@ namespace API.Controllers;
 public class ScheduleController : ControllerBase
 {
     private readonly IWorkshopService _workshopService;
+    private readonly IBookingService _bookingService;
     private readonly IGenericRepository<Provider> _providerRepository;
     private readonly ILogger<ScheduleController> _logger;
 
     public ScheduleController(
         IWorkshopService workshopService,
+        IBookingService bookingService,
         IGenericRepository<Provider> providerRepository,
         ILogger<ScheduleController> logger)
     {
         _workshopService = workshopService;
+        _bookingService = bookingService;
         _providerRepository = providerRepository;
         _logger = logger;
     }
@@ -150,6 +153,9 @@ public class ScheduleController : ControllerBase
                 return NotFound();
             }
 
+            // Refund any existing bookings to wallets
+            await _bookingService.CancelScheduleBookingsAsync(scheduleId);
+
             return NoContent();
         }
         catch (UnauthorizedAccessException ex)
@@ -199,6 +205,121 @@ public class ScheduleController : ControllerBase
         {
             _logger.LogError(ex, "Error getting provider schedules");
             return StatusCode(500, new { message = "An error occurred while retrieving schedules." });
+        }
+    }
+
+    // GET: api/provider/schedule/with-bookings
+    [HttpGet("~/api/provider/schedule/with-bookings")]
+    public async Task<IActionResult> GetProviderSchedulesWithBookings()
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var providerId = await GetProviderIdAsync(userId);
+            if (providerId == null) return BadRequest(new { message = "Provider profile not found." });
+
+            var schedules = await _workshopService.GetProviderSchedulesWithBookingsAsync(providerId.Value);
+            return Ok(schedules);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting provider schedules with bookings");
+            return StatusCode(500, new { message = "An error occurred while retrieving schedules." });
+        }
+    }
+
+    // PUT: api/provider/booking/check-in
+    [HttpPut("~/api/provider/booking/check-in")]
+    public async Task<IActionResult> CheckInBooking([FromBody] CheckInBookingRequest request)
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var providerId = await GetProviderIdAsync(userId);
+            if (providerId == null) return BadRequest(new { message = "Provider profile not found." });
+
+            if (string.IsNullOrWhiteSpace(request.ConfirmationCode))
+                return BadRequest(new { message = "Confirmation code is required." });
+
+            var result = await _bookingService.CheckInBookingAsync(providerId.Value, request.ConfirmationCode.Trim());
+            if (result == null)
+                return NotFound(new { message = "Booking not found for this code." });
+
+            return Ok(new { message = "Participant checked in successfully.", booking = result });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking in booking");
+            return StatusCode(500, new { message = "An error occurred during check-in." });
+        }
+    }
+
+    // PUT: api/provider/booking/{bookingId}/no-show
+    [HttpPut("~/api/provider/booking/{bookingId}/no-show")]
+    public async Task<IActionResult> MarkNoShow(int bookingId)
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var providerId = await GetProviderIdAsync(userId);
+            if (providerId == null) return BadRequest(new { message = "Provider profile not found." });
+
+            var result = await _bookingService.MarkBookingNoShowAsync(providerId.Value, bookingId);
+            if (result == null)
+                return NotFound(new { message = "Booking not found." });
+
+            return Ok(new { message = "Marked as no-show.", booking = result });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error marking no-show for booking {BookingId}", bookingId);
+            return StatusCode(500, new { message = "An error occurred." });
+        }
+    }
+
+    // PUT: api/provider/schedule/{scheduleId}/complete
+    [HttpPut("~/api/provider/schedule/{scheduleId}/complete")]
+    public async Task<IActionResult> CompleteSchedule(int scheduleId)
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var providerId = await GetProviderIdAsync(userId);
+            if (providerId == null) return BadRequest(new { message = "Provider profile not found." });
+
+            var result = await _workshopService.MarkScheduleCompleteAsync(providerId.Value, scheduleId);
+            if (!result) return NotFound(new { message = "Schedule not found." });
+
+            return Ok(new { message = "Workshop marked as complete." });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error marking schedule {scheduleId} as complete");
+            return StatusCode(500, new { message = "An error occurred." });
         }
     }
 

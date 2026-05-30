@@ -7,7 +7,7 @@ import {
     Loader2, AlertCircle, RefreshCcw,
     ArrowRight, CreditCard, Ticket,
     CheckCircle2, Clock3, Ban, X, AlertTriangle, Receipt,
-    Star, StarHalf
+    Star, StarHalf, ImagePlus, X as XIcon
 } from 'lucide-react';
 import Navbar from '../../components/landing/Navbar';
 import Footer from '../../components/landing/Footer';
@@ -45,6 +45,8 @@ interface Booking {
     refundPercentage?: number;
     cancelledBy?: string;
     hasReviewed?: boolean;
+    canReview?: boolean;
+    attendanceStatus?: number;
     schedule: {
         id: number;
         startDateTime: string;
@@ -75,6 +77,8 @@ const MyBookings: React.FC = () => {
     const [bookingToReview, setBookingToReview] = useState<Booking | null>(null);
     const [reviewRating, setReviewRating] = useState(0);
     const [reviewComment, setReviewComment] = useState('');
+    const [reviewImages, setReviewImages] = useState<File[]>([]);
+    const [reviewImagePreviews, setReviewImagePreviews] = useState<string[]>([]);
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
     const [hoverRating, setHoverRating] = useState(0);
 
@@ -187,32 +191,53 @@ const MyBookings: React.FC = () => {
         }
     };
 
+    const handleReviewImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        const combined = [...reviewImages, ...files].slice(0, 3);
+        setReviewImages(combined);
+        reviewImagePreviews.forEach((url) => URL.revokeObjectURL(url));
+        setReviewImagePreviews(combined.map((f) => URL.createObjectURL(f)));
+        e.target.value = '';
+    };
+
+    const removeReviewImage = (index: number) => {
+        URL.revokeObjectURL(reviewImagePreviews[index]);
+        setReviewImages(reviewImages.filter((_, i) => i !== index));
+        setReviewImagePreviews(reviewImagePreviews.filter((_, i) => i !== index));
+    };
+
+    const resetReviewForm = () => {
+        reviewImagePreviews.forEach((url) => URL.revokeObjectURL(url));
+        setReviewImages([]);
+        setReviewImagePreviews([]);
+        setReviewRating(0);
+        setReviewComment('');
+    };
+
     const handleReviewSubmit = async () => {
         if (!bookingToReview || reviewRating === 0) return;
         
         try {
             setIsSubmittingReview(true);
             const token = localStorage.getItem('token');
-            // Backend endpoint: api/workshop/{workshopId}/review
-            const response = await fetch(`${API_ENDPOINTS.workshop.base}/${bookingToReview.workshop.id}/review`, {
+            const formData = new FormData();
+            formData.append('bookingId', String(bookingToReview.id));
+            formData.append('rating', String(reviewRating));
+            formData.append('comment', reviewComment);
+            reviewImages.forEach((file) => formData.append('images', file));
+
+            const response = await fetch(API_ENDPOINTS.workshop.review(bookingToReview.workshop.id), {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    rating: reviewRating,
-                    comment: reviewComment,
-                    bookingId: bookingToReview.id
-                })
+                body: formData,
             });
 
             if (response.ok) {
-                // Update local state to mark it as reviewed
                 setBookings(prev => prev.map(b => b.id === bookingToReview.id ? { ...b, hasReviewed: true } : b));
                 setBookingToReview(null);
-                setReviewRating(0);
-                setReviewComment('');
+                resetReviewForm();
                 alert('Thank you for your review!');
             } else {
                 const errorData = await response.json();
@@ -405,7 +430,18 @@ const MyBookings: React.FC = () => {
                                                         </button>
                                                     )}
 
-                                                    {booking.bookingStatus === BookingStatus.Confirmed && !isUpcoming(booking.schedule?.startDateTime) && !booking.hasReviewed && (
+                                                    {booking.bookingStatus === BookingStatus.Confirmed &&
+                                                        booking.paymentStatus === PaymentStatus.Paid && (
+                                                        <Link
+                                                            to={`/ticket/${booking.confirmationCode}`}
+                                                            className="px-4 py-2 text-sm font-bold text-deep-purple bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors flex items-center gap-2"
+                                                        >
+                                                            <Ticket size={14} />
+                                                            View Ticket
+                                                        </Link>
+                                                    )}
+
+                                                    {booking.canReview && !booking.hasReviewed && (
                                                         <button 
                                                             onClick={() => setBookingToReview(booking)}
                                                             className="px-4 py-2 text-sm font-bold text-primary-orange bg-orange-50 hover:bg-orange-100 rounded-xl transition-colors flex items-center gap-2"
@@ -522,7 +558,7 @@ const MyBookings: React.FC = () => {
                                     className="bg-white rounded-[2rem] p-8 md:p-12 max-w-xl w-full relative z-10 shadow-2xl border border-gray-100"
                                 >
                                     <button 
-                                        onClick={() => setBookingToReview(null)}
+                                        onClick={() => { setBookingToReview(null); resetReviewForm(); }}
                                         className="absolute top-6 right-6 w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 hover:text-deep-purple transition-colors"
                                     >
                                         <X size={20} />
@@ -565,6 +601,39 @@ const MyBookings: React.FC = () => {
                                                 placeholder="Tell us about the atmosphere, the host, or what you learned..."
                                                 className="w-full bg-gray-50 border-none rounded-3xl px-8 py-6 text-deep-purple focus:ring-2 focus:ring-primary-orange/50 transition-shadow resize-none h-40 text-lg leading-relaxed placeholder:text-gray-300"
                                             />
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">
+                                                Photos (optional, max 3)
+                                            </label>
+                                            <div className="flex flex-wrap gap-3 items-center">
+                                                {reviewImagePreviews.map((preview, idx) => (
+                                                    <div key={idx} className="relative w-20 h-20 rounded-2xl overflow-hidden border border-gray-100">
+                                                        <img src={preview} alt="" className="w-full h-full object-cover" />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeReviewImage(idx)}
+                                                            className="absolute top-1 right-1 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center text-white"
+                                                        >
+                                                            <XIcon size={12} />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                {reviewImages.length < 3 && (
+                                                    <label className="w-20 h-20 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:border-primary-orange/50 hover:bg-orange-50/30 transition-colors">
+                                                        <ImagePlus size={22} className="text-gray-300" />
+                                                        <span className="text-[9px] font-bold text-gray-400 mt-1">Add</span>
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            multiple
+                                                            className="hidden"
+                                                            onChange={handleReviewImagesChange}
+                                                        />
+                                                    </label>
+                                                )}
+                                            </div>
                                         </div>
 
                                         <div className="pt-4">

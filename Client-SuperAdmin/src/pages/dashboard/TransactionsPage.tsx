@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../../config/api';
-import { Search, Filter, ArrowUpDown } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 interface Transaction {
     id: number;
@@ -20,7 +20,6 @@ interface Transaction {
 const TransactionsPage: React.FC = () => {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     const fetchTransactions = async () => {
@@ -33,7 +32,7 @@ const TransactionsPage: React.FC = () => {
             const data = await res.json();
             setTransactions(data);
         } catch (err: any) {
-            setError(err.message);
+            console.error(err.message);
         } finally {
             setLoading(false);
         }

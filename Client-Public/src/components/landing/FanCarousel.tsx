@@ -3,19 +3,19 @@ import { motion } from 'framer-motion';
 
 const imageSets = [
     {
-        left: "https://images.unsplash.com/photo-1452860606245-08befc0ff44b?q=80&w=600&auto=format",
-        center: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=600&auto=format",
-        right: "https://images.unsplash.com/photo-1579938202767-771be803237b?q=80&w=686&auto=format"
+        left: "https://i.pinimg.com/1200x/81/2c/c8/812cc890f5e7827e20deeaccdd3f8739.jpg",
+        center: "https://i.pinimg.com/1200x/48/09/9c/48099c941b05bdd0f8118c8f37280757.jpg",
+        right: "https://i.pinimg.com/1200x/a3/cf/d2/a3cfd250325e0d238171ce144cd31ab5.jpg"
     },
     {
-        left: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=600&auto=format",
-        center: "https://images.unsplash.com/photo-1544967082-d9d25d867d66?q=80&w=600&auto=format",
-        right: "https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?q=80&w=600&auto=format"
+        left: "https://i.pinimg.com/736x/ca/f4/8a/caf48a70080f113d7485f623dd3e8b81.jpg",
+        center: "https://i.pinimg.com/1200x/c8/0a/9d/c80a9dd57ecaa06314d4f51454c4ffe9.jpg",
+        right: "https://i.pinimg.com/736x/f9/96/78/f996780ee28b943873b3068a4cdbf2d4.jpg"
     },
     {
-        left: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?q=80&w=600&auto=format",
-        center: "https://images.unsplash.com/photo-1544928147-79a2dbc1f389?q=80&w=687&auto=format",
-        right: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=600&auto=format"
+        left: "https://i.pinimg.com/736x/f9/96/78/f996780ee28b943873b3068a4cdbf2d4.jpg",
+        center: "https://i.pinimg.com/736x/cc/ae/32/ccae32c4d5801a947b611cc659b9a027.jpg",
+        right: "https://i.pinimg.com/736x/2b/6c/66/2b6c66264501ee78a76b3196c588ead3.jpg"
     }
 ];
 

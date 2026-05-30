@@ -8,6 +8,7 @@ using Ganss.Xss;
 using System.Text.RegularExpressions;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace API.Services;
 
@@ -28,6 +29,7 @@ public class WorkshopService : IWorkshopService
     private readonly IGenericRepository<WorkshopModification> _modificationRepository;
     private readonly IBookingRepository _bookingRepository;
     private readonly IGenericRepository<UserPreference> _userPreferenceRepository;
+    private readonly IMemoryCache _cache;
 
     public WorkshopService(
         IWorkshopRepository workshopRepository,
@@ -39,7 +41,8 @@ public class WorkshopService : IWorkshopService
         WorkshopChangeDetector changeDetector,
         IGenericRepository<WorkshopModification> modificationRepository,
         IBookingRepository bookingRepository,
-        IGenericRepository<UserPreference> userPreferenceRepository)
+        IGenericRepository<UserPreference> userPreferenceRepository,
+        IMemoryCache cache)
     {
         _workshopRepository = workshopRepository;
         _categoryRepository = categoryRepository;
@@ -51,6 +54,7 @@ public class WorkshopService : IWorkshopService
         _modificationRepository = modificationRepository;
         _bookingRepository = bookingRepository;
         _userPreferenceRepository = userPreferenceRepository;
+        _cache = cache;
         _htmlSanitizer = new HtmlSanitizer();
     }
 
@@ -97,20 +101,7 @@ public class WorkshopService : IWorkshopService
         // Create pricing
         var pricing = _mapper.Map<WorkshopPricing>(request);
         pricing.WorkshopId = workshop.Id;
-        try 
-        {
-            var (category, confidence, isConfident) = await _mlService.PredictCategoryAsync(workshop.Title, workshop.Description);
-            if (category != null)
-            {
-                workshop.AISuggestedCategory = category;
-                workshop.AIConfidenceScore = confidence;
-                workshop.AIIsConfident = isConfident;
-            }
-        }
-        catch (Exception ex) 
-        {
-            Console.WriteLine($"ML Error during creation: {ex.Message}");
-        }
+
 
         workshop.Pricing = pricing;
 
@@ -221,24 +212,7 @@ public class WorkshopService : IWorkshopService
         }
         workshop.UpdatedAt = DateTime.UtcNow;
 
-        // Perform ML Classification
-        try 
-        {
-            var (category, confidence, isConfident) = await _mlService.PredictCategoryAsync(
-                hasMajor && workshop.Status == WorkshopStatus.Published ? originalTitle : workshop.Title, 
-                workshop.Description);
 
-            if (category != null)
-            {
-                workshop.AISuggestedCategory = category;
-                workshop.AIConfidenceScore = confidence;
-                workshop.AIIsConfident = isConfident;
-            }
-        }
-        catch (Exception ex) 
-        {
-            Console.WriteLine($"ML Error during update: {ex.Message}");
-        }
 
         if (workshop.Pricing != null)
         {
@@ -297,6 +271,8 @@ public class WorkshopService : IWorkshopService
         if (!string.IsNullOrEmpty(userId))
         {
             response.BookedScheduleIds = await _bookingRepository.GetBookedScheduleIdsForUserAsync(userId, id);
+            response.PendingPaymentScheduleIds =
+                await _bookingRepository.GetPendingPaymentScheduleIdsForUserAsync(userId, id);
         }
 
         return response;
@@ -304,14 +280,33 @@ public class WorkshopService : IWorkshopService
 
     public async Task<IEnumerable<WorkshopListResponse>> GetAllPublishedWorkshopsAsync()
     {
+        if (_cache.TryGetValue("CacheKey_AllPublished", out IEnumerable<WorkshopListResponse>? cachedWorkshops))
+        {
+            return cachedWorkshops!;
+        }
+
         var workshops = await _workshopRepository.GetPublishedWorkshopsAsync();
-        return _mapper.Map<IEnumerable<WorkshopListResponse>>(workshops);
+        var result = _mapper.Map<IEnumerable<WorkshopListResponse>>(workshops);
+
+        _cache.Set("CacheKey_AllPublished", result, TimeSpan.FromMinutes(5));
+
+        return result;
     }
 
     public async Task<IEnumerable<WorkshopListResponse>> GetWorkshopsByCategoryAsync(int categoryId)
     {
+        string cacheKey = $"CacheKey_Category_{categoryId}";
+        if (_cache.TryGetValue(cacheKey, out IEnumerable<WorkshopListResponse>? cachedWorkshops))
+        {
+            return cachedWorkshops!;
+        }
+
         var workshops = await _workshopRepository.GetWorkshopsByCategoryAsync(categoryId);
-        return _mapper.Map<IEnumerable<WorkshopListResponse>>(workshops);
+        var result = _mapper.Map<IEnumerable<WorkshopListResponse>>(workshops);
+
+        _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
+
+        return result;
     }
 
     public async Task<IEnumerable<WorkshopListResponse>> GetProviderWorkshopsAsync(int providerId)
@@ -328,8 +323,18 @@ public class WorkshopService : IWorkshopService
 
     public async Task<IEnumerable<WorkshopListResponse>> GetFeaturedWorkshopsAsync(int count = 6)
     {
+        string cacheKey = $"CacheKey_FeaturedWorkshops_{count}";
+        if (_cache.TryGetValue(cacheKey, out IEnumerable<WorkshopListResponse>? cachedWorkshops))
+        {
+            return cachedWorkshops!;
+        }
+
         var workshops = await _workshopRepository.GetFeaturedWorkshopsAsync(count);
-        return _mapper.Map<IEnumerable<WorkshopListResponse>>(workshops);
+        var result = _mapper.Map<IEnumerable<WorkshopListResponse>>(workshops);
+
+        _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
+
+        return result;
     }
 
     public async Task<bool> PublishWorkshopAsync(int workshopId, int providerId)
@@ -349,13 +354,7 @@ public class WorkshopService : IWorkshopService
         workshop.Status = WorkshopStatus.PendingReview;
         workshop.UpdatedAt = DateTime.UtcNow;
 
-        var (pCategory, pConfidence, pIsConfident) = await _mlService.PredictCategoryAsync(workshop.Title, workshop.Description);
-        if (pCategory != null)
-        {
-            workshop.AISuggestedCategory = pCategory;
-            workshop.AIConfidenceScore = pConfidence;
-            workshop.AIIsConfident = pIsConfident;
-        }
+
 
         _workshopRepository.Update(workshop);
         await _workshopRepository.SaveChangesAsync();
@@ -503,8 +502,66 @@ public class WorkshopService : IWorkshopService
         return _mapper.Map<IEnumerable<ScheduleResponse>>(schedules);
     }
 
+    public async Task<IEnumerable<ScheduleWithBookingsResponse>> GetProviderSchedulesWithBookingsAsync(int providerId)
+    {
+        var schedules = await _scheduleRepository.GetProviderSchedulesWithBookingsAsync(providerId);
+        
+        var response = schedules.Select(s => new ScheduleWithBookingsResponse
+        {
+            Id = s.Id,
+            WorkshopId = s.WorkshopId,
+            WorkshopTitle = s.Workshop?.Title ?? string.Empty,
+            BasePrice = s.Workshop?.Pricing?.BasePrice ?? 0,
+            StartDateTime = s.StartDateTime,
+            EndDateTime = s.EndDateTime,
+            MaxCapacity = s.MaxCapacity,
+            AvailableSeats = s.AvailableSeats,
+            IsSoldOut = s.AvailableSeats <= 0,
+            Status = s.Status,
+            Bookings = s.Bookings?.Select(b => new BookingAttendeeResponse
+            {
+                Id = b.Id,
+                GuestName = b.User?.FullName ?? "Unknown",
+                GuestEmail = b.User?.Email,
+                NumberOfSeats = b.NumberOfSeats,
+                ConfirmationCode = b.ConfirmationCode,
+                BookingStatus = b.BookingStatus,
+                PaymentStatus = b.PaymentStatus,
+                BookingDate = b.BookingDate,
+                AttendanceStatus = b.AttendanceStatus,
+                CheckedInAt = b.CheckedInAt
+            }).ToList() ?? new List<BookingAttendeeResponse>()
+        });
+
+        return response;
+    }
+
+    public async Task<bool> MarkScheduleCompleteAsync(int providerId, int scheduleId)
+    {
+        var schedule = await _scheduleRepository.GetByIdAsync(scheduleId);
+        
+        if (schedule == null)
+            return false;
+
+        var workshop = await _workshopRepository.GetByIdAsync(schedule.WorkshopId);
+        if (workshop == null || workshop.ProviderId != providerId)
+            throw new UnauthorizedAccessException("You don't have permission to modify this schedule.");
+
+        schedule.Status = ScheduleStatus.Completed;
+        _scheduleRepository.Update(schedule);
+        await _scheduleRepository.SaveChangesAsync();
+
+        return true;
+    }
+
     public async Task<IEnumerable<WorkshopListResponse>> GetRelatedWorkshopsAsync(int id, int count = 5)
     {
+        string cacheKey = $"CacheKey_RelatedWorkshops_{id}_{count}";
+        if (_cache.TryGetValue(cacheKey, out IEnumerable<WorkshopListResponse>? cachedRelated))
+        {
+            return cachedRelated!;
+        }
+
         var sourceWorkshop = await _workshopRepository.GetWorkshopWithDetailsAsync(id);
         if (sourceWorkshop == null) return Enumerable.Empty<WorkshopListResponse>();
 
@@ -520,6 +577,8 @@ public class WorkshopService : IWorkshopService
             w.ProviderId != sourceWorkshop.ProviderId && 
             w.Status == WorkshopStatus.Published && 
             w.IsActive);
+
+        IEnumerable<WorkshopListResponse> finalResult;
 
         if (otherCandidates.Any())
         {
@@ -549,15 +608,25 @@ public class WorkshopService : IWorkshopService
                 item.RecommendationScore = match.Score;
             }
             
-            var combined = sameProviderList.Concat(rankedList).DistinctBy(w => w.Id).Take(count);
-            return combined;
+            finalResult = sameProviderList.Concat(rankedList).DistinctBy(w => w.Id).Take(count);
+        }
+        else
+        {
+            finalResult = sameProviderList.Take(count);
         }
 
-        return sameProviderList.Take(count);
+        _cache.Set(cacheKey, finalResult, TimeSpan.FromMinutes(15));
+        return finalResult;
     }
 
     public async Task<IEnumerable<WorkshopListResponse>> GetRecommendedWorkshopsForUserAsync(string userId, int count = 6)
     {
+        string cacheKey = $"CacheKey_Recommendations_{userId}_{count}";
+        if (_cache.TryGetValue(cacheKey, out IEnumerable<WorkshopListResponse>? cachedWorkshops))
+        {
+            return cachedWorkshops!;
+        }
+
         // Get User Interest Categories
         var userPrefs = await _userPreferenceRepository.FindAsync(up => up.UserId == userId);
         
@@ -610,6 +679,8 @@ public class WorkshopService : IWorkshopService
             var match = rankedResults.FirstOrDefault(r => r.Id == item.Id);
             item.RecommendationScore = match.Score;
         }
+
+        _cache.Set(cacheKey, results, TimeSpan.FromMinutes(15));
 
         return results;
     }

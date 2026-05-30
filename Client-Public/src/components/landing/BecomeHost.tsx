@@ -23,14 +23,14 @@ const BecomeHost: React.FC = () => {
                 {/* Parallax Images */}
                 <motion.img
                     style={{ y: leftImageY }}
-                    src="https://images.unsplash.com/photo-1610701596007-11502861dcfa?q=80&w=1200&auto=format&fit=crop"
+                    src="https://i.pinimg.com/1200x/12/3a/0d/123a0d01d45b4a3a02c041270eda496e.jpg"
                     alt="Pottery Workshop"
                     className="absolute left-[-15%] md:left-[-5%] top-[10%] w-[55vw] md:w-[32vw] max-w-[450px] aspect-[4/5] object-cover rounded-[2.5rem] shadow-2xl rotate-[10deg] z-0"
                 />
 
                 <motion.img
                     style={{ y: rightImageY }}
-                    src="https://images.unsplash.com/photo-1556910103-1c02745aae4d?q=80&w=1200&auto=format&fit=crop"
+                    src="https://i.pinimg.com/1200x/ce/b0/dd/ceb0dda95c0ec0cff06b33648bcc7b96.jpg"
                     alt="Culinary Workshop"
                     className="absolute right-[-15%] md:right-[-5%] top-[40%] w-[50vw] md:w-[28vw] max-w-[400px] aspect-[3/4] object-cover rounded-[2.5rem] shadow-2xl rotate-[-12deg] z-0"
                 />
@@ -44,9 +44,8 @@ const BecomeHost: React.FC = () => {
                         <h1 className="font-serif text-[10vw] sm:text-6xl md:text-7xl xl:text-[7rem] leading-[1] text-[#1A1A1A] font-bold tracking-tighter uppercase relative z-10 block">
                             workshops?
                         </h1>
-                        {/* Elegant Layered Brush Underline */}
+                        {/* Layered Brush Underline */}
                         <svg className="absolute w-[110%] h-[60px] left-[-5%] bottom-[-15px] pointer-events-none overflow-visible z-[-1] opacity-90" viewBox="0 0 400 60" preserveAspectRatio="none">
-                            {/* Main thick core */}
                             <motion.path
                                 d="M 10 50 Q 150 15, 250 40 T 390 25"
                                 fill="none"
@@ -56,7 +55,6 @@ const BecomeHost: React.FC = () => {
                                 opacity="0.9"
                                 style={{ pathLength }}
                             />
-                            {/* Top brush bristle */}
                             <motion.path
                                 d="M 5 42 Q 140 5, 240 32 T 395 18"
                                 fill="none"
@@ -66,7 +64,6 @@ const BecomeHost: React.FC = () => {
                                 opacity="0.5"
                                 style={{ pathLength }}
                             />
-                            {/* Bottom brush bristle */}
                             <motion.path
                                 d="M 15 58 Q 160 25, 260 48 T 385 32"
                                 fill="none"

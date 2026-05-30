@@ -97,11 +97,7 @@ public class Workshop
     public string? SafetyRequirements { get; set; } 
     public string? WhatsIncluded { get; set; } 
     
-    [MaxLength(100)]
-    public string? AISuggestedCategory { get; set; }
-    public double? AIConfidenceScore { get; set; }
-    public bool? AIIsConfident { get; set; }
-    
+
     public bool IsManuallyCategorized { get; set; } = false;  
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

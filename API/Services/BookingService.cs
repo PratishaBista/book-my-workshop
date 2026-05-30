@@ -22,6 +22,10 @@ public class BookingService : IBookingService
     private readonly IMapper _mapper;
     private readonly ILogger<BookingService> _logger;
     private readonly ApplicationDbContext _context;
+    private readonly IBookingTicketService _ticketService;
+    private readonly IGiftCardService _giftCardService;
+    private readonly INotificationService _notificationService;
+    private readonly IEmailService _emailService;
 
     public BookingService(
         IBookingRepository bookingRepository,
@@ -29,7 +33,11 @@ public class BookingService : IBookingService
         IWorkshopRepository workshopRepository,
         IMapper mapper,
         ILogger<BookingService> logger,
-        ApplicationDbContext context)
+        ApplicationDbContext context,
+        IBookingTicketService ticketService,
+        IGiftCardService giftCardService,
+        INotificationService notificationService,
+        IEmailService emailService)
     {
         _bookingRepository = bookingRepository;
         _scheduleRepository = scheduleRepository;
@@ -37,6 +45,10 @@ public class BookingService : IBookingService
         _mapper = mapper;
         _logger = logger;
         _context = context;
+        _ticketService = ticketService;
+        _giftCardService = giftCardService;
+        _notificationService = notificationService;
+        _emailService = emailService;
     }
 
     public async Task<BookingResponse> CreateBookingAsync(string userId, CreateBookingRequest request)
@@ -97,30 +109,102 @@ public class BookingService : IBookingService
         }
 
         // Create booking
+        decimal walletAmountUsed = 0;
+        if (request.UseWallet)
+        {
+            var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == userId);
+            if (wallet != null)
+            {
+                walletAmountUsed = Math.Min(wallet.Balance, totalAmount);
+            }
+        }
+
         var booking = _mapper.Map<Booking>(request);
         booking.UserId = userId;
         booking.TotalAmount = totalAmount;
+        booking.WalletAmountUsed = walletAmountUsed;
         booking.ConfirmationCode = GenerateConfirmationCode();
-        booking.BookingStatus = BookingStatus.Pending;
-        booking.PaymentStatus = PaymentStatus.Pending;
+        
+        bool isFullyPaidWithWallet = walletAmountUsed == totalAmount;
+
+        if (isFullyPaidWithWallet)
+        {
+            booking.BookingStatus = BookingStatus.Confirmed;
+            booking.PaymentStatus = PaymentStatus.Paid;
+            booking.PaymentGateway = "Wallet";
+            booking.PaymentCompletedAt = DateTime.UtcNow;
+
+            var settings = await _context.PlatformSettings.FirstOrDefaultAsync();
+            var commissionRate = settings?.CommissionPercentage ?? 10.0m;
+            var vatRate = settings?.VatPercentage ?? 13.0m;
+
+            booking.PlatformFee = Math.Round(totalAmount * commissionRate / 100, 2);
+            booking.VatOnCommission = Math.Round(booking.PlatformFee * vatRate / 100, 2);
+            booking.HostEarnings = totalAmount - booking.PlatformFee;
+            booking.PayoutStatus = PayoutStatus.Escrow;
+        }
+        else
+        {
+            booking.BookingStatus = BookingStatus.Pending;
+            booking.PaymentStatus = PaymentStatus.Pending;
+        }
 
         // Atomic operation: Create booking and decrement seats
+        using var dbTransaction = await _context.Database.BeginTransactionAsync();
         try
         {
             await _bookingRepository.AddAsync(booking);
-            
-            // Decrement available seats
-            schedule.AvailableSeats -= request.NumberOfSeats;
-            _scheduleRepository.Update(schedule);
+
+            // --- Concurrency-safe seat decrement ---
+            // Uses a single conditional SQL UPDATE to prevent overbooking under concurrent requests.
+            // This is an atomic read-modify-write: the WHERE clause re-checks availability at the
+            // exact moment of the UPDATE, so two simultaneous requests cannot both decrement from 1 → 0.
+            // The loser gets rowsUpdated == 0 and receives a "sold out" error instead of a double-booking.
+            int rowsUpdated = await _context.WorkshopSchedules
+                .Where(s => s.Id == schedule.Id && s.AvailableSeats >= request.NumberOfSeats)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(x => x.AvailableSeats, x => x.AvailableSeats - request.NumberOfSeats));
+
+            if (rowsUpdated == 0)
+            {
+                // Another concurrent request just took the last seat(s) — reject this one.
+                throw new InvalidOperationException(
+                    "Sorry, this session just sold out. Please choose another date.");
+            }
 
             await _bookingRepository.SaveChangesAsync();
 
-            _logger.LogInformation($"Booking created: {booking.ConfirmationCode} for user {userId}");
+            if (isFullyPaidWithWallet)
+            {
+                var deducted = await _giftCardService.DeductFromWalletAsync(userId, booking.Id, totalAmount);
+                if (!deducted)
+                {
+                    throw new InvalidOperationException("Failed to deduct from wallet. Insufficient balance.");
+                }
+            }
+
+            await dbTransaction.CommitAsync();
+            _logger.LogInformation(
+                "Booking created: {Code} for user {UserId} — {Seats} seat(s) reserved on schedule {ScheduleId}",
+                booking.ConfirmationCode, userId, request.NumberOfSeats, schedule.Id);
         }
-        catch (DbUpdateException ex)
+        catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating booking - possible race condition");
-            throw new InvalidOperationException("Failed to create booking. Please try again.");
+            await dbTransaction.RollbackAsync();
+            _logger.LogError(ex, "Error creating booking for schedule {ScheduleId}", schedule.Id);
+            throw new InvalidOperationException(ex.Message);
+        }
+
+        if (isFullyPaidWithWallet)
+        {
+            try
+            {
+                await _ticketService.SendBookingConfirmationEmailAsync(booking);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send booking confirmation email for fully wallet-paid {BookingId}", booking.Id);
+            }
         }
 
         // Get full booking details
@@ -130,10 +214,62 @@ public class BookingService : IBookingService
         var response = _mapper.Map<BookingResponse>(bookingDetail);
         
         // Set review eligibility
-        response.CanReview = bookingDetail.WorkshopSchedule.Status == ScheduleStatus.Completed 
-                           && bookingDetail.BookingStatus == BookingStatus.Confirmed;
+        response.CanReview = CanReviewBooking(bookingDetail);
 
         return response;
+    }
+
+    public async Task<BookingResponse> GetOrCreateBookingForPaymentAsync(string userId, CreateBookingRequest request)
+    {
+        var pending = await _bookingRepository.GetPendingUnpaidBookingAsync(userId, request.WorkshopScheduleId);
+        if (pending != null)
+        {
+            var walletMatches = request.UseWallet
+                ? pending.WalletAmountUsed > 0
+                : pending.WalletAmountUsed == 0;
+
+            if (pending.NumberOfSeats == request.NumberOfSeats && walletMatches)
+            {
+                _logger.LogInformation(
+                    "Resuming payment for pending booking {BookingId} on schedule {ScheduleId}",
+                    pending.Id, request.WorkshopScheduleId);
+
+                var existing = _mapper.Map<BookingResponse>(pending);
+                existing.CanReview = CanReviewBooking(pending);
+                return existing;
+            }
+
+            await ReleasePendingUnpaidBookingAsync(pending, userId);
+        }
+
+        return await CreateBookingAsync(userId, request);
+    }
+
+    private async Task ReleasePendingUnpaidBookingAsync(Booking booking, string userId)
+    {
+        if (booking.UserId != userId)
+            throw new UnauthorizedAccessException();
+
+        if (booking.BookingStatus != BookingStatus.Pending || booking.PaymentStatus != PaymentStatus.Pending)
+            return;
+
+        var schedule = await _scheduleRepository.GetByIdAsync(booking.WorkshopScheduleId);
+        if (schedule != null)
+        {
+            schedule.AvailableSeats += booking.NumberOfSeats;
+            _scheduleRepository.Update(schedule);
+        }
+
+        booking.BookingStatus = BookingStatus.Cancelled;
+        booking.CancelledAt = DateTime.UtcNow;
+        booking.CancellationReason = "Payment not completed — reservation released";
+        booking.CancelledBy = "System";
+        _bookingRepository.Update(booking);
+        await _bookingRepository.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Released pending unpaid booking {BookingId}; {Seats} seat(s) returned to schedule {ScheduleId}",
+            booking.Id, booking.NumberOfSeats, booking.WorkshopScheduleId);
     }
 
     public async Task<BookingResponse?> GetBookingByIdAsync(int bookingId, string userId)
@@ -146,24 +282,31 @@ public class BookingService : IBookingService
         }
 
         var response = _mapper.Map<BookingResponse>(booking);
-        response.CanReview = await _bookingRepository.CanUserReviewWorkshopAsync(userId, booking.WorkshopSchedule.WorkshopId);
+        response.CanReview = CanReviewBooking(booking);
 
         return response;
     }
 
-    public async Task<BookingResponse?> GetBookingByConfirmationCodeAsync(string confirmationCode)
+    public async Task<BookingResponse?> GetBookingByConfirmationCodeAsync(string confirmationCode, string userId)
     {
         var booking = await _bookingRepository.GetBookingByConfirmationCodeAsync(confirmationCode);
         
-        if (booking == null)
-        {
+        if (booking == null || booking.UserId != userId)
             return null;
-        }
 
         var response = _mapper.Map<BookingResponse>(booking);
-        response.CanReview = await _bookingRepository.CanUserReviewWorkshopAsync(booking.UserId, booking.WorkshopSchedule.WorkshopId);
+        response.CanReview = CanReviewBooking(booking);
 
         return response;
+    }
+
+    public async Task<BookingTicketResponse?> GetBookingTicketByCodeAsync(string confirmationCode, string userId)
+    {
+        var booking = await _bookingRepository.GetBookingByConfirmationCodeAsync(confirmationCode);
+        if (booking == null || booking.UserId != userId)
+            return null;
+
+        return await GetBookingTicketAsync(booking.Id, userId);
     }
 
     public async Task<IEnumerable<BookingResponse>> GetUserBookingsAsync(string userId)
@@ -175,9 +318,8 @@ public class BookingService : IBookingService
         foreach (var response in responses)
         {
             var booking = bookings.First(b => b.Id == response.Id);
-            response.CanReview = booking.WorkshopSchedule.Status == ScheduleStatus.Completed 
-                               && booking.BookingStatus == BookingStatus.Confirmed
-                               && booking.Review == null;
+            response.CanReview = CanReviewBooking(booking);
+            response.HasReviewed = booking.Review != null;
         }
 
         return responses;
@@ -238,6 +380,12 @@ public class BookingService : IBookingService
             }
             
             booking.PayoutStatus = PayoutStatus.Cancelled;
+
+            // Refund to user's wallet
+            if (refundPct > 0 && refundAmount > 0)
+            {
+                await _giftCardService.RefundToWalletAsync(booking.UserId, booking.Id, refundAmount);
+            }
         }
 
         _bookingRepository.Update(booking);
@@ -277,26 +425,241 @@ public class BookingService : IBookingService
 
         if (booking.PaymentStatus == PaymentStatus.Paid) return true;
 
-        booking.BookingStatus = BookingStatus.Confirmed;
-        booking.PaymentStatus = PaymentStatus.Paid;
-        booking.PaymentCompletedAt = DateTime.UtcNow;
-        booking.TransactionId = transactionUuid;
-        booking.PaymentGateway = "eSewa";
+        using var dbTransaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            if (booking.WalletAmountUsed > 0)
+            {
+                var deducted = await _giftCardService.DeductFromWalletAsync(booking.UserId, booking.Id, booking.WalletAmountUsed);
+                if (!deducted)
+                {
+                    _logger.LogError("Insufficient wallet balance for user {UserId} to confirm Booking {BookingId}", booking.UserId, booking.Id);
+                    return false;
+                }
+            }
 
-        var settings = await _context.PlatformSettings.FirstOrDefaultAsync();
-        var commissionRate = settings?.CommissionPercentage ?? 10.0m;
+            booking.BookingStatus = BookingStatus.Confirmed;
+            booking.PaymentStatus = PaymentStatus.Paid;
+            booking.PaymentCompletedAt = DateTime.UtcNow;
+            booking.TransactionId = transactionUuid;
+            booking.PaymentGateway = booking.WalletAmountUsed > 0 ? "eSewa + Wallet" : "eSewa";
 
-        booking.PlatformFee = Math.Round(booking.TotalAmount * commissionRate / 100, 2);
-        booking.HostEarnings = booking.TotalAmount - booking.PlatformFee;
-        booking.PayoutStatus = PayoutStatus.Escrow;
+            var settings = await _context.PlatformSettings.FirstOrDefaultAsync();
+            var commissionRate = settings?.CommissionPercentage ?? 10.0m;
+            var vatRate = settings?.VatPercentage ?? 13.0m;
 
+            booking.PlatformFee = Math.Round(booking.TotalAmount * commissionRate / 100, 2);
+            booking.VatOnCommission = Math.Round(booking.PlatformFee * vatRate / 100, 2);
+            booking.HostEarnings = booking.TotalAmount - booking.PlatformFee;
+            booking.PayoutStatus = PayoutStatus.Escrow;
+
+            _bookingRepository.Update(booking);
+            await _bookingRepository.SaveChangesAsync();
+            await dbTransaction.CommitAsync();
+        }
+        catch (Exception ex)
+        {
+            await dbTransaction.RollbackAsync();
+            _logger.LogError(ex, "Failed to confirm booking payment for {BookingId}", booking.Id);
+            return false;
+        }
+
+        _logger.LogInformation(
+            "Payment confirmed for Booking {BookingId}. Fee: {Fee}, Host Earnings: {Earnings}. Transaction: {Transaction}",
+            booking.Id, booking.PlatformFee, booking.HostEarnings, transactionUuid);
+
+        try
+        {
+            await _ticketService.SendBookingConfirmationEmailAsync(booking);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send booking confirmation email for {BookingId}", booking.Id);
+        }
+
+        return true;
+    }
+
+    public async Task<BookingTicketResponse?> GetBookingTicketAsync(int bookingId, string userId)
+    {
+        var booking = await _bookingRepository.GetBookingWithDetailsAsync(bookingId);
+        if (booking == null || booking.UserId != userId)
+            return null;
+
+        if (booking.PaymentStatus != PaymentStatus.Paid || booking.BookingStatus != BookingStatus.Confirmed)
+            return null;
+
+        var workshop = booking.WorkshopSchedule.Workshop;
+        var imageUrl = workshop.Media?
+            .Where(m => m.MediaType == MediaType.Image)
+            .OrderBy(m => m.DisplayOrder)
+            .Select(m => m.Url)
+            .FirstOrDefault();
+
+        return new BookingTicketResponse
+        {
+            BookingId = booking.Id,
+            ConfirmationCode = booking.ConfirmationCode,
+            GuestName = booking.User.FullName ?? "Guest",
+            NumberOfSeats = booking.NumberOfSeats,
+            WorkshopTitle = workshop.Title,
+            WorkshopSlug = workshop.Slug,
+            WorkshopImageUrl = imageUrl,
+            StartDateTime = booking.WorkshopSchedule.StartDateTime,
+            EndDateTime = booking.WorkshopSchedule.EndDateTime,
+            LocationAddress = workshop.LocationAddress,
+            LocationName = workshop.LocationName,
+            TicketUrl = _ticketService.BuildTicketUrl(booking.ConfirmationCode),
+            QrPayload = _ticketService.BuildQrPayload(booking.ConfirmationCode),
+            AttendanceStatus = booking.AttendanceStatus,
+            BookingStatus = booking.BookingStatus,
+            PaymentStatus = booking.PaymentStatus
+        };
+    }
+
+    public async Task<BookingAttendeeResponse?> CheckInBookingAsync(int providerId, string confirmationCode)
+    {
+        var booking = await _context.Bookings
+            .Include(b => b.User)
+            .Include(b => b.WorkshopSchedule)
+                .ThenInclude(s => s.Workshop)
+            .FirstOrDefaultAsync(b => b.ConfirmationCode == confirmationCode);
+
+        if (booking == null)
+            return null;
+
+        if (booking.WorkshopSchedule.Workshop.ProviderId != providerId)
+            throw new UnauthorizedAccessException("This booking is not for your workshop.");
+
+        if (booking.BookingStatus != BookingStatus.Confirmed || booking.PaymentStatus != PaymentStatus.Paid)
+            throw new InvalidOperationException("Only confirmed, paid bookings can be checked in.");
+
+        if (booking.AttendanceStatus != AttendanceStatus.CheckedIn)
+        {
+            booking.AttendanceStatus = AttendanceStatus.CheckedIn;
+            booking.CheckedInAt = DateTime.UtcNow;
+            _bookingRepository.Update(booking);
+            await _bookingRepository.SaveChangesAsync();
+        }
+
+        return MapAttendee(booking);
+    }
+
+    public async Task<BookingAttendeeResponse?> MarkBookingNoShowAsync(int providerId, int bookingId)
+    {
+        var booking = await _context.Bookings
+            .Include(b => b.User)
+            .Include(b => b.WorkshopSchedule)
+                .ThenInclude(s => s.Workshop)
+            .FirstOrDefaultAsync(b => b.Id == bookingId);
+
+        if (booking == null)
+            return null;
+
+        if (booking.WorkshopSchedule.Workshop.ProviderId != providerId)
+            throw new UnauthorizedAccessException("This booking is not for your workshop.");
+
+        booking.AttendanceStatus = AttendanceStatus.NoShow;
+        booking.CheckedInAt = null;
         _bookingRepository.Update(booking);
         await _bookingRepository.SaveChangesAsync();
 
-        _logger.LogInformation(
-            $"Payment confirmed for Booking {booking.Id}. Fee: {booking.PlatformFee}, Host Earnings: {booking.HostEarnings}. Transaction: {transactionUuid}");
-        return true;
+        return MapAttendee(booking);
     }
+
+    public async Task<int> CancelScheduleBookingsAsync(int scheduleId)
+    {
+        var bookings = await _context.Bookings
+            .Include(b => b.User)
+            .Include(b => b.WorkshopSchedule)
+            .Where(b => b.WorkshopScheduleId == scheduleId 
+                     && b.BookingStatus != BookingStatus.Cancelled 
+                     && b.BookingStatus != BookingStatus.Refunded)
+            .ToListAsync();
+
+        int refundedCount = 0;
+
+        foreach (var booking in bookings)
+        {
+            if (booking.PaymentStatus == PaymentStatus.Paid)
+            {
+                // Full refund since host cancelled
+                booking.RefundPercentage = 100;
+                booking.RefundAmount = booking.TotalAmount;
+                booking.PaymentStatus = PaymentStatus.Refunded;
+                booking.BookingStatus = BookingStatus.Refunded;
+
+                // Refund to user's wallet
+                if (booking.TotalAmount > 0)
+                {
+                    await _giftCardService.RefundToWalletAsync(booking.UserId, booking.Id, booking.TotalAmount);
+                }
+                refundedCount++;
+
+                await _notificationService.CreateNotificationAsync(
+                    booking.UserId,
+                    "Workshop Cancelled",
+                    $"The host has cancelled the schedule for '{booking.WorkshopSchedule.Workshop.Title}'. A full refund of Rs. {booking.TotalAmount} has been credited to your wallet.",
+                    NotificationType.Alert
+                );
+
+                var emailBody = EmailTemplates.GetNotificationEmail(
+                    "Workshop Schedule Cancelled",
+                    $"Dear {booking.User.FullName},<br/><br/>The host has cancelled the upcoming schedule for '<b>{booking.WorkshopSchedule.Workshop.Title}</b>'.<br/><br/>A full refund of <b>Rs. {booking.TotalAmount}</b> has been processed and credited directly to your BookMyWorkshop Wallet.<br/><br/>We apologize for the inconvenience."
+                );
+                if (!string.IsNullOrEmpty(booking.User.Email))
+                    await _emailService.SendEmailAsync(booking.User.Email, "Workshop Cancelled & Refunded", emailBody);
+            }
+            else
+            {
+                // Unpaid bookings just get cancelled
+                booking.BookingStatus = BookingStatus.Cancelled;
+
+                await _notificationService.CreateNotificationAsync(
+                    booking.UserId,
+                    "Workshop Cancelled",
+                    $"The host has cancelled the schedule for '{booking.WorkshopSchedule.Workshop.Title}'. Your pending booking has been cancelled.",
+                    NotificationType.Alert
+                );
+
+                var emailBody = EmailTemplates.GetNotificationEmail(
+                    "Workshop Schedule Cancelled",
+                    $"Dear {booking.User.FullName},<br/><br/>The host has cancelled the upcoming schedule for '<b>{booking.WorkshopSchedule.Workshop.Title}</b>'.<br/><br/>Your pending booking has been cancelled.<br/><br/>We apologize for the inconvenience."
+                );
+                if (!string.IsNullOrEmpty(booking.User.Email))
+                    await _emailService.SendEmailAsync(booking.User.Email, "Workshop Cancelled", emailBody);
+            }
+
+            _bookingRepository.Update(booking);
+        }
+
+        if (bookings.Any())
+        {
+            await _bookingRepository.SaveChangesAsync();
+        }
+
+        return refundedCount;
+    }
+
+    private static bool CanReviewBooking(Booking booking) =>
+        booking.WorkshopSchedule.Status == ScheduleStatus.Completed
+        && booking.BookingStatus == BookingStatus.Confirmed
+        && booking.AttendanceStatus == AttendanceStatus.CheckedIn
+        && booking.Review == null;
+
+    private static BookingAttendeeResponse MapAttendee(Booking booking) => new()
+    {
+        Id = booking.Id,
+        GuestName = booking.User.FullName ?? "Unknown",
+        GuestEmail = booking.User.Email,
+        NumberOfSeats = booking.NumberOfSeats,
+        ConfirmationCode = booking.ConfirmationCode,
+        BookingStatus = booking.BookingStatus,
+        PaymentStatus = booking.PaymentStatus,
+        BookingDate = booking.BookingDate,
+        AttendanceStatus = booking.AttendanceStatus,
+        CheckedInAt = booking.CheckedInAt
+    };
 
     private string GenerateConfirmationCode()
     {

@@ -28,7 +28,7 @@ export const ActiveHosts: React.FC = () => {
         <div>
             <div className="mb-8">
                 <h2 className="text-2xl font-bold text-white tracking-tight leading-tight">Active Partners</h2>
-                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] font-mono mt-1 opacity-80">Verified Platform Nodes</p>
+                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] font-mono mt-1 opacity-80">Verified Platform</p>
             </div>
 
             <div className="bg-[#0D0D0D] rounded-2xl border border-[#1A1A1A] overflow-hidden animate-in slide-in-from-bottom-4 duration-500 shadow-2xl shadow-black/50">
@@ -43,7 +43,7 @@ export const ActiveHosts: React.FC = () => {
                     {loading ? (
                         <div className="p-20 text-center text-slate-600 font-mono text-xs uppercase tracking-[0.2em] animate-pulse">Syncing directory...</div>
                     ) : hosts.length === 0 ? (
-                        <div className="p-20 text-center text-slate-500 italic font-mono text-xs uppercase tracking-widest">No active nodes detected.</div>
+                        <div className="p-20 text-center text-slate-500 italic font-mono text-xs uppercase tracking-widest">No active workshops detected.</div>
                     ) : (
                         hosts.map(p => (
                             <div key={p.id} className="grid grid-cols-12 gap-4 px-8 py-5 items-center hover:bg-[#111] border-l-4 border-l-transparent hover:border-l-indigo-600 transition-all cursor-pointer group">

@@ -12,9 +12,16 @@ sentence-transformers
 torch
 datasets
 accelerate
+tensorflow
 
 # Data Processing
 pandas
+
+# HTTP (enhancement providers)
+httpx
+
+# Optional: Hugging Face enhancement
+huggingface_hub
 
 # Development
 python-dotenv

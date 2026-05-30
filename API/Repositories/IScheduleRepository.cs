@@ -12,4 +12,5 @@ public interface IScheduleRepository : IGenericRepository<WorkshopSchedule>
     Task<WorkshopSchedule?> GetScheduleWithBookingsAsync(int scheduleId);
     Task<bool> IsScheduleAvailableAsync(int scheduleId, int requestedSeats);
     Task<IEnumerable<WorkshopSchedule>> GetProviderUpcomingSchedulesAsync(int providerId);
+    Task<IEnumerable<WorkshopSchedule>> GetProviderSchedulesWithBookingsAsync(int providerId);
 }

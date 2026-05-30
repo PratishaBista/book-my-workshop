@@ -13,20 +13,30 @@ namespace API.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-[Authorize(Roles = UserRoles.Admin)]
+[Authorize(Roles = $"{UserRoles.Admin},{UserRoles.SuperAdmin}")]
 public class AdminController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IEmailService _emailService;
     private readonly INotificationService _notificationService;
+    private readonly IReviewSeedService _reviewSeedService;
+    private readonly IReviewModerationService _reviewModeration;
 
-    public AdminController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IEmailService emailService, INotificationService notificationService)
+    public AdminController(
+        ApplicationDbContext context,
+        UserManager<ApplicationUser> userManager,
+        IEmailService emailService,
+        INotificationService notificationService,
+        IReviewSeedService reviewSeedService,
+        IReviewModerationService reviewModeration)
     {
         _context = context;
         _userManager = userManager;
         _emailService = emailService;
         _notificationService = notificationService;
+        _reviewSeedService = reviewSeedService;
+        _reviewModeration = reviewModeration;
     }
 
     // GET: api/admin/providers/pending
@@ -54,8 +64,6 @@ public class AdminController : ControllerBase
                 ContactPerson = p.User.FullName,
                 Email = p.User.Email,
                 RegisteredAt = p.CreatedAt,
-                p.TrustScore,
-                p.TrustAnalysisJson,
                 IdCardUrl = p.IdCardUrl,
                 PanCardUrl = p.PanCardUrl,
                 StudioImageUrl = p.StudioImageUrl
@@ -98,6 +106,43 @@ public class AdminController : ControllerBase
         return Ok(new { Message = $"Provider '{provider.BusinessName}' approved successfully." });
     }
 
+    public class RejectProviderRequest
+    {
+        public string Reason { get; set; } = string.Empty;
+    }
+
+    // PUT: api/admin/reject-provider/{id}
+    [HttpPut("reject-provider/{id}")]
+    public async Task<IActionResult> RejectProvider(int id, [FromBody] RejectProviderRequest request)
+    {
+        var provider = await _context.Providers.FindAsync(id);
+        if (provider == null) return NotFound("Provider not found");
+
+        if (provider.Status == ProviderStatus.Approved) return BadRequest("Provider is already approved. You must suspend them instead.");
+
+        provider.Status = ProviderStatus.Rejected;
+        provider.ReviewNotes = request.Reason;
+        provider.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        // Send Rejection Email
+        var user = await _userManager.FindByIdAsync(provider.UserId);
+        if (user != null && !string.IsNullOrEmpty(user.Email))
+        {
+            var emailBody = EmailTemplates.GetNotificationEmail("Host Profile Requires Action", $"We have reviewed your host application. Unfortunately, it cannot be approved at this time for the following reason:<br/><br/><i>{request.Reason}</i><br/><br/>Please login to your dashboard to update your profile and resubmit.");
+            await _emailService.SendEmailAsync(user.Email, "Action Required: Host Profile Update - BookMyWorkshop", emailBody);
+        }
+
+        // Notify Host via SignalR
+        await _notificationService.CreateNotificationAsync(provider.UserId, 
+            "Profile Needs Update", 
+            $"Your host profile was reviewed but requires changes. Reason: {request.Reason}", 
+            NotificationType.Alert, 
+            "/host/settings");
+
+        return Ok(new { Message = $"Provider '{provider.BusinessName}' rejected.", Reason = request.Reason });
+    }
+
     // GET: api/admin/workshops/pending
     [HttpGet("workshops/pending")]
     public async Task<IActionResult> GetPendingWorkshops()
@@ -128,11 +173,7 @@ public class AdminController : ControllerBase
                 CategoryNames = w.Categories.Select(c => c.Name).ToList(),
                 Price = w.Pricing != null ? w.Pricing.BasePrice : 0,
                 w.HasPendingModifications,
-                PendingChanges = _context.WorkshopMedia.Where(m => false).ToList(), // Placeholder, we'll fetch actual modifications below
-                // AI Fields
-                w.AISuggestedCategory,
-                w.AIConfidenceScore,
-                w.AIIsConfident
+                PendingChanges = _context.WorkshopMedia.Where(m => false).ToList() // Placeholder, we'll fetch actual modifications below
             })
             .ToListAsync();
 
@@ -159,8 +200,7 @@ public class AdminController : ControllerBase
                 w.LocationAddress, w.LocationName, w.ProviderName, w.ProviderContact,
                 w.ProviderEmail, w.SubmittedAt, w.CategoryNames, w.Price,
                 w.HasPendingModifications,
-                PendingData = pendingData,
-                w.AISuggestedCategory, w.AIConfidenceScore, w.AIIsConfident
+                PendingData = pendingData
             });
         }
 
@@ -195,10 +235,7 @@ public class AdminController : ControllerBase
                 ProviderEmail = w.Provider.User.Email,
                 PublishedAt = w.UpdatedAt,
                 CategoryNames = w.Categories.Select(c => c.Name).ToList(),
-                Price = w.Pricing != null ? w.Pricing.BasePrice : 0,
-                // AI Fields
-                w.AISuggestedCategory,
-                w.AIConfidenceScore
+                Price = w.Pricing != null ? w.Pricing.BasePrice : 0
             })
             .ToListAsync();
 
@@ -341,6 +378,14 @@ public class AdminController : ControllerBase
         
         await _context.SaveChangesAsync();
 
+        // Send Email
+        var user = await _userManager.FindByIdAsync(workshop.Provider.UserId);
+        if (user != null && !string.IsNullOrEmpty(user.Email))
+        {
+            var emailBody = EmailTemplates.GetNotificationEmail("Workshop Needs Changes", $"Your workshop '<b>{workshop.Title}</b>' has been reviewed and requires changes before it can be published. Reason:<br/><br/><i>{request.Reason}</i><br/><br/>Please login to your host dashboard, edit the workshop, and resubmit it.");
+            await _emailService.SendEmailAsync(user.Email, "Action Required: Workshop Review - BookMyWorkshop", emailBody);
+        }
+
         // Notify Host
         await _notificationService.CreateNotificationAsync(workshop.Provider.UserId, 
             "Workshop Rejected", 
@@ -349,6 +394,151 @@ public class AdminController : ControllerBase
             $"/host/workshops");
 
         return Ok(new { Message = $"Workshop '{workshop.Title}' has been rejected.", Reason = request.Reason });
+    }
+
+    // PUT: api/admin/suspend-provider/{id}
+    [HttpPut("suspend-provider/{id}")]
+    public async Task<IActionResult> SuspendProvider(int id, [FromBody] SuspendRequest request)
+    {
+        var provider = await _context.Providers.Include(p => p.User).FirstOrDefaultAsync(p => p.Id == id);
+        if (provider == null) return NotFound("Provider not found");
+        if (provider.Status == ProviderStatus.Suspended) return BadRequest("Provider is already suspended.");
+
+        provider.Status = ProviderStatus.Suspended;
+        provider.ReviewNotes = request.Reason;
+        provider.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        // Email
+        if (provider.User?.Email != null)
+        {
+            var body = EmailTemplates.GetNotificationEmail("Your Host Account Has Been Suspended",
+                $"Your BookMyWorkshop host account (<b>{provider.BusinessName}</b>) has been suspended.<br/><br/>"
+              + $"<b>Reason:</b> <i>{request.Reason}</i><br/><br/>"
+              + "All your active workshops have been hidden from the marketplace. "
+              + "Please contact support if you believe this is a mistake.");
+            await _emailService.SendEmailAsync(provider.User.Email, "Account Suspended - BookMyWorkshop", body);
+        }
+
+        // In-app notification
+        await _notificationService.CreateNotificationAsync(provider.UserId,
+            "Account Suspended",
+            $"Your host account has been suspended. Reason: {request.Reason}",
+            NotificationType.Alert,
+            "/host/settings");
+
+        try
+        {
+            var logService = HttpContext.RequestServices.GetRequiredService<ISystemLogService>();
+            await logService.LogWarningAsync("Moderation", $"Host account '{provider.BusinessName}' (ID: {id}) suspended. Reason: {request.Reason}.", User.Identity?.Name ?? "Admin");
+        }
+        catch {}
+
+        return Ok(new { Message = $"Provider '{provider.BusinessName}' has been suspended." });
+    }
+
+    // PUT: api/admin/unsuspend-provider/{id}
+    [HttpPut("unsuspend-provider/{id}")]
+    public async Task<IActionResult> UnsuspendProvider(int id)
+    {
+        var provider = await _context.Providers.Include(p => p.User).FirstOrDefaultAsync(p => p.Id == id);
+        if (provider == null) return NotFound("Provider not found");
+        if (provider.Status != ProviderStatus.Suspended) return BadRequest("Provider is not suspended.");
+
+        provider.Status = ProviderStatus.Approved;
+        provider.ReviewNotes = null;
+        provider.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        // Email
+        if (provider.User?.Email != null)
+        {
+            var body = EmailTemplates.GetNotificationEmail("Your Host Account Has Been Reinstated",
+                $"Great news! Your BookMyWorkshop host account (<b>{provider.BusinessName}</b>) has been reinstated.<br/><br/>"
+              + "You can now log back in and your workshops will be visible again. "
+              + "Please ensure you follow our community guidelines going forward.");
+            await _emailService.SendEmailAsync(provider.User.Email, "Account Reinstated - BookMyWorkshop", body);
+        }
+
+        await _notificationService.CreateNotificationAsync(provider.UserId,
+            "Account Reinstated",
+            "Your host account suspension has been lifted. Welcome back!",
+            NotificationType.Success,
+            "/host/dashboard");
+
+        try
+        {
+            var logService = HttpContext.RequestServices.GetRequiredService<ISystemLogService>();
+            await logService.LogInfoAsync("Moderation", $"Host account '{provider.BusinessName}' (ID: {id}) suspension lifted.", User.Identity?.Name ?? "Admin");
+        }
+        catch {}
+
+        return Ok(new { Message = $"Provider '{provider.BusinessName}' has been reinstated." });
+    }
+
+    public class SuspendRequest
+    {
+        public string Reason { get; set; } = string.Empty;
+    }
+
+    // PUT: api/admin/suspend-user/{userId}
+    [HttpPut("suspend-user/{userId}")]
+    public async Task<IActionResult> SuspendUser(string userId, [FromBody] SuspendRequest request)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null) return NotFound("User not found");
+
+        // Use ASP.NET Identity's built-in lockout mechanism
+        await _userManager.SetLockoutEnabledAsync(user, true);
+        await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);
+
+        if (!string.IsNullOrEmpty(user.Email))
+        {
+            var body = EmailTemplates.GetNotificationEmail("Your Account Has Been Suspended",
+                $"Your BookMyWorkshop account has been suspended.<br/><br/>"
+              + $"<b>Reason:</b> <i>{request.Reason}</i><br/><br/>"
+              + "If you believe this is a mistake, please contact our support team at "
+              + "<a href='mailto:support@bookmyworkshop.com'>support@bookmyworkshop.com</a>.");
+            await _emailService.SendEmailAsync(user.Email, "Account Suspended - BookMyWorkshop", body);
+        }
+
+        try
+        {
+            var logService = HttpContext.RequestServices.GetRequiredService<ISystemLogService>();
+            await logService.LogWarningAsync("Moderation", $"User account '{user.FullName}' (Email: {user.Email}) suspended. Reason: {request.Reason}.", User.Identity?.Name ?? "Admin");
+        }
+        catch {}
+
+        return Ok(new { Message = $"User '{user.FullName}' has been suspended." });
+    }
+
+    // PUT: api/admin/unsuspend-user/{userId}
+    [HttpPut("unsuspend-user/{userId}")]
+    public async Task<IActionResult> UnsuspendUser(string userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null) return NotFound("User not found");
+
+        await _userManager.SetLockoutEndDateAsync(user, null);
+        await _userManager.ResetAccessFailedCountAsync(user);
+
+        if (!string.IsNullOrEmpty(user.Email))
+        {
+            var body = EmailTemplates.GetNotificationEmail("Your Account Has Been Reinstated",
+                "Your BookMyWorkshop account suspension has been lifted. "
+              + "You can now log in and use the platform normally. "
+              + "Please ensure you follow our community guidelines going forward.");
+            await _emailService.SendEmailAsync(user.Email, "Account Reinstated - BookMyWorkshop", body);
+        }
+
+        try
+        {
+            var logService = HttpContext.RequestServices.GetRequiredService<ISystemLogService>();
+            await logService.LogInfoAsync("Moderation", $"User account '{user.FullName}' (Email: {user.Email}) suspension lifted.", User.Identity?.Name ?? "Admin");
+        }
+        catch {}
+
+        return Ok(new { Message = $"User '{user.FullName}' has been reinstated." });
     }
 
     // GET: api/admin/users
@@ -373,7 +563,9 @@ public class AdminController : ControllerBase
                     p.User.EmailConfirmed,
                     Role = "Provider",
                     ProviderId = p.Id,
+                    IsSuspended = p.Status == ProviderStatus.Suspended,
                     Status = p.Status == ProviderStatus.Approved ? "Active" :
+                             p.Status == ProviderStatus.Suspended ? "Suspended" :
                              p.Status == ProviderStatus.PendingReview ? "Pending" :
                              p.Status == ProviderStatus.Incomplete ? "Incomplete" : "Other"
                 })
@@ -383,18 +575,19 @@ public class AdminController : ControllerBase
 
         if (role == "Customer")
         {
+            var excludedUserIds = new HashSet<string>();
+            foreach (var admin in await _userManager.GetUsersInRoleAsync(UserRoles.Admin))
+                excludedUserIds.Add(admin.Id);
+            foreach (var superAdmin in await _userManager.GetUsersInRoleAsync(UserRoles.SuperAdmin))
+                excludedUserIds.Add(superAdmin.Id);
 
-            var customers = await _userManager.GetUsersInRoleAsync(UserRoles.User);
+            var providerUserIds = (await _context.Providers.Select(p => p.UserId).ToListAsync()).ToHashSet();
 
-            var admins = await _userManager.GetUsersInRoleAsync(UserRoles.Admin);
-            var adminIds = admins.Select(a => a.Id).ToHashSet();
-
-            var providerUserIds = await _context.Providers.Select(p => p.UserId).ToListAsync();
-            var providerUserIdSet = providerUserIds.ToHashSet();
-
-            var filteredCustomers = customers
-                .Where(u => !adminIds.Contains(u.Id))
-                .Where(u => !providerUserIdSet.Contains(u.Id))
+            // Clients = any account that is not admin/super-admin and has no host (Provider) profile.
+            // Includes email/password and Google users
+            var filteredCustomers = await _userManager.Users
+                .Where(u => !excludedUserIds.Contains(u.Id) && !providerUserIds.Contains(u.Id))
+                .OrderByDescending(u => u.CreatedAt)
                 .Select(u => new
                 {
                     u.Id,
@@ -403,8 +596,10 @@ public class AdminController : ControllerBase
                     u.PhoneNumber,
                     u.EmailConfirmed,
                     Role = "Customer",
-                    Status = "Active"
-                });
+                    IsSuspended = u.LockoutEnd != null && u.LockoutEnd > DateTimeOffset.UtcNow,
+                    Status = (u.LockoutEnd != null && u.LockoutEnd > DateTimeOffset.UtcNow) ? "Suspended" : "Active"
+                })
+                .ToListAsync();
 
             return Ok(filteredCustomers);
         }
@@ -431,4 +626,128 @@ public class AdminController : ControllerBase
 
         return Ok(new { Message = $"User '{user.FullName}' has been manually verified." });
     }
+
+    // POST: api/admin/reviews/remoderate
+    [HttpPost("reviews/remoderate")]
+    public async Task<IActionResult> RemoderateAllReviews()
+    {
+        var reviews = await _context.WorkshopReviews.ToListAsync();
+        var flagged = 0;
+
+        foreach (var review in reviews)
+        {
+            var (isFlagged, score, _) = await _reviewModeration.AnalyzeAsync(review.Comment);
+            review.IsFlagged = isFlagged;
+            review.OffensiveScore = score;
+            if (isFlagged) flagged++;
+        }
+
+        await _context.SaveChangesAsync();
+        return Ok(new { updated = reviews.Count, flagged });
+    }
+
+    // POST: api/admin/seed-sample-reviews?force=false
+    [HttpPost("seed-sample-reviews")]
+    public async Task<IActionResult> SeedSampleReviews([FromQuery] bool force = false)
+    {
+        var result = await _reviewSeedService.SeedSampleReviewsAsync(force);
+        if (result.ReviewsCreated == 0 && !result.Skipped)
+            return BadRequest(new { result.Message, result.Skipped, result.Items });
+
+        return Ok(result);
+    }
+
+    // GET: api/admin/reviews?filter=all|flagged
+    [HttpGet("reviews")]
+    public async Task<IActionResult> GetReviews([FromQuery] string filter = "all")
+    {
+        var query = _context.WorkshopReviews
+            .AsNoTracking()
+            .Include(r => r.User)
+            .Include(r => r.Workshop)
+            .AsQueryable();
+
+        if (string.Equals(filter, "flagged", StringComparison.OrdinalIgnoreCase))
+            query = query.Where(r => r.IsFlagged);
+
+        var reviews = await query
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync();
+
+        return Ok(reviews.Select(MapAdminReview));
+    }
+
+    // GET: api/admin/reviews/flagged (legacy alias)
+    [HttpGet("reviews/flagged")]
+    public Task<IActionResult> GetFlaggedReviews() => GetReviews("flagged");
+
+    private static DTOs.Responses.AdminReviewResponse MapAdminReview(WorkshopReview r) =>
+        new()
+        {
+            Id = r.Id,
+            WorkshopId = r.WorkshopId,
+            WorkshopTitle = r.Workshop.Title,
+            UserName = r.User.FullName ?? "Unknown",
+            UserEmail = r.User.Email ?? "",
+            Rating = r.Rating,
+            Comment = r.Comment,
+            ImageUrls = r.ImageUrls,
+            IsFlagged = r.IsFlagged,
+            OffensiveScore = r.OffensiveScore,
+            CreatedAt = r.CreatedAt
+        };
+
+    // DELETE: api/admin/reviews/{id}
+    [HttpDelete("reviews/{id}")]
+    public async Task<IActionResult> DeleteFlaggedReview(int id)
+    {
+        var review = await _context.WorkshopReviews.FindAsync(id);
+        if (review == null) return NotFound(new { message = "Review not found." });
+
+        if (!review.IsFlagged)
+        {
+            return BadRequest(new { message = "Only flagged reviews can be removed from this panel." });
+        }
+
+        _context.WorkshopReviews.Remove(review);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    [HttpGet("overview-stats")]
+    public async Task<IActionResult> GetOverviewStats()
+    {
+        var totalRevenue = await _context.Bookings
+            .Where(b => b.PaymentStatus == PaymentStatus.Paid 
+                     && b.BookingStatus != BookingStatus.Refunded
+                     && b.PayoutStatus != PayoutStatus.Escrow)
+            .SumAsync(b => b.PlatformFee - b.VatOnCommission);
+
+        var activeWorkshops = await _context.Workshops.CountAsync(w => w.Status == WorkshopStatus.Published);
+        var pendingHosts = await _context.Providers.CountAsync(p => p.Status == ProviderStatus.PendingReview);
+        var totalUsers = await _context.Users.CountAsync();
+        var flaggedReviews = await _context.WorkshopReviews.CountAsync(r => r.IsFlagged);
+        var totalReviews = await _context.WorkshopReviews.CountAsync();
+
+        return Ok(new AdminOverviewStatsResponse
+        {
+            TotalRevenue = totalRevenue,
+            ActiveWorkshops = activeWorkshops,
+            PendingHosts = pendingHosts,
+            TotalUsers = totalUsers,
+            FlaggedReviews = flaggedReviews,
+            TotalReviews = totalReviews
+        });
+    }
+}
+
+public class AdminOverviewStatsResponse
+{
+    public decimal TotalRevenue { get; set; }
+    public int ActiveWorkshops { get; set; }
+    public int PendingHosts { get; set; }
+    public int TotalUsers { get; set; }
+    public int FlaggedReviews { get; set; }
+    public int TotalReviews { get; set; }
 }

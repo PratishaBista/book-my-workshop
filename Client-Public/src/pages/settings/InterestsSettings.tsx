@@ -172,16 +172,6 @@ const InterestsSettings: React.FC = () => {
                     {saving ? 'Saving...' : 'Save Interests'}
                 </button>
             </div>
-
-            <div className="mt-12 p-8 bg-primary-orange/5 rounded-[2.5rem] border border-primary-orange/10 flex items-center gap-6">
-                <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center text-primary-orange shadow-sm border border-primary-orange/10">
-                    <Sparkles size={32} />
-                </div>
-                <div>
-                    <h4 className="font-bold text-lg text-deep-purple">Why this matters?</h4>
-                    <p className="text-sm text-deep-purple/60">We use these interests to rank workshops on your home page, ensuring you always see what's most relevant to you first.</p>
-                </div>
-            </div>
         </motion.div>
     );
 };

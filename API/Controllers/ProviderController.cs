@@ -232,27 +232,7 @@ public class ProviderController : ControllerBase
             return BadRequest(new { message = "Please upload your Government ID, PAN Certificate, and Studio Image." });
         }
 
-        // Trigger AI Consistency Check (NLP Fraud Detection)
-        try 
-        {
-            var regText = $"Name: {provider.User.FullName}. Business: {provider.BusinessName}. Tagline: {provider.Tagline}. Bio: {provider.Description}. Website: {provider.Website}. Location: {provider.State}.";
-            var docText = $"Owner: {provider.User.FullName}. DocName1: {provider.IdFileName}. DocName2: {provider.PanFileName}.";
-            
-            var analysis = await _mlService.VerifyInformationConsistencyAsync(regText, docText, provider.Website);
-            
-            if (analysis != null)
-            {
-                provider.TrustScore = analysis.OverallScore;
-                provider.TrustAnalysisJson = JsonSerializer.Serialize(analysis);
-                
-                // Optional: Auto-reject if score is dangerously low (e.g., < 10%)
-            }
-        }
-        catch (Exception ex)
-        {
-            // Log but don't block the submission if the ML service is down
-            Console.WriteLine($"[AI VERIFY ERROR]: {ex.Message}");
-        }
+
 
         provider.Status = ProviderStatus.PendingReview;
         provider.UpdatedAt = DateTime.UtcNow;
@@ -318,4 +298,45 @@ public class ProviderController : ControllerBase
             RecentTransactions = transactions
         };
     }
+
+    [HttpGet("stats")]
+    public async Task<ActionResult<HostStatsResponse>> GetStats()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var provider = await _context.Providers.FirstOrDefaultAsync(p => p.UserId == userId);
+        
+        if (provider == null) return NotFound("Provider profile not found");
+
+        var bookings = await _context.Bookings
+            .Include(b => b.WorkshopSchedule)
+                .ThenInclude(s => s.Workshop)
+            .Where(b => b.WorkshopSchedule.Workshop.ProviderId == provider.Id && 
+                        (b.PaymentStatus == PaymentStatus.Paid || b.PaymentStatus == PaymentStatus.Refunded))
+            .ToListAsync();
+
+        var totalBookings = bookings.Count;
+        var activeWorkshops = await _context.Workshops.CountAsync(w => w.ProviderId == provider.Id && w.Status == WorkshopStatus.Published);
+        var totalRevenue = bookings.Where(b => b.PaymentStatus == PaymentStatus.Paid).Sum(b => b.HostEarnings);
+        
+        var avgRating = await _context.WorkshopReviews
+            .Where(r => r.Workshop.ProviderId == provider.Id)
+            .Select(r => (double?)r.Rating)
+            .AverageAsync() ?? 5.0;
+
+        return new HostStatsResponse
+        {
+            TotalBookings = totalBookings,
+            ActiveWorkshops = activeWorkshops,
+            TotalRevenue = totalRevenue,
+            AvgRating = Math.Round(avgRating, 1)
+        };
+    }
+}
+
+public class HostStatsResponse
+{
+    public int TotalBookings { get; set; }
+    public int ActiveWorkshops { get; set; }
+    public decimal TotalRevenue { get; set; }
+    public double AvgRating { get; set; }
 }

@@ -35,4 +35,6 @@ public interface IWorkshopService
     Task<bool> DeleteScheduleAsync(int workshopId, int scheduleId, int providerId);
     Task<IEnumerable<ScheduleResponse>> GetWorkshopSchedulesAsync(int workshopId);
     Task<IEnumerable<ScheduleResponse>> GetProviderSchedulesAsync(int providerId);
+    Task<IEnumerable<ScheduleWithBookingsResponse>> GetProviderSchedulesWithBookingsAsync(int providerId);
+    Task<bool> MarkScheduleCompleteAsync(int providerId, int scheduleId);
 }

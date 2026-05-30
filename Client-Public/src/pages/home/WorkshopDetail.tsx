@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
+import { hostProfilePath } from '../../utils/hostProfile';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Clock, MapPin,
@@ -125,7 +126,7 @@ const WorkshopDetail: React.FC = () => {
         const fetchReviews = async (workshopId: number) => {
             try {
                 setLoadingReviews(true);
-                const response = await fetch(`${API_ENDPOINTS.workshop.base}/${workshopId}/review`);
+                const response = await fetch(API_ENDPOINTS.workshop.review(workshopId));
                 if (response.ok) {
                     const data = await response.json();
                     setReviews(data.reviews);
@@ -284,7 +285,7 @@ const WorkshopDetail: React.FC = () => {
                             </div>
                         </div>
                         <div className="flex-1 px-8 border-r border-gray-100">
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Group</p>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Capacity</p>
                             <div className="flex items-center gap-2">
                                 <Users size={18} className="text-deep-purple" strokeWidth={1.5} />
                                 <span className="text-lg font-medium">1 - {workshop.maxCapacity} ppl</span>
@@ -300,7 +301,7 @@ const WorkshopDetail: React.FC = () => {
                     </div>
 
                     <section>
-                        <h2 className="text-3xl font-serif font-medium mb-8">The Experience</h2>
+                        <h2 className="text-3xl font-serif font-medium mb-8">What you'll do</h2>
                         <div className={`prose prose-lg prose-headings:font-serif prose-p:text-gray-600 prose-p:font-light prose-p:leading-relaxed prose-li:text-gray-600 ${!isDescriptionExpanded ? 'line-clamp-[10]' : ''}`}>
                             <div dangerouslySetInnerHTML={{ __html: workshop.description }} />
                         </div>
@@ -345,12 +346,18 @@ const WorkshopDetail: React.FC = () => {
                         <div>
                             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Your Host</p>
                             <h3 className="text-2xl font-serif font-medium mb-2">{workshop.provider.businessName}</h3>
-                            <p className="text-gray-600 font-light leading-relaxed mb-4 max-w-md">
-                                {workshop.provider.address || "Passionate expert bringing unique creative experiences to the community."}
+                            <p className="text-gray-600 font-light leading-relaxed mb-4 max-w-md line-clamp-4">
+                                {workshop.provider.description?.trim() ||
+                                    workshop.provider.tagline?.trim() ||
+                                    workshop.provider.address ||
+                                    'Learn more about who runs this workshop.'}
                             </p>
-                            <button className="text-sm font-bold border-b border-gray-300 pb-0.5 hover:border-deep-purple transition-all">
-                                View Profile & Other Workshops
-                            </button>
+                            <Link
+                                to={hostProfilePath(workshop.provider)}
+                                className="inline-flex items-center gap-1 text-sm font-bold text-primary-orange border-b border-primary-orange/30 pb-0.5 hover:border-primary-orange transition-all"
+                            >
+                                Read more about the host
+                            </Link>
                         </div>
                     </section>
 
@@ -476,7 +483,23 @@ const WorkshopDetail: React.FC = () => {
                                             </span>
                                         </div>
                                         
-                                        <p className="text-lg text-deep-purple font-light leading-relaxed mb-8 italic">"{review.comment}"</p>
+                                        <p className="text-lg text-deep-purple font-light leading-relaxed mb-6 italic">"{review.comment}"</p>
+
+                                        {review.imageUrls?.length > 0 && (
+                                            <div className="flex gap-2 mb-6 flex-wrap">
+                                                {review.imageUrls.map((url: string, idx: number) => (
+                                                    <a
+                                                        key={idx}
+                                                        href={url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="w-24 h-24 rounded-2xl overflow-hidden border border-gray-100"
+                                                    >
+                                                        <img src={url} alt="" className="w-full h-full object-cover" />
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        )}
                                         
                                         <div className="flex items-center gap-4 pt-6 border-t border-gray-50">
                                             <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 font-bold font-serif">
@@ -591,15 +614,19 @@ const WorkshopDetail: React.FC = () => {
                                                         const occupied = schedule.maxCapacity - schedule.availableSeats;
                                                         const occupancyPercent = (occupied / schedule.maxCapacity) * 100;
                                                         const formatTime = (dateStr: string) => new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                                        const isPendingPayment = workshop.pendingPaymentScheduleIds?.includes(schedule.id);
                                                         const isBooked = workshop.bookedScheduleIds?.includes(schedule.id);
+                                                        const isReserved = isBooked || isPendingPayment;
 
                                                         return (
                                                             <button
                                                                 key={schedule.id}
-                                                                disabled={isLocked && !isBooked}
+                                                                disabled={isLocked && !isReserved}
                                                                 onClick={() => setSelectedScheduleId(schedule.id)}
                                                                 className={`relative group flex flex-col items-start p-4 rounded-2xl border-2 transition-all duration-200 ${isBooked
                                                                     ? 'border-green-500 bg-green-500 text-white shadow-lg shadow-green-200'
+                                                                    : isPendingPayment
+                                                                        ? 'border-amber-500 bg-amber-500 text-white shadow-lg shadow-amber-200'
                                                                     : selectedScheduleId === schedule.id
                                                                         ? 'border-primary-orange bg-orange-50/50'
                                                                         : isLocked
@@ -608,18 +635,18 @@ const WorkshopDetail: React.FC = () => {
                                                                     }`}
                                                             >
                                                                 <div className="flex justify-between w-full mb-2">
-                                                                    <span className={`text-md font-bold font-mono tracking-tight ${isBooked ? 'text-white' : selectedScheduleId === schedule.id ? 'text-deep-purple' : 'text-gray-700'}`}>
+                                                                    <span className={`text-md font-bold font-mono tracking-tight ${isReserved ? 'text-white' : selectedScheduleId === schedule.id ? 'text-deep-purple' : 'text-gray-700'}`}>
                                                                         {formatTime(schedule.startDateTime)} - {formatTime(schedule.endDateTime)}
                                                                     </span>
                                                                     <div className="flex items-center gap-2">
-                                                                        {isBooked && <CheckCircle2 size={18} className="text-white" />}
-                                                                        {!isBooked && selectedScheduleId === schedule.id && <CheckCircle2 size={18} className="text-primary-orange" />}
+                                                                        {isReserved && <CheckCircle2 size={18} className="text-white" />}
+                                                                        {!isReserved && selectedScheduleId === schedule.id && <CheckCircle2 size={18} className="text-primary-orange" />}
                                                                     </div>
                                                                 </div>
                                                                 <div className="w-full space-y-1.5">
-                                                                    <div className={`flex justify-between text-[10px] uppercase font-bold tracking-wider ${isBooked ? 'text-green-100' : 'text-gray-400'}`}>
-                                                                        <span>{isBooked ? 'Reservation Confirmed' : isLocked ? (schedule.isSoldOut ? 'Sold Out' : 'Closed') : 'Available'}</span>
-                                                                        {!isBooked && <span>{schedule.availableSeats} spots left</span>}
+                                                                    <div className={`flex justify-between text-[10px] uppercase font-bold tracking-wider ${isReserved ? (isBooked ? 'text-green-100' : 'text-amber-100') : 'text-gray-400'}`}>
+                                                                        <span>{isBooked ? 'Reservation Confirmed' : isPendingPayment ? 'Payment Pending' : isLocked ? (schedule.isSoldOut ? 'Sold Out' : 'Closed') : 'Available'}</span>
+                                                                        {!isReserved && <span>{schedule.availableSeats} spots left</span>}
                                                                     </div>
                                                                     <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                                                                         <div
@@ -644,7 +671,9 @@ const WorkshopDetail: React.FC = () => {
                                 )}
                             </div>
 
-                            {selectedScheduleId && !workshop.bookedScheduleIds?.includes(selectedScheduleId) && (
+                            {selectedScheduleId
+                                && !workshop.bookedScheduleIds?.includes(selectedScheduleId)
+                                && !workshop.pendingPaymentScheduleIds?.includes(selectedScheduleId) && (
                                 <div className="mb-8 p-6 bg-gray-50 rounded-3xl border border-gray-100">
                                     <div className="flex items-center justify-between mb-4">
                                         <div>
@@ -683,8 +712,9 @@ const WorkshopDetail: React.FC = () => {
 
                             <button
                                 onClick={() => {
-                                    if (workshop.bookedScheduleIds?.includes(selectedScheduleId || -1)) {
-                                        navigate('/profile/bookings');
+                                    const scheduleId = selectedScheduleId || -1;
+                                    if (workshop.bookedScheduleIds?.includes(scheduleId)) {
+                                        navigate('/profile?tab=bookings');
                                     } else {
                                         handleReserve();
                                     }
@@ -695,6 +725,8 @@ const WorkshopDetail: React.FC = () => {
                                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
                                         : workshop.bookedScheduleIds?.includes(selectedScheduleId || -1)
                                             ? 'bg-green-500 text-white hover:bg-green-600 shadow-xl shadow-green-500/10'
+                                            : workshop.pendingPaymentScheduleIds?.includes(selectedScheduleId || -1)
+                                                ? 'bg-amber-500 text-white hover:bg-amber-600 shadow-xl shadow-amber-500/10'
                                             : 'bg-deep-purple text-white hover:bg-deep-purple/90 shadow-xl shadow-deep-purple/10 disabled:opacity-70 disabled:cursor-not-allowed'
                                     }`}
                             >
@@ -707,6 +739,11 @@ const WorkshopDetail: React.FC = () => {
                                         <>
                                             Already Booked
                                             <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                        </>
+                                    ) : workshop.pendingPaymentScheduleIds?.includes(selectedScheduleId || -1) ? (
+                                        <>
+                                            Complete Payment
+                                            <CreditCard size={18} className="group-hover:scale-110 transition-transform" />
                                         </>
                                     ) : (
                                         <>

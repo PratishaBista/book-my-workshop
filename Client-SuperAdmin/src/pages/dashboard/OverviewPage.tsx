@@ -5,14 +5,17 @@ import { Users, Library, ShieldCheck } from 'lucide-react';
 
 interface DashboardStats {
     commissionRate: number;
-    totalPlatformRevenue: number;
+    vatRate: number;
+    totalPlatformRevenue: number;   // gross commission
+    totalVatCollected: number;      // VAT portion
+    netPlatformRevenue: number;     // what platform keeps after VAT
     pendingHostPayouts: number;
     fundsInEscrow: number;
     totalBookingVolume: number;
     totalUsers: number;
     totalProviders: number;
     totalWorkshops: number;
-    monthlyRevenueData: { month: string, revenue: number }[];
+    monthlyRevenueData: { month: string; revenue: number; grossCommission: number; vat: number; netRevenue: number }[];
 }
 
 const OverviewPage: React.FC = () => {
@@ -86,16 +89,31 @@ const OverviewPage: React.FC = () => {
                     <h2 className="text-lg font-semibold mb-8">Financial Overview</h2>
                     <div className="grid grid-cols-2 gap-x-12 gap-y-10">
                         <Stat label="Booking Volume" value={fmt(stats!.totalBookingVolume)} icon={<span className="font-bold text-xs top-px relative">Rs.</span>} />
-                        <Stat label="Platform Revenue" value={fmt(stats!.totalPlatformRevenue)} icon={<span className="font-bold text-xs top-px relative">Rs.</span>} highlight/>
+                        <Stat label="Net Platform Revenue" value={fmt(stats!.netPlatformRevenue)} icon={<span className="font-bold text-xs top-px relative">Rs.</span>} highlight />
+                        <Stat label="Gross Commission" value={fmt(stats!.totalPlatformRevenue)} />
+                        <div>
+                            <p className="text-xs uppercase tracking-wider mb-2 flex flex-row items-center gap-1.5 text-amber-400/80">
+                                VAT Collected ({stats!.vatRate}%)
+                            </p>
+                            <p className="text-2xl font-semibold tracking-tight">{fmt(stats!.totalVatCollected)}</p>
+                            <p className="text-[10px] text-white/30 mt-1">Remit to IRD</p>
+                        </div>
                         <Stat label="Funds in Escrow" value={fmt(stats!.fundsInEscrow)} />
                         <Stat label="Pending Payouts" value={fmt(stats!.pendingHostPayouts)} />
                         <Stat label="Commission Rate" value={`${stats!.commissionRate}%`} />
+                        <Stat label="VAT Rate" value={`${stats!.vatRate}%`} />
                     </div>
                 </div>
 
                 {/* Revenue Chart */}
                 <div className="bg-[#1C1C1E] border border-white/5 rounded-2xl p-8 h-[360px] flex flex-col">
-                    <h2 className="text-lg font-semibold mb-6">Revenue Trend (Last 6 Months)</h2>
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-lg font-semibold">Revenue Trend (Last 6 Months)</h2>
+                        <div className="flex items-center gap-4 text-xs text-white/40">
+                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-[#7C3AED]" />Net Revenue</span>
+                            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm inline-block bg-[#F59E0B]" />VAT</span>
+                        </div>
+                    </div>
                     <div className="flex-1 w-full -ml-4">
                         {stats?.monthlyRevenueData && stats.monthlyRevenueData.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
@@ -118,9 +136,13 @@ const OverviewPage: React.FC = () => {
                                         cursor={{ fill: '#ffffff10' }}
                                         contentStyle={{ backgroundColor: '#1C1C1E', borderColor: '#ffffff20', borderRadius: '8px', color: '#fff' }}
                                         itemStyle={{ color: '#fff' }}
-                                        formatter={(value: any) => [fmt(Number(value)), 'Revenue']}
+                                        formatter={(value: any, name: any) => [
+                                            fmt(Number(value)),
+                                            String(name) === 'netRevenue' ? 'Net Revenue (after VAT)' : 'VAT'
+                                        ]}
                                     />
-                                    <Bar dataKey="revenue" fill="#7C3AED" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                    <Bar dataKey="netRevenue" stackId="a" fill="#7C3AED" radius={[0, 0, 0, 0]} maxBarSize={40} />
+                                    <Bar dataKey="vat" stackId="a" fill="#F59E0B" radius={[4, 4, 0, 0]} maxBarSize={40} />
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (

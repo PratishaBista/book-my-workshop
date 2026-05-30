@@ -18,6 +18,19 @@ export const API_ENDPOINTS = {
         providers: `${API_URL}/api/admin/providers`,
         approveWorkshop: (id: number) => `${API_URL}/api/admin/approve-workshop/${id}`,
         rejectWorkshop: (id: number) => `${API_URL}/api/admin/reject-workshop/${id}`,
+        approveProvider: (id: number) => `${API_URL}/api/admin/approve-provider/${id}`,
+        rejectProvider: (id: number) => `${API_URL}/api/admin/reject-provider/${id}`,
+        suspendProvider: (id: number) => `${API_URL}/api/admin/suspend-provider/${id}`,
+        unsuspendProvider: (id: number) => `${API_URL}/api/admin/unsuspend-provider/${id}`,
+        suspendUser: (id: string) => `${API_URL}/api/admin/suspend-user/${id}`,
+        unsuspendUser: (id: string) => `${API_URL}/api/admin/unsuspend-user/${id}`,
+        reviews: (filter: 'all' | 'flagged' = 'all') =>
+            `${API_URL}/api/admin/reviews?filter=${filter}`,
+        flaggedReviews: `${API_URL}/api/admin/reviews/flagged`,
+        deleteReview: (id: number) => `${API_URL}/api/admin/reviews/${id}`,
+        seedSampleReviews: (force = false) =>
+            `${API_URL}/api/admin/seed-sample-reviews?force=${force}`,
+        remoderateReviews: `${API_URL}/api/admin/reviews/remoderate`,
     },
     profile: {
         get: `${API_URL}/api/profile`,
@@ -41,9 +54,6 @@ export const API_ENDPOINTS = {
     payment: {
         initiate: `${API_URL}/api/payment/initiate`,
         verify: `${API_URL}/api/payment/verify`,
-    },
-    ml: {
-        suggestCategory: `${API_URL}/api/ml/suggest-category`,
     },
     notifications: {
         base: `${API_URL}/api/notification`,

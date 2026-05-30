@@ -30,6 +30,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<JournalArticle> JournalArticles { get; set; }
     public DbSet<ContactMessage> ContactMessages { get; set; }
 
+    // Gift card & Wallet DbSets
+    public DbSet<GiftCard> GiftCards { get; set; }
+    public DbSet<Wallet> Wallets { get; set; }
+    public DbSet<WalletTransaction> WalletTransactions { get; set; }
+
+    // System Logs DbSet
+    public DbSet<SystemLog> SystemLogs { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -194,5 +202,44 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<NewsletterSubscription>()
             .HasIndex(ns => ns.Email)
             .IsUnique();
+
+        // GiftCard configuration
+        builder.Entity<GiftCard>()
+            .HasOne(gc => gc.SenderUser)
+            .WithMany()
+            .HasForeignKey(gc => gc.SenderUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<GiftCard>()
+            .HasOne(gc => gc.ClaimedByUser)
+            .WithMany()
+            .HasForeignKey(gc => gc.ClaimedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Wallet configuration
+        builder.Entity<Wallet>()
+            .HasOne(w => w.User)
+            .WithMany()
+            .HasForeignKey(w => w.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // WalletTransaction configuration
+        builder.Entity<WalletTransaction>()
+            .HasOne(wt => wt.Wallet)
+            .WithMany()
+            .HasForeignKey(wt => wt.WalletId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<WalletTransaction>()
+            .HasOne(wt => wt.GiftCard)
+            .WithMany()
+            .HasForeignKey(wt => wt.GiftCardId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.Entity<WalletTransaction>()
+            .HasOne(wt => wt.Booking)
+            .WithMany()
+            .HasForeignKey(wt => wt.BookingId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

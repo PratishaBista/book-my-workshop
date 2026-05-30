@@ -1,6 +1,7 @@
 using API.Data;
 using API.Entities;
 using API.Enums;
+using API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +42,15 @@ namespace API.Controllers
                          && b.BookingStatus != BookingStatus.Refunded)
                 .SumAsync(b => b.PlatformFee);
 
+            // VAT collected on settled commission
+            var totalVatCollected = await _context.Bookings
+                .Where(b => b.PaymentStatus == PaymentStatus.Paid
+                         && b.PayoutStatus != PayoutStatus.Escrow
+                         && b.BookingStatus != BookingStatus.Refunded)
+                .SumAsync(b => b.VatOnCommission);
+
+            decimal netPlatformRevenue = totalRevenue - totalVatCollected;
+
             // 3. Pending Host Balance (Released to wallet, ready to settle)
             var releasedPayouts = await _context.Providers
                 .SumAsync(p => p.WalletBalance);
@@ -65,8 +75,11 @@ namespace API.Controllers
             
             // Get raw data from DB
             var recentBookingsRaw = await _context.Bookings
-                .Where(b => b.PaymentStatus == PaymentStatus.Paid && b.BookingDate >= sixMonthsAgo)
-                .Select(b => new { b.BookingDate, b.PlatformFee })
+                .Where(b => b.PaymentStatus == PaymentStatus.Paid 
+                         && b.BookingStatus != BookingStatus.Refunded
+                         && b.PayoutStatus != PayoutStatus.Escrow
+                         && b.BookingDate >= sixMonthsAgo)
+                .Select(b => new { b.BookingDate, b.PlatformFee, b.VatOnCommission })
                 .ToListAsync();
 
             // Group in memory
@@ -75,16 +88,23 @@ namespace API.Controllers
                 .Select(g => new
                 {
                     month = new DateTime(g.Key.Year, g.Key.Month, 1).ToString("MMM yyyy"),
-                    revenue = g.Sum(b => b.PlatformFee)
+                    grossCommission = g.Sum(b => b.PlatformFee),
+                    vat = g.Sum(b => b.VatOnCommission),
+                    netRevenue = g.Sum(b => b.PlatformFee - b.VatOnCommission),
+                    // keep old 'revenue' key for backwards compat
+                    revenue = g.Sum(b => b.PlatformFee - b.VatOnCommission)
                 })
-                .OrderBy(d => DateTime.Parse(d.month)) // Re-order after grouping
+                .OrderBy(d => DateTime.Parse(d.month))
                 .ToList();
 
 
             return Ok(new
             {
                 CommissionRate = settings.CommissionPercentage,
-                TotalPlatformRevenue = totalRevenue,
+                VatRate = settings.VatPercentage,
+                TotalPlatformRevenue = totalRevenue,           // gross commission
+                TotalVatCollected = totalVatCollected,         // VAT to remit to IRD
+                NetPlatformRevenue = netPlatformRevenue,       // what the platform actually keeps
                 PendingHostPayouts = releasedPayouts,
                 FundsInEscrow = escrowFunds,
                 TotalBookingVolume = totalVolume,
@@ -114,13 +134,57 @@ namespace API.Controllers
                 _context.PlatformSettings.Add(settings);
             }
 
+            var oldRate = settings.CommissionPercentage;
             settings.CommissionPercentage = request.Percentage;
             settings.LastUpdated = DateTime.UtcNow;
             settings.UpdatedBy = User.Identity?.Name ?? "SuperAdmin";
 
             await _context.SaveChangesAsync();
 
+            try
+            {
+                var logService = HttpContext.RequestServices.GetRequiredService<ISystemLogService>();
+                await logService.LogWarningAsync("Financials", $"Commission rate updated from {oldRate}% to {request.Percentage}% by {settings.UpdatedBy}.", settings.UpdatedBy);
+            }
+            catch {}
+
             return Ok(new { Message = "Commission rate updated successfully", NewRate = settings.CommissionPercentage });
+        }
+
+        // --- VAT SETTINGS ---
+
+        [HttpGet("vat")]
+        public async Task<IActionResult> GetVatRate()
+        {
+            var settings = await _context.PlatformSettings.FirstOrDefaultAsync();
+            return Ok(new { Rate = settings?.VatPercentage ?? 13.0m });
+        }
+
+        [HttpPut("vat")]
+        public async Task<IActionResult> UpdateVatRate([FromBody] UpdateVatRequest request)
+        {
+            var settings = await _context.PlatformSettings.FirstOrDefaultAsync();
+            if (settings == null)
+            {
+                settings = new PlatformSettings();
+                _context.PlatformSettings.Add(settings);
+            }
+
+            var oldRate = settings.VatPercentage;
+            settings.VatPercentage = request.Percentage;
+            settings.LastUpdated = DateTime.UtcNow;
+            settings.UpdatedBy = User.Identity?.Name ?? "SuperAdmin";
+
+            await _context.SaveChangesAsync();
+
+            try
+            {
+                var logService = HttpContext.RequestServices.GetRequiredService<ISystemLogService>();
+                await logService.LogWarningAsync("Financials", $"VAT rate updated from {oldRate}% to {request.Percentage}% by {settings.UpdatedBy}.", settings.UpdatedBy);
+            }
+            catch {}
+
+            return Ok(new { Message = "VAT rate updated successfully", NewRate = settings.VatPercentage });
         }
 
         // --- HOST PAYOUTS ---
@@ -184,6 +248,13 @@ namespace API.Controllers
 
             await _context.SaveChangesAsync();
 
+            try
+            {
+                var logService = HttpContext.RequestServices.GetRequiredService<ISystemLogService>();
+                await logService.LogInfoAsync("Financials", $"Escrowed funds released. Total releases: {releasedCount} bookings, total amount: Rs. {totalReleased}.", User.Identity?.Name ?? "System");
+            }
+            catch {}
+
             return Ok(new { 
                 Message = "Escrowed funds released to host wallets.", 
                 ReleasedCount = releasedCount, 
@@ -221,6 +292,13 @@ namespace API.Controllers
 
             await _context.SaveChangesAsync();
 
+            try
+            {
+                var logService = HttpContext.RequestServices.GetRequiredService<ISystemLogService>();
+                await logService.LogInfoAsync("Financials", $"Payout of Rs. {settledAmount} successfully settled for provider '{provider.BusinessName}' (ID: {providerId}) by SuperAdmin.", User.Identity?.Name ?? "SuperAdmin");
+            }
+            catch {}
+
             return Ok(new { Message = "Payout settled", SettledAmount = settledAmount, BookingsUpdated = bookings.Count });
         }
 
@@ -240,13 +318,16 @@ namespace API.Controllers
                     WorkshopTitle = b.WorkshopSchedule.Workshop.Title,
                     HostName = b.WorkshopSchedule.Workshop.Provider.BusinessName,
                     b.TotalAmount,
-                    b.PlatformFee,
+                    b.PlatformFee,        // gross commission
+                    b.VatOnCommission,    // VAT deducted from commission
+                    NetPlatformFee = b.PlatformFee - b.VatOnCommission,
                     b.HostEarnings,
                     b.BookingStatus,
                     b.PaymentStatus,
                     b.PayoutStatus,
                     b.BookingDate,
-                    b.TransactionId
+                    b.TransactionId,
+                    b.WalletAmountUsed
                 })
                 .ToListAsync();
 
@@ -255,6 +336,12 @@ namespace API.Controllers
     }
 
     public class UpdateCommissionRequest
+    {
+        [Range(0, 100)]
+        public decimal Percentage { get; set; }
+    }
+
+    public class UpdateVatRequest
     {
         [Range(0, 100)]
         public decimal Percentage { get; set; }

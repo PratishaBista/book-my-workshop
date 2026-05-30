@@ -34,7 +34,7 @@ const Stories: React.FC = () => {
         fetchArticles();
     }, []);
 
-    if (loading) return null; // Or a subtle skeleton
+    if (loading) return null; 
     if (articles.length === 0) return null;
 
     return (
@@ -44,7 +44,7 @@ const Stories: React.FC = () => {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-end mb-20 border-b border-deep-purple/10 pb-8">
                     <h2 className="text-6xl md:text-8xl font-serif text-deep-purple leading-none tracking-tight">
-                        The Journal
+                        Stories
                     </h2>
                     <p className="text-lg md:text-xl text-deep-purple/60 font-sans max-w-sm mt-6 md:mt-0 text-right">
                         Notes on creativity, craft, and the messiness of being human.

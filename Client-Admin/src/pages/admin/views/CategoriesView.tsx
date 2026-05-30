@@ -144,11 +144,11 @@ export const CategoriesView: React.FC = () => {
         <div className="min-h-full flex flex-col gap-8 animate-in fade-in duration-1000">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-2">
                 <div className="space-y-1">
-                    <h1 className="text-3xl font-sans font-bold text-white tracking-tight">Taxonomy & Categories</h1>
+                    <h1 className="text-3xl font-sans font-bold text-white tracking-tight">Categories</h1>
                     <div className="flex items-center gap-2 text-slate-500 text-[10px] uppercase font-bold tracking-[0.2em] font-mono">
                         <span className="opacity-60">System Core</span>
                         <ChevronRight size={10} className="opacity-40" />
-                        <span className="text-indigo-400">Taxonomy Manager</span>
+                        <span className="text-indigo-400">Catgoery Manager</span>
                     </div>
                 </div>
 
@@ -158,7 +158,7 @@ export const CategoriesView: React.FC = () => {
                         className="flex items-center gap-3 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-bold font-mono text-[10px] uppercase tracking-[0.2em] shadow-[0_10px_30px_rgba(79,70,229,0.3)] transition-all active:scale-95"
                     >
                         <Plus size={16} />
-                        Append Node
+                        Add Category
                     </button>
                 </div>
             </div>
@@ -188,7 +188,6 @@ export const CategoriesView: React.FC = () => {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-indigo-500 transition-colors" size={18} />
                     <input
                         type="text"
-                        placeholder="Search taxonomy nodes by identity or logic..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-12 pr-4 py-3 bg-black border border-[#1A1A1A] focus:border-indigo-500/50 rounded-xl transition-all outline-none font-mono text-[11px] uppercase tracking-wider text-slate-300 placeholder:text-slate-800"
@@ -205,12 +204,12 @@ export const CategoriesView: React.FC = () => {
                 {isLoading ? (
                     <div className="h-96 flex flex-col items-center justify-center space-y-4">
                         <div className="w-10 h-10 border-2 border-white/5 border-t-indigo-600 rounded-full animate-spin" />
-                        <p className="text-slate-600 text-[10px] font-bold uppercase tracking-[0.3em] font-mono animate-pulse">Syncing Topology...</p>
+                        <p className="text-slate-600 text-[10px] font-bold uppercase tracking-[0.3em] font-mono animate-pulse">Syncing Category...</p>
                     </div>
                 ) : (
                     <div className="bg-[#0D0D0D] rounded-3xl border border-[#1A1A1A] overflow-hidden shadow-2xl shadow-black/50">
                         <div className="px-8 py-5 flex items-center justify-between bg-black/40 border-b border-[#1A1A1A]">
-                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 font-mono">{filteredCategories.length} NODES DETECTED</span>
+                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 font-mono">{filteredCategories.length} Category Detected</span>
                         </div>
                         <div className="overflow-x-auto custom-scrollbar">
                             <table className="w-full text-left">
@@ -292,7 +291,7 @@ export const CategoriesView: React.FC = () => {
                             <div className="p-8 border-b border-[#1A1A1A] flex items-center justify-between bg-black">
                                 <div className="space-y-1">
                                     <h2 className="text-2xl font-sans font-bold text-white tracking-tight">
-                                        {editingCategory ? 'Edit Taxonomy Node' : 'Configure New Segment'}
+                                        {editingCategory ? 'Edit Category' : 'Configure New Segment'}
                                     </h2>
                                     <p className="text-[10px] font-bold text-slate-500 tracking-[0.2em] font-mono uppercase opacity-60">System Hierarchy Configuration</p>
                                 </div>
@@ -316,7 +315,7 @@ export const CategoriesView: React.FC = () => {
                                     {/* Name Input */}
                                     <div className="space-y-3">
                                         <label className="flex items-center justify-between">
-                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] font-mono">Segment Label</span>
+                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] font-mono">Name</span>
                                             <span className="text-[9px] text-slate-600 font-mono uppercase tracking-widest">Required Node IP</span>
                                         </label>
                                         <input
@@ -324,7 +323,7 @@ export const CategoriesView: React.FC = () => {
                                             value={formData.name}
                                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                             className="w-full px-6 py-4 bg-black border border-[#1A1A1A] focus:border-indigo-500/50 rounded-2xl transition-all outline-none font-bold text-white placeholder:text-slate-800 font-mono tracking-tight"
-                                            placeholder="ENTER_SEGMENT_LABEL..."
+                                            placeholder="ENTER_CATEGORY_NAME..."
                                             required
                                         />
                                     </div>
@@ -332,7 +331,7 @@ export const CategoriesView: React.FC = () => {
                                     {/* Description */}
                                     <div className="space-y-3">
                                         <label className="flex items-center justify-between">
-                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] font-mono">Global Logic Descriptor</span>
+                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] font-mono">Describe</span>
                                         </label>
                                         <textarea
                                             value={formData.description}
@@ -354,7 +353,7 @@ export const CategoriesView: React.FC = () => {
                                                 : 'bg-black border-[#1A1A1A] text-slate-600'
                                                 }`}
                                         >
-                                            <span className="font-bold text-[10px] uppercase tracking-[0.2em] font-mono">{formData.isActive ? 'Active Node' : 'Inert'}</span>
+                                            <span className="font-bold text-[10px] uppercase tracking-[0.2em] font-mono">{formData.isActive ? 'Active' : 'Inert'}</span>
                                             <div className={`w-2 h-2 rounded-full ${formData.isActive ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)] animate-pulse' : 'bg-slate-800'}`} />
                                         </button>
                                     </div>
@@ -374,13 +373,13 @@ export const CategoriesView: React.FC = () => {
                                     onClick={() => setIsPanelOpen(false)}
                                     className="flex-1 py-4 border border-[#1A1A1A] text-slate-500 font-bold rounded-xl hover:bg-[#111] transition-all uppercase tracking-widest text-[10px] font-mono"
                                 >
-                                    Abort
+                                    Cancel
                                 </button>
                                 <button
                                     onClick={handleSubmit}
                                     className="flex-[2] py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 shadow-xl shadow-indigo-600/10 transition-all active:scale-[0.98] uppercase tracking-widest text-[10px] font-mono"
                                 >
-                                    {editingCategory ? 'Commit Topology' : 'Deploy Node'}
+                                    {editingCategory ? 'Commit' : 'Submit'}
                                 </button>
                             </div>
                         </motion.div>

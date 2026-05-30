@@ -22,14 +22,13 @@ interface ValidationErrors {
   confirmPassword?: string;
 }
 
-
-
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login, logout } = useAuth();
   const location = useLocation();
-  const from = location.state?.from?.pathname || '/';
-  const [activeTab, setActiveTab] = useState<TabType>('login');
+  const queryParams = new URLSearchParams(location.search);
+  const from = queryParams.get('redirect') || location.state?.from?.pathname || '/';
+  const [activeTab, setActiveTab] = useState<TabType>((queryParams.get('tab') as TabType) || 'login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -38,10 +37,22 @@ const Login: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState('');
 
   // Form states
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(queryParams.get('email') || '');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const emailParam = params.get('email');
+    const tabParam = params.get('tab');
+    if (emailParam) {
+      setEmail(emailParam);
+    }
+    if (tabParam === 'signup' || tabParam === 'login') {
+      setActiveTab(tabParam);
+    }
+  }, [location.search]);
 
   // Handle Google Login Callback
   const handleGoogleCallback = async (response: any) => {
@@ -85,7 +96,6 @@ const Login: React.FC = () => {
       setLoading(false);
     }
   };
-
 
   // Separate initialization from rendering
   React.useEffect(() => {
@@ -241,7 +251,7 @@ const Login: React.FC = () => {
       login(data.token, data.expiry, data.hasCompletedOnboarding);
       localStorage.setItem('isApproved', data.isApproved);
 
-      // Decode token to check role - ONLY allow Customer logins
+      // Decode token to check role and only allow Customer logins
       try {
         const parts = data.token.split('.');
         if (parts.length >= 2) {
@@ -322,7 +332,7 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      // Step 1: Register
+      // Register
       const signupResponse = await fetch(API_ENDPOINTS.auth.signup, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

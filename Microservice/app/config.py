@@ -18,7 +18,8 @@ class Settings(BaseSettings):
     
     # Model Paths
     MODEL_DIR: str = "models"
-    CATEGORY_CLASSIFIER_PATH: str = "models/category_classifier/model.pkl"
+    REVIEW_SENTIMENT_DIR: str = "models/review_sentiment"
+    OFFENSIVE_THRESHOLD: float = 0.5
     
     # Data Paths
     DATA_DIR: str = "data"
@@ -28,9 +29,18 @@ class Settings(BaseSettings):
     # ML Configuration
     CONFIDENCE_THRESHOLD: float = 0.5
     
-    # External APIs
+    # Text enhancement (workshop descriptions)
+    ENHANCEMENT_PROVIDER: str = "auto"  # auto | ollama | groq | openai | huggingface
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "llama3.2"
+    GROQ_API_KEY: Optional[str] = None
+    GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
+    GROQ_MODEL: str = "llama-3.1-8b-instant"
     OPENAI_API_KEY: Optional[str] = None
+    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
+    OPENAI_MODEL: str = "gpt-4o-mini"
     HF_API_TOKEN: Optional[str] = None
+    HF_ENHANCE_MODEL: str = "meta-llama/Llama-3.1-8B-Instruct"
     
     model_config = {
         "env_file": ".env",

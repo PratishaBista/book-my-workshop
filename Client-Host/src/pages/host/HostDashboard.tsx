@@ -8,7 +8,10 @@ import { ScheduleManagement } from './views/ScheduleManagement';
 import { BusinessProfile } from './views/BusinessProfile';
 import { Earnings } from './views/Earnings';
 import { VerificationCenter } from './views/VerificationCenter';
-import { PlaceholderView } from './views/PlaceholderView';
+import { ParticipantBookings } from './views/ParticipantBookings';
+import { HostReviewsView } from './views/HostReviewsView';
+import { HostSupportView } from './views/HostSupportView';
+import { HostSettingsView } from './views/HostSettingsView';
 import type { HostTab, ProviderProfile } from '../../types/host';
 import { ProviderStatus } from '../../types/host';
 
@@ -102,31 +105,19 @@ const HostDashboard: React.FC = () => {
             case 'workshops': return <MyWorkshops isApproved={isApproved} />;
             case 'schedules': return <ScheduleManagement />;
             case 'bookings':
-                return <PlaceholderView
-                    title="Participant Bookings"
-                    description="Keep track of everyone joining your workshops. You'll be able to mark attendance and manage groups here."
-                />;
+                return <ParticipantBookings />;
             case 'earnings':
                 return <Earnings />;
             case 'reviews':
-                return <PlaceholderView
-                    title="Student Reviews"
-                    description="See what your participants are saying. Respond to feedback and build your reputation as a top artisan."
-                />;
+                return <HostReviewsView />;
             case 'profile':
                 return <BusinessProfile profile={profile} onUpdate={(updated) => setProfile(updated)} />;
             case 'verification':
                 return <VerificationCenter profile={profile} onUpdate={(updated) => setProfile(updated)} />;
             case 'support':
-                return <PlaceholderView
-                    title="Host Support"
-                    description="Need help? Raise a ticket or chat with our community managers to optimize your workshop business."
-                />;
+                return <HostSupportView />;
             case 'settings':
-                return <PlaceholderView
-                    title="Account Settings"
-                    description="Manage your notification preferences, security settings, and shared platform credentials."
-                />;
+                return <HostSettingsView />;
             default: return (
                 <HostOverview
                     status={profile.status}

@@ -3,21 +3,21 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 interface ProtectedRouteProps {
-    allowedRoles?: string[];
+    allowedRoles?: string[]; // Property must be a string, if provided otherwise it's optional
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
     const { isAuthenticated, user, loading } = useAuth();
 
     if (loading) {
-        return <div className="h-screen flex items-center justify-center">Loading...</div>; // Or a proper spinner
+        return <div className="h-screen flex items-center justify-center">Loading...</div>;
     }
 
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;
     }
 
-    // New: Check for onboarding status for regular Users
+    // Check for onboarding status for regular Users
     if (user && user.role === 'User' && !user.hasCompletedOnboarding && window.location.pathname !== '/onboarding') {
         return <Navigate to="/onboarding" replace />;
     }

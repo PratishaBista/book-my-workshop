@@ -3,8 +3,9 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { API_ENDPOINTS } from '../../config/api';
 import Navbar from '../../components/landing/Navbar';
 import Footer from '../../components/landing/Footer';
-import { Check, Loader2, ArrowRight, Sparkles } from 'lucide-react';
+import { Check, Loader2, ArrowRight, Sparkles, Ticket } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { QRCodeSVG } from 'qrcode.react';
 
 const PaymentSuccess = () => {
     const [searchParams] = useSearchParams();
@@ -16,17 +17,57 @@ const PaymentSuccess = () => {
         workshopSlug?: string;
         startDateTime?: string;
         customerName?: string;
+        confirmationCode?: string;
+        numberOfSeats?: number;
+        bookingId?: number;
     } | null>(null);
 
     useEffect(() => {
         const data = searchParams.get('data');
-        if (!data) {
+        const bookingId = searchParams.get('bookingId');
+        if (bookingId) {
+            fetchBookingDetailsDirectly(parseInt(bookingId));
+        } else if (data) {
+            verifyPayment(data);
+        } else {
             setStatus('error');
             setMessage('No payment data received.');
             return;
         }
-        verifyPayment(data);
     }, [searchParams]);
+
+    const fetchBookingDetailsDirectly = async (id: number) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(API_ENDPOINTS.booking.byId(id), {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                setStatus('success');
+                setBookingDetails({
+                    workshopTitle: result.workshop?.title || result.workshopTitle,
+                    workshopSlug: result.workshop?.slug || result.workshopSlug,
+                    startDateTime: result.schedule?.startDateTime || result.startDateTime,
+                    customerName: result.userName || result.customerName,
+                    confirmationCode: result.confirmationCode,
+                    numberOfSeats: result.numberOfSeats,
+                    bookingId: result.id,
+                });
+                setMessage('Your spot is officially reserved. Check your email for your ticket with QR code — or view it below.');
+            } else {
+                setStatus('error');
+                setMessage('Failed to retrieve booking details.');
+            }
+        } catch (error) {
+            console.error(error);
+            setStatus('error');
+            setMessage('An unexpected error occurred during verification.');
+        }
+    };
 
     const verifyPayment = async (data: string) => {
         try {
@@ -47,9 +88,12 @@ const PaymentSuccess = () => {
                     workshopTitle: result.workshopTitle,
                     workshopSlug: result.workshopSlug,
                     startDateTime: result.startDateTime,
-                    customerName: result.customerName
+                    customerName: result.customerName,
+                    confirmationCode: result.confirmationCode,
+                    numberOfSeats: result.numberOfSeats,
+                    bookingId: result.bookingId,
                 });
-                setMessage('Your spot is officially reserved. We\'ve sent the details to your email.');
+                setMessage('Your spot is officially reserved. Check your email for your ticket with QR code or view it below.');
             } else {
                 const result = await response.json();
                 setStatus('error');
@@ -134,12 +178,36 @@ const PaymentSuccess = () => {
                                             ) : 'Date & Time loading...'}
                                         </p>
                                     </div>
-                                    <div className="pt-4 border-t border-gray-50 flex items-center justify-between text-sm">
-                                        <Link to="/profile/bookings" className="text-deep-purple font-bold hover:underline">
-                                            View Ticket Details
-                                        </Link>
+                                    {bookingDetails.confirmationCode && (
+                                        <div className="flex flex-col items-center gap-3 py-4">
+                                            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                                <QRCodeSVG
+                                                    value={`${window.location.origin}/ticket/${bookingDetails.confirmationCode}`}
+                                                    size={160}
+                                                    level="M"
+                                                />
+                                            </div>
+                                            <p className="text-[10px] font-mono font-bold text-gray-400 tracking-widest">
+                                                {bookingDetails.confirmationCode}
+                                            </p>
+                                            {bookingDetails.numberOfSeats != null && (
+                                                <p className="text-sm text-gray-500">
+                                                    {bookingDetails.numberOfSeats} seat{bookingDetails.numberOfSeats > 1 ? 's' : ''} · {bookingDetails.customerName}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div className="pt-4 border-t border-gray-50 flex flex-col sm:flex-row items-center justify-center gap-3 text-sm">
+                                        {bookingDetails.confirmationCode && (
+                                            <Link
+                                                to={`/ticket/${bookingDetails.confirmationCode}`}
+                                                className="text-deep-purple font-bold hover:underline flex items-center gap-1"
+                                            >
+                                                <Ticket size={14} /> Open full ticket
+                                            </Link>
+                                        )}
                                         <Link to={`/workshop/${bookingDetails.workshopSlug}`} className="text-primary-orange font-bold hover:underline flex items-center gap-1">
-                                            Back to Workshop <ArrowRight size={14} />
+                                            Workshop page <ArrowRight size={14} />
                                         </Link>
                                     </div>
                                 </motion.div>
@@ -154,7 +222,7 @@ const PaymentSuccess = () => {
                                     <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                                 </Link>
                                 <Link
-                                    to="/profile/bookings"
+                                    to="/profile?tab=bookings"
                                     className="w-full sm:w-auto px-8 py-4 border border-gray-200 text-deep-purple rounded-2xl font-bold hover:bg-white transition-all"
                                 >
                                     View Tickets

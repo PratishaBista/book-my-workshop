@@ -541,4 +541,193 @@ public static class EmailTemplates
 </body>
 </html>";
     }
+
+    public static string GetBookingConfirmationEmail(
+        string guestName,
+        string workshopTitle,
+        string sessionDate,
+        string sessionTime,
+        string venue,
+        string? locationName,
+        int seatCount,
+        string confirmationCode,
+        string ticketUrl,
+        string qrCodeBase64)
+    {
+        var venueLine = string.IsNullOrWhiteSpace(locationName)
+            ? venue
+            : $"{locationName}<br/><span style='color:#6B7280;font-size:14px;'>{venue}</span>";
+        var seatLabel = seatCount == 1 ? "1 seat" : $"{seatCount} seats";
+
+        return $@"
+<!DOCTYPE html>
+<html>
+<head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'></head>
+<body style='margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,""Segoe UI"",Roboto,sans-serif;background-color:#f5f5f5;'>
+<table role='presentation' style='width:100%;border-collapse:collapse;'>
+<tr><td align='center' style='padding:40px 20px;'>
+<table role='presentation' style='width:600px;max-width:100%;background:#ffffff;border-collapse:collapse;'>
+<tr><td style='padding:40px;text-align:center;border-bottom:1px solid #e5e7eb;'>
+<img src='https://res.cloudinary.com/daaysxdli/image/upload/v1767434247/Badge_hjkzju.png' alt='BookMyWorkshop' style='height:56px;margin-bottom:12px;' />
+<p style='margin:0;color:#6B7280;font-size:12px;font-weight:600;letter-spacing:0.15em;'>BOOKMYWORKSHOP</p>
+</td></tr>
+<tr><td style='padding:48px 40px;'>
+<p style='margin:0 0 8px 0;color:#6B46C1;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;'>You're all set</p>
+<h1 style='margin:0 0 16px 0;color:#111827;font-size:26px;font-weight:600;line-height:1.3;'>Hi {guestName}, your spot is reserved!</h1>
+<p style='margin:0 0 28px 0;color:#374151;font-size:16px;line-height:1.7;'>
+We're so excited you'll be joining us for <strong>{workshopTitle}</strong>. Show the QR code below at the venue — we'll take care of the rest.
+</p>
+<div style='background:#F9FAFB;border:1px solid #E5E7EB;border-radius:12px;padding:24px;margin-bottom:28px;'>
+<p style='margin:0 0 12px 0;font-size:11px;font-weight:700;color:#9CA3AF;letter-spacing:0.1em;text-transform:uppercase;'>Session details</p>
+<p style='margin:0 0 8px 0;color:#111827;font-size:16px;font-weight:600;'>{sessionDate}</p>
+<p style='margin:0 0 16px 0;color:#374151;font-size:15px;'>{sessionTime}</p>
+<p style='margin:0 0 16px 0;color:#374151;font-size:15px;line-height:1.5;'>{venueLine}</p>
+<p style='margin:0;color:#374151;font-size:15px;'><strong>Guests:</strong> {seatLabel} &nbsp;·&nbsp; <strong>Ticket:</strong> <span style='font-family:monospace;color:#6B46C1;'>{confirmationCode}</span></p>
+</div>
+<div style='text-align:center;margin:32px 0;'>
+<img src='data:image/png;base64,{qrCodeBase64}' alt='Check-in QR code' width='200' height='200' style='display:block;margin:0 auto 16px;border:8px solid #fff;box-shadow:0 4px 24px rgba(0,0,0,0.08);border-radius:12px;' />
+<p style='margin:0 0 20px 0;color:#6B7280;font-size:13px;'>Scan at the venue for check-in</p>
+<a href='{ticketUrl}' style='background-color:#6B46C1;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:14px 32px;border-radius:8px;display:inline-block;'>View your ticket</a>
+</div>
+<p style='margin:32px 0 0 0;color:#6B7280;font-size:13px;line-height:1.6;border-top:1px solid #E5E7EB;padding-top:24px;'>
+Can't find this email? Your ticket is also saved under <strong>Profile → Your Experiences</strong>. After the session, you'll be able to share a review once your host confirms your attendance.
+</p>
+</td></tr>
+<tr><td style='background:#F9FAFB;padding:28px 40px;border-top:1px solid #E5E7EB;text-align:center;'>
+<p style='margin:0;color:#9CA3AF;font-size:12px;'>© 2026 BookMyWorkshop · Made with care in Nepal</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>";
+    }
+
+    public static string GetGiftCardEmail(string senderName, string recipientEmail, decimal amount, string code, string claimLink, string? personalMessage)
+    {
+        var messageSection = string.IsNullOrWhiteSpace(personalMessage) 
+            ? "" 
+            : $@"<div style='margin-bottom: 24px; padding: 16px; background-color: #F9FAFB; border-left: 4px solid #EE7932; border-radius: 4px; color: #4A4A4A; font-style: italic; font-size: 15px;'>
+                    ""{personalMessage}""
+                 </div>";
+
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>You've Received a Gift Card!</title>
+</head>
+<body style='margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, ""Helvetica Neue"", Arial, sans-serif; background-color: #FAF8F2;'>
+    <table role='presentation' style='width: 100%; border-collapse: collapse;'>
+        <tr>
+            <td align='center' style='padding: 40px 20px;'>
+                <table role='presentation' style='width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.05);'>
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style='padding: 40px 40px 30px 40px; text-align: center; background-color: #ffffff;'>
+                            <img src='https://res.cloudinary.com/daaysxdli/image/upload/v1767434247/Badge_hjkzju.png' alt='BookMyWorkshop' style='height: 60px; margin-bottom: 16px; display: block; margin-left: auto; margin-right: auto;' />
+                            <p style='margin: 0; color: #EE7932; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;'>
+                                Gift Card Experience
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Body -->
+                    <tr>
+                        <td style='padding: 20px 40px 40px 40px;'>
+                            <h1 style='margin: 0 0 24px 0; color: #1A0B2E; font-size: 28px; font-weight: 700; text-align: center; font-family: serif; line-height: 1.2;'>
+                                You've received a gift card!
+                            </h1>
+                            <p style='margin: 0 0 20px 0; color: #4A4A4A; font-size: 16px; line-height: 1.7; text-align: center;'>
+                                Great news! <strong>{senderName}</strong> has sent you a BookMyWorkshop gift card.
+                            </p>
+                            
+                            {messageSection}
+
+                            <!-- Card design -->
+                            <div style='background: linear-gradient(135deg, #1A0B2E 0%, #3B1560 100%); color: #ffffff; border-radius: 16px; padding: 32px; text-align: center; margin: 32px 0; box-shadow: 0 10px 25px rgba(26, 11, 46, 0.15); position: relative;'>
+                                <div style='font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: #EE7932; margin-bottom: 8px;'>BookMyWorkshop Gift Card</div>
+                                <div style='font-size: 40px; font-weight: 800; font-family: serif; margin-bottom: 16px;'>Rs. {amount:N0}</div>
+                                <div style='font-size: 14px; font-family: monospace; letter-spacing: 1px; background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 8px; display: inline-block;'>CODE: {code}</div>
+                            </div>
+
+                            <!-- Main Call to Action -->
+                            <div style='text-align: center; margin: 40px 0;'>
+                                <a href='{claimLink}' style='background-color: #EE7932; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; padding: 16px 40px; border-radius: 50px; display: inline-block; box-shadow: 0 10px 20px rgba(238, 121, 50, 0.2);'>Claim Your Gift Card</a>
+                            </div>
+
+                            <p style='margin: 0; color: #6B7280; font-size: 14px; line-height: 1.6; text-align: center;'>
+                                Once claimed, the balance of Rs. {amount:N0} will be added to your BookMyWorkshop wallet. You can then use it to book any workshop on the platform!
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style='background-color: #1A0B2E; padding: 40px; color: #ffffff;'>
+                            <p style='margin: 0; font-size: 12px; text-align: center; color: rgba(255,255,255,0.6);'>
+                                © 2026 BookMyWorkshop. All rights reserved. <br /> Kathmandu, Nepal.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>";
+    }
+    public static string GetNotificationEmail(string title, string htmlMessage)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>{title}</title>
+</head>
+<body style='margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, ""Helvetica Neue"", Arial, sans-serif; background-color: #f5f5f5;'>
+    <table role='presentation' style='width: 100%; border-collapse: collapse;'>
+        <tr>
+            <td align='center' style='padding: 40px 20px;'>
+                <table role='presentation' style='width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff;'>
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style='padding: 40px; text-align: center; border-bottom: 1px solid #e5e7eb;'>
+                            <img src='https://res.cloudinary.com/daaysxdli/image/upload/v1767434247/Badge_hjkzju.png' alt='BookMyWorkshop' style='height: 50px; margin-bottom: 16px;' />
+                            <h2 style='margin: 0; color: #111827; font-size: 20px; font-weight: 600;'>{title}</h2>
+                        </td>
+                    </tr>
+                    
+                    <!-- Body -->
+                    <tr>
+                        <td style='padding: 40px;'>
+                            <div style='margin-bottom: 24px; color: #374151; font-size: 16px; line-height: 1.6;'>
+                                {htmlMessage}
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style='background-color: #F9FAFB; padding: 32px; border-top: 1px solid #E5E7EB; text-align: center;'>
+                            <p style='margin: 0; color: #9CA3AF; font-size: 12px;'>
+                                © 2026 BookMyWorkshop. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>";
+    }
 }

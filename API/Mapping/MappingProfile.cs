@@ -52,8 +52,11 @@ public class MappingProfile : Profile
                     .OrderBy(m => m.DisplayOrder)
                     .Select(m => m.Url)
                     .FirstOrDefault()))
-            .ForMember(dest => dest.AverageRating, opt => opt.MapFrom(src => src.Reviews.Any() ? src.Reviews.Average(r => (double)r.Rating) : (double?)null))
-            .ForMember(dest => dest.ReviewCount, opt => opt.MapFrom(src => src.Reviews.Count))
+            .ForMember(dest => dest.AverageRating, opt => opt.MapFrom(src =>
+                src.Reviews.Any(r => !r.IsFlagged)
+                    ? src.Reviews.Where(r => !r.IsFlagged).Average(r => (double)r.Rating)
+                    : (double?)null))
+            .ForMember(dest => dest.ReviewCount, opt => opt.MapFrom(src => src.Reviews.Count(r => !r.IsFlagged)))
             .ForMember(dest => dest.HasUpcomingSchedules, opt => opt.MapFrom(src => src.Schedules.Any(s => s.StartDateTime > DateTime.UtcNow && s.Status == ScheduleStatus.Upcoming)))
             .ForMember(dest => dest.NextScheduleDate, opt => opt.MapFrom(src => src.Schedules.Where(s => s.StartDateTime > DateTime.UtcNow && s.Status == ScheduleStatus.Upcoming).OrderBy(s => s.StartDateTime).Select(s => (DateTime?)s.StartDateTime).FirstOrDefault()));
 
@@ -63,9 +66,13 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Pricing, opt => opt.MapFrom(src => src.Pricing))
             .ForMember(dest => dest.Media, opt => opt.MapFrom(src => src.Media.OrderBy(m => m.DisplayOrder)))
             .ForMember(dest => dest.UpcomingSchedules, opt => opt.MapFrom(src => src.Schedules.Where(s => s.StartDateTime > DateTime.UtcNow && s.Status == ScheduleStatus.Upcoming).OrderBy(s => s.StartDateTime)))
-            .ForMember(dest => dest.Reviews, opt => opt.MapFrom(src => src.Reviews.OrderByDescending(r => r.CreatedAt)))
-            .ForMember(dest => dest.AverageRating, opt => opt.MapFrom(src => src.Reviews.Any() ? src.Reviews.Average(r => (double)r.Rating) : (double?)null))
-            .ForMember(dest => dest.ReviewCount, opt => opt.MapFrom(src => src.Reviews.Count))
+            .ForMember(dest => dest.Reviews, opt => opt.MapFrom(src =>
+                src.Reviews.Where(r => !r.IsFlagged).OrderByDescending(r => r.CreatedAt)))
+            .ForMember(dest => dest.AverageRating, opt => opt.MapFrom(src =>
+                src.Reviews.Any(r => !r.IsFlagged)
+                    ? src.Reviews.Where(r => !r.IsFlagged).Average(r => (double)r.Rating)
+                    : (double?)null))
+            .ForMember(dest => dest.ReviewCount, opt => opt.MapFrom(src => src.Reviews.Count(r => !r.IsFlagged)))
             .ForMember(dest => dest.Venue, opt => opt.MapFrom(src => src.Venue));
 
         // Category mappings
@@ -179,6 +186,17 @@ public class MappingProfile : Profile
 
         CreateMap<WorkshopReview, ReviewResponse>()
             .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.FullName))
-            .ForMember(dest => dest.IsVerifiedAttendee, opt => opt.MapFrom(src => src.IsVerifiedAttendee));
+            .ForMember(dest => dest.IsVerifiedAttendee, opt => opt.MapFrom(src => src.IsVerifiedAttendee))
+            .ForMember(dest => dest.ImageUrls, opt => opt.MapFrom(src => src.ImageUrls))
+            .ForMember(dest => dest.WorkshopTitle, opt => opt.MapFrom(src => src.Workshop.Title))
+            .ForMember(dest => dest.WorkshopSlug, opt => opt.MapFrom(src => src.Workshop.Slug))
+            .ForMember(dest => dest.WorkshopImageUrl, opt => opt.MapFrom(src =>
+                src.Workshop.Media
+                    .Where(m => m.MediaType == MediaType.Image)
+                    .OrderBy(m => m.DisplayOrder)
+                    .Select(m => m.Url)
+                    .FirstOrDefault()))
+            .ForMember(dest => dest.ProviderId, opt => opt.MapFrom(src => src.Workshop.ProviderId))
+            .ForMember(dest => dest.ProviderName, opt => opt.MapFrom(src => src.Workshop.Provider.BusinessName));
     }
 }

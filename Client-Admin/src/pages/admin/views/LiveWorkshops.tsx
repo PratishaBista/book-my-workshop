@@ -93,9 +93,9 @@ export const LiveWorkshops: React.FC = () => {
             {/* Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto pb-12 custom-scrollbar">
                 {loading ? (
-                    <div className="col-span-full py-20 text-center text-slate-600 animate-pulse font-mono font-bold text-xs uppercase tracking-[0.3em]">Downloading Live Topology...</div>
+                    <div className="col-span-full py-20 text-center text-slate-600 animate-pulse font-mono font-bold text-xs uppercase tracking-[0.3em]">Downloading...</div>
                 ) : filteredWorkshops.length === 0 ? (
-                    <div className="col-span-full py-20 text-center text-slate-500 italic font-mono text-xs uppercase tracking-widest">No matching nodes detected in live buffer.</div>
+                    <div className="col-span-full py-20 text-center text-slate-500 italic font-mono text-xs uppercase tracking-widest">No matching category detected in live buffer.</div>
                 ) : (
                     filteredWorkshops.map(w => (
                         <div key={w.id} className="bg-[#0D0D0D] rounded-2xl border border-[#1A1A1A] hover:border-[#333] transition-all p-6 flex flex-col gap-5 group">

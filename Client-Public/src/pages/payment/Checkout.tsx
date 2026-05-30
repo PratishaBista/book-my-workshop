@@ -4,11 +4,18 @@ import Navbar from '../../components/landing/Navbar';
 import Footer from '../../components/landing/Footer';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config/api';
+import StripeCheckoutModal, {
+    useStripeVerify,
+    parseStripeInitiateResponse,
+    readApiErrorMessage,
+} from '../../components/payment/StripeCheckoutModal';
 import {
     Calendar, MapPin, Clock, ArrowLeft, ShieldCheck,
-    CreditCard, Loader2, Mail, User as UserIcon
+    CreditCard, Loader2, Mail, User as UserIcon, Wallet, CheckCircle2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+
+type PaymentProvider = 'esewa' | 'stripe';
 
 const Checkout: React.FC = () => {
     const { state } = useLocation();
@@ -16,6 +23,14 @@ const Checkout: React.FC = () => {
     const { user } = useAuth();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [useWallet, setUseWallet] = useState(false);
+    const [walletBalance, setWalletBalance] = useState(0);
+    const [paymentProvider, setPaymentProvider] = useState<PaymentProvider>('esewa');
+
+    // Stripe state
+    const [stripeModalOpen, setStripeModalOpen] = useState(false);
+    const [stripeClientSecret, setStripeClientSecret] = useState('');
+    const [stripePublishableKey, setStripePublishableKey] = useState('');
 
     useEffect(() => {
         if (!state?.workshop || !state?.schedule) {
@@ -23,12 +38,47 @@ const Checkout: React.FC = () => {
         }
     }, [state, navigate]);
 
+    useEffect(() => {
+        const fetchWallet = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) return;
+                const response = await fetch(API_ENDPOINTS.wallet.get, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setWalletBalance(data.balance);
+                }
+            } catch (err) {
+                console.error("Error fetching wallet balance:", err);
+            }
+        };
+        fetchWallet();
+    }, []);
+
+    // Stripe verification hook
+    const { verifyPayment } = useStripeVerify({
+        onVerified: (data) => {
+            const type = data.type ?? data.Type;
+            const bookingId = data.bookingId ?? data.BookingId;
+            if (type === 'Booking' && bookingId) {
+                navigate(`/payment/success?bookingId=${bookingId}`);
+            } else {
+                navigate('/payment/success');
+            }
+        },
+    });
+
     if (!state?.workshop || !state?.schedule) return null;
 
     const { workshop, schedule, numberOfSeats = 1 } = state;
     const workshopDate = new Date(schedule.startDateTime);
     const totalPrice = workshop.pricing.basePrice * numberOfSeats;
+    const walletAppliedAmount = useWallet ? Math.min(walletBalance, totalPrice) : 0;
+    const finalPrice = totalPrice - walletAppliedAmount;
 
+    // eSewa redirect 
     const submitToEsewa = (params: any) => {
         const form = document.createElement("form");
         form.setAttribute("method", "POST");
@@ -62,35 +112,80 @@ const Checkout: React.FC = () => {
         form.submit();
     };
 
+    // Main payment handler 
     const handlePayment = async () => {
         try {
             setLoading(true);
             setError(null);
             const token = localStorage.getItem('token');
 
-            const response = await fetch(API_ENDPOINTS.payment.initiate, {
+            const bookingPayload = {
+                workshopScheduleId: schedule.id,
+                numberOfSeats: numberOfSeats,
+                useWallet: useWallet,
+            };
+
+            const endpoint = paymentProvider === 'stripe'
+                ? API_ENDPOINTS.payment.initiateStripe
+                : API_ENDPOINTS.payment.initiate;
+
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`,
                 },
-                body: JSON.stringify({
-                    workshopScheduleId: schedule.id,
-                    numberOfSeats: numberOfSeats
-                })
+                body: JSON.stringify(bookingPayload),
             });
 
-            if (response.ok) {
-                const paymentData = await response.json();
-                submitToEsewa(paymentData);
-            } else {
-                const errorText = await response.text();
-                setError(errorText || "Failed to initiate payment. Please try again.");
+            if (!response.ok) {
+                setError(await readApiErrorMessage(response, 'Failed to initiate payment. Please try again.'));
                 setLoading(false);
+                return;
+            }
+
+            const paymentData = parseStripeInitiateResponse(await response.json());
+
+            // Wallet covered everything
+            if (paymentData.isFullyPaid) {
+                const bookingId = paymentData.transactionUuid.replace('wallet-', '');
+                navigate(`/payment/success?bookingId=${bookingId}`);
+                return;
+            }
+
+            if (paymentProvider === 'stripe') {
+                if (!paymentData.clientSecret || !paymentData.publishableKey) {
+                    setError(
+                        'Stripe did not return payment details. Check Stripe:SecretKey and Stripe:PublishableKey in API appsettings.'
+                    );
+                    setLoading(false);
+                    return;
+                }
+                setStripeClientSecret(paymentData.clientSecret);
+                setStripePublishableKey(paymentData.publishableKey);
+                setStripeModalOpen(true);
+                setLoading(false);
+            } else {
+                // Redirect to eSewa
+                submitToEsewa(paymentData);
             }
         } catch (err) {
             console.error("Payment Error:", err);
             setError("Network error. Please check your connection.");
+            setLoading(false);
+        }
+    };
+
+    // Called when Stripe payment element succeeds
+    const handleStripeSuccess = async (paymentIntentId: string) => {
+        setStripeModalOpen(false);
+        setLoading(true);
+        setError(null);
+        try {
+            await verifyPayment(paymentIntentId);
+        } catch (err: any) {
+            setError(err.message || "Verification failed. Please contact support.");
+        } finally {
             setLoading(false);
         }
     };
@@ -205,6 +300,7 @@ const Checkout: React.FC = () => {
                                 transition={{ delay: 0.3, duration: 0.6 }}
                                 className="sticky top-32 space-y-10"
                             >
+                                {/* Contact Details */}
                                 <div>
                                     <h3 className="text-lg font-serif font-bold mb-6 flex items-center gap-3">
                                         <span className="w-8 h-[1px] bg-deep-purple"></span>
@@ -236,36 +332,128 @@ const Checkout: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="pt-8">
-                                    <h3 className="text-lg font-serif font-bold mb-6 flex items-center gap-3">
+                                {/* Payment Section */}
+                                <div className="pt-8 space-y-6">
+                                    <h3 className="text-lg font-serif font-bold flex items-center gap-3">
                                         <span className="w-8 h-[1px] bg-deep-purple"></span>
                                         Payment
                                     </h3>
 
-                                    <div className="flex items-baseline justify-between mb-8">
-                                        <span className="text-3xl font-serif font-bold">
-                                            <span className="text-lg font-sans font-normal text-gray-400 mr-2">{workshop.pricing.currency}</span>
-                                            {totalPrice.toLocaleString()}
-                                        </span>
-                                        <span className="text-sm text-gray-400">Total inc. taxes</span>
+                                    {/* Wallet Balance */}
+                                    {walletBalance > 0 && (
+                                        <div className="p-4 bg-white rounded-2xl border border-gray-200 flex items-center justify-between shadow-sm">
+                                            <label className="flex items-center gap-3 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={useWallet}
+                                                    onChange={(e) => setUseWallet(e.target.checked)}
+                                                    className="w-4 h-4 rounded text-primary-orange focus:ring-primary-orange/50 border-gray-300"
+                                                />
+                                                <div>
+                                                    <span className="text-sm font-bold text-deep-purple flex items-center gap-1.5">
+                                                        <Wallet size={14} className="text-emerald-500" />
+                                                        Use Wallet Balance
+                                                    </span>
+                                                    <p className="text-xs text-gray-400 font-medium">Available: Rs. {walletBalance.toLocaleString()}</p>
+                                                </div>
+                                            </label>
+                                            <span className="text-sm font-bold text-emerald-600">
+                                                - Rs. {walletAppliedAmount.toLocaleString()}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Payment Provider Selector and only show if there's a remaining amount */}
+                                    {finalPrice > 0 && (
+                                        <div className="space-y-3">
+                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Choose Payment Method</p>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {/* eSewa */}
+                                                <button
+                                                    onClick={() => setPaymentProvider('esewa')}
+                                                    className={`relative p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${
+                                                        paymentProvider === 'esewa'
+                                                            ? 'border-[#60BB46] bg-[#60BB46]/5 shadow-sm'
+                                                            : 'border-gray-200 hover:border-gray-300 bg-white'
+                                                    }`}
+                                                >
+                                                    {paymentProvider === 'esewa' && (
+                                                        <CheckCircle2 size={16} className="absolute top-2 right-2 text-[#60BB46]" />
+                                                    )}
+                                                    {/* eSewa logo text */}
+                                                    <span className="text-2xl font-black" style={{ color: '#60BB46' }}>e</span>
+                                                    <span className="text-xs font-bold text-gray-600">eSewa</span>
+                                                    <span className="text-[10px] text-gray-400">Digital Wallet</span>
+                                                </button>
+
+                                                {/* Stripe */}
+                                                <button
+                                                    onClick={() => setPaymentProvider('stripe')}
+                                                    className={`relative p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${
+                                                        paymentProvider === 'stripe'
+                                                            ? 'border-[#635BFF] bg-[#635BFF]/5 shadow-sm'
+                                                            : 'border-gray-200 hover:border-gray-300 bg-white'
+                                                    }`}
+                                                >
+                                                    {paymentProvider === 'stripe' && (
+                                                        <CheckCircle2 size={16} className="absolute top-2 right-2 text-[#635BFF]" />
+                                                    )}
+                                                    <CreditCard size={22} className={paymentProvider === 'stripe' ? 'text-[#635BFF]' : 'text-gray-400'} />
+                                                    <span className="text-xs font-bold text-gray-600">Card / Stripe</span>
+                                                    <span className="text-[10px] text-gray-400">Visa, Mastercard</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Price Breakdown */}
+                                    <div className="space-y-3 border-t border-b border-gray-100 py-4">
+                                        <div className="flex justify-between text-sm font-semibold text-gray-500">
+                                            <span>Subtotal</span>
+                                            <span>Rs. {totalPrice.toLocaleString()}</span>
+                                        </div>
+                                        {useWallet && walletAppliedAmount > 0 && (
+                                            <div className="flex justify-between text-sm font-semibold text-emerald-600">
+                                                <span>Wallet Balance Applied</span>
+                                                <span>- Rs. {walletAppliedAmount.toLocaleString()}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between items-baseline pt-2">
+                                            <span className="text-base font-bold">Total to Pay</span>
+                                            <span className="text-3xl font-serif font-bold text-deep-purple">
+                                                Rs. {finalPrice.toLocaleString()}
+                                            </span>
+                                        </div>
                                     </div>
 
                                     {error && (
-                                        <div className="mb-6 text-red-600 text-sm bg-red-50 p-4 rounded-xl border border-red-100">
+                                        <div className="text-red-600 text-sm bg-red-50 p-4 rounded-xl border border-red-100">
                                             {error}
                                         </div>
                                     )}
 
+                                    {/* Pay Button */}
                                     <button
                                         onClick={handlePayment}
                                         disabled={loading}
-                                        className="w-full py-5 bg-deep-purple text-white text-lg font-medium rounded-2xl hover:bg-deep-purple/90 transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed group relative overflow-hidden"
+                                        className={`w-full py-5 text-white text-lg font-bold rounded-2xl transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed group relative overflow-hidden ${
+                                            finalPrice === 0
+                                                ? 'bg-gradient-to-r from-emerald-600 to-green-500 hover:opacity-95 shadow-xl shadow-emerald-600/10'
+                                                : paymentProvider === 'stripe'
+                                                    ? 'bg-[#635BFF] hover:bg-[#4F46E5] shadow-xl shadow-[#635BFF]/20'
+                                                    : 'bg-deep-purple hover:bg-deep-purple/90'
+                                        }`}
                                     >
                                         {loading ? (
                                             <Loader2 className="animate-spin" />
                                         ) : (
                                             <span className="relative z-10 flex items-center gap-2">
-                                                Confirm & Pay with eSewa
+                                                {finalPrice === 0
+                                                    ? 'Book Workshop with Wallet'
+                                                    : paymentProvider === 'stripe'
+                                                        ? 'Continue to Card Payment'
+                                                        : 'Confirm & Pay with eSewa'
+                                                }
                                                 <span className="group-hover:translate-x-1 transition-transform">→</span>
                                             </span>
                                         )}
@@ -282,6 +470,19 @@ const Checkout: React.FC = () => {
                 </div>
             </main>
             <Footer />
+
+            {/* Stripe Payment Modal */}
+            <StripeCheckoutModal
+                isOpen={stripeModalOpen}
+                clientSecret={stripeClientSecret}
+                publishableKey={stripePublishableKey}
+                amount={finalPrice}
+                onSuccess={handleStripeSuccess}
+                onClose={() => {
+                    setStripeModalOpen(false);
+                    setLoading(false);
+                }}
+            />
         </div>
     );
 };

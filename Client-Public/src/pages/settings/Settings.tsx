@@ -9,6 +9,9 @@ import Navbar from '../../components/landing/Navbar';
 import EditProfile from './EditProfile';
 import InterestsSettings from './InterestsSettings';
 import AccountSettings from './AccountSettings';
+import NotificationsSettings from './NotificationsSettings';
+import PrivacySettings from './PrivacySettings';
+import SecuritySettings from './SecuritySettings';
 import PlaceholderSection from './PlaceholderSection';
 
 const Settings: React.FC = () => {
@@ -18,7 +21,7 @@ const Settings: React.FC = () => {
         { label: 'Edit profile', path: '/settings/edit-profile' },
         { label: 'Your interests', path: '/settings/interests' },
         { label: 'Account management', path: '/settings/account' },
-        { label: 'Profile visibility', path: '/settings/visibility' },
+        // { label: 'Profile visibility', path: '/settings/visibility' },
         { label: 'Notifications', path: '/settings/notifications' },
         { label: 'Privacy and data', path: '/settings/privacy' },
         { label: 'Security', path: '/settings/security' },
@@ -64,10 +67,10 @@ const Settings: React.FC = () => {
                                 <Route path="edit-profile" element={<EditProfile />} />
                                 <Route path="interests" element={<InterestsSettings />} />
                                 <Route path="account" element={<AccountSettings />} />
-                                <Route path="visibility" element={<PlaceholderSection title="Profile Visibility" desc="Control who can see your profile and workshops." />} />
-                                <Route path="notifications" element={<PlaceholderSection title="Notifications" desc="Choose which notifications you want to receive." />} />
-                                <Route path="privacy" element={<PlaceholderSection title="Privacy and Data" desc="Manage your data and privacy preferences." />} />
-                                <Route path="security" element={<PlaceholderSection title="Security" desc="Secure your account with multi-factor authentication." />} />
+                                {/* <Route path="visibility" element={<PlaceholderSection title="Profile Visibility" desc="Control who can see your profile and workshops." />} /> */}
+                                <Route path="notifications" element={<NotificationsSettings />} />
+                                <Route path="privacy" element={<PrivacySettings />} />
+                                <Route path="security" element={<SecuritySettings />} />
                             </Routes>
                         </AnimatePresence>
                     </main>

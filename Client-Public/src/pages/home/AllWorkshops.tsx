@@ -1,24 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, MapPin, SlidersHorizontal, ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { Search, MapPin, SlidersHorizontal, Loader2 } from 'lucide-react';
 import { API_ENDPOINTS } from '../../config/api';
 import Navbar from '../../components/landing/Navbar';
 import Footer from '../../components/landing/Footer';
-
-interface Workshop {
-    id: number;
-    title: string;
-    slug: string;
-    locationName: string;
-    locationAddress: string;
-    categoryName: string;
-    basePrice: number;
-    currency: string;
-    primaryImageUrl: string;
-    averageRating: number | null;
-    reviewCount: number;
-}
+import WorkshopCard from '../../components/workshops/WorkshopCard';
+import { normalizeWorkshop, type Workshop } from '../../hooks/useWorkshopQueries';
 
 const AllWorkshops: React.FC = () => {
     const navigate = useNavigate();
@@ -34,7 +22,7 @@ const AllWorkshops: React.FC = () => {
     
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 20;
+    const itemsPerPage = 25;
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -72,17 +60,9 @@ const AllWorkshops: React.FC = () => {
                 const response = await fetch(url);
                 if (response.ok) {
                     const data = await response.json();
-                    // Map the response and shuffle it
-                    let formattedData = data.map((w: any) => ({
-                        ...w,
-                        categoryName: w.categories?.[0]?.name || w.categoryName || ''
-                    }));
-                    
-                    // Fisher-Yates Shuffle algorithm
-                    for (let i = formattedData.length - 1; i > 0; i--) {
-                        const j = Math.floor(Math.random() * (i + 1));
-                        [formattedData[i], formattedData[j]] = [formattedData[j], formattedData[i]];
-                    }
+                    // Newest first (highest id = most recently created)
+                    let formattedData = data.map((w: Record<string, unknown>) => normalizeWorkshop(w));
+                    formattedData.sort((a: { id: number }, b: { id: number }) => b.id - a.id);
                     
                     setWorkshops(formattedData);
                     setCurrentPage(1); // Reset to first page on search
@@ -102,7 +82,7 @@ const AllWorkshops: React.FC = () => {
         if (selectedLocation !== 'All Locations') newParams.loc = selectedLocation;
         setSearchParams(newParams);
 
-    }, [searchQuery, selectedCategory, selectedLocation, categories, setSearchParams]);
+    }, [searchQuery, selectedCategory, selectedLocation]);
 
     const handleWorkshopClick = (slugOrId: string) => {
         navigate(`/workshop/${slugOrId}`);
@@ -135,47 +115,46 @@ const AllWorkshops: React.FC = () => {
             {/* Spacer for Sticky Nav */}
             <div className="h-[84px]" />
 
-            {/* Premium Header & Filter Area */}
             <div className="bg-[#FDFCF7] pt-12 pb-8 px-6 md:px-12 border-b border-deep-purple/5 relative">
                 <div className="max-w-[1600px] mx-auto">
                     <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-8">
                         <div>
                             <h1 className="text-5xl md:text-6xl font-serif font-medium mb-4">
-                                Explore <span className="italic text-primary-orange">Experiences</span>
+                                {/* Explore <span className="italic text-primary-orange">Experiences</span> */}
                             </h1>
                             <p className="text-xl text-deep-purple/60 font-light max-w-xl">
                                 Discover and book unique workshops taught by passionate locals in your city.
                             </p>
                         </div>
                         
-                        {/* Compact Integrated Search & Location */}
-                        <div className="flex items-center bg-white p-2 rounded-full shadow-md shadow-deep-purple/5 border border-deep-purple/10 flex-1 max-w-2xl lg:max-w-xl h-[64px]">
-                            <div className="flex-1 flex items-center px-4">
-                                <Search className="w-5 h-5 text-deep-purple/30 mr-3 hidden sm:block" />
-                                <input
-                                    type="text"
-                                    placeholder="Search creative workshops..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full py-2 bg-transparent outline-none font-medium text-sm text-deep-purple placeholder:text-deep-purple/30 focus:ring-0"
-                                />
-                            </div>
-                            <div className="w-px h-8 bg-deep-purple/10 mx-2"></div>
-                            <div className="flex items-center px-4 relative">
-                                <MapPin className="w-5 h-5 text-primary-orange mr-2 hidden sm:block" />
-                                <select 
-                                    value={selectedLocation}
-                                    onChange={(e) => setSelectedLocation(e.target.value)}
-                                    className="py-2 bg-transparent appearance-none outline-none font-bold text-xs uppercase tracking-wider cursor-pointer pr-4 hover:text-primary-orange transition-colors"
-                                >
-                                    <option value="All Locations">All Locations</option>
-                                    <option value="Kathmandu">Kathmandu</option>
-                                    <option value="Pokhara">Pokhara</option>
-                                    <option value="Lalitpur">Lalitpur</option>
-                                    <option value="Bhaktapur">Bhaktapur</option>
-                                </select>
-                            </div>
-                        </div>
+                        {/* Compact Integrated Search & Location
+                        // <div className="flex items-center bg-white p-2 rounded-full shadow-md shadow-deep-purple/5 border border-deep-purple/10 flex-1 max-w-2xl lg:max-w-xl h-[64px]">
+                        //     <div className="flex-1 flex items-center px-4">
+                        //         <Search className="w-5 h-5 text-deep-purple/30 mr-3 hidden sm:block" />
+                        //         <input
+                        //             type="text"
+                        //             placeholder="Search creative workshops..."
+                        //             value={searchQuery}
+                        //             onChange={(e) => setSearchQuery(e.target.value)}
+                        //             className="w-full py-2 bg-transparent outline-none font-medium text-sm text-deep-purple placeholder:text-deep-purple/30 focus:ring-0"
+                        //         />
+                        //     </div>
+                        //     <div className="w-px h-8 bg-deep-purple/10 mx-2"></div>
+                        //     <div className="flex items-center px-4 relative">
+                        //         <MapPin className="w-5 h-5 text-primary-orange mr-2 hidden sm:block" />
+                        //         <select 
+                        //             value={selectedLocation}
+                        //             onChange={(e) => setSelectedLocation(e.target.value)}
+                        //             className="py-2 bg-transparent appearance-none outline-none font-bold text-xs uppercase tracking-wider cursor-pointer pr-4 hover:text-primary-orange transition-colors"
+                        //         >
+                        //             <option value="All Locations">All Locations</option>
+                        //             <option value="Kathmandu">Kathmandu</option>
+                        //             <option value="Pokhara">Pokhara</option>
+                        //             <option value="Lalitpur">Lalitpur</option>
+                        //             <option value="Bhaktapur">Bhaktapur</option>
+                        //         </select>
+                        //     </div>
+                        // </div> */}
                     </div>
 
                     {/* Scrollable Category Pills */}
@@ -188,7 +167,7 @@ const AllWorkshops: React.FC = () => {
                                     : 'bg-white border-deep-purple/10 text-deep-purple/70 hover:border-deep-purple/30 hover:text-deep-purple'
                             }`}
                         >
-                            <span className="flex items-center gap-2"><Sparkles size={14}/> All</span>
+                            <span className="flex items-center gap-2"> All</span>
                         </button>
                         {categories.map((cat) => (
                             <button
@@ -207,7 +186,7 @@ const AllWorkshops: React.FC = () => {
                 </div>
             </div>
 
-            {/* Main Content - Flat List */}
+            {/* Main Content */}
             <main className="py-20 px-6 md:px-12 max-w-[1600px] mx-auto">
                 {loading ? (
                     <div className="min-h-[400px] flex flex-col items-center justify-center gap-6">
@@ -230,73 +209,15 @@ const AllWorkshops: React.FC = () => {
                             variants={containerVariants}
                             initial="hidden"
                             animate="visible"
-                            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-16"
+                            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-12 md:gap-x-5"
                         >
                             {paginatedItems.map((workshop) => (
-                                <motion.div
-                                    key={workshop.id}
-                                    variants={itemVariants}
-                                    onClick={() => handleWorkshopClick(workshop.slug)}
-                                    className="group cursor-pointer"
-                                >
-                                    <div className="relative aspect-[4/5] mb-4 overflow-hidden rounded-3xl bg-gray-100 shadow-sm border border-deep-purple/5">
-                                        {workshop.primaryImageUrl ? (
-                                            <img
-                                                src={workshop.primaryImageUrl}
-                                                alt={workshop.title}
-                                                className="w-full h-full object-cover transition-transform duration-1000 ease-out group-hover:scale-110"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full bg-gradient-to-br from-deep-purple/5 to-primary-orange/5 flex items-center justify-center">
-                                                <Sparkles className="w-8 h-8 text-deep-purple/10" />
-                                            </div>
-                                        )}
-                                        
-                                        <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end justify-between">
-                                            <div className="text-white">
-                                                <div className="flex items-center gap-1">
-                                                    <span className="text-sm font-serif text-white">View Details</span>
-                                                    <ArrowRight size={14} />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {workshop.averageRating && (
-                                            <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-2 py-1 rounded-xl flex items-center gap-1 shadow-lg ring-1 ring-black/5">
-                                                <span className="text-primary-orange font-bold text-[10px]">★</span>
-                                                <span className="font-bold text-[10px] text-deep-purple">{workshop.averageRating.toFixed(1)}</span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2">
-                                            {workshop.categoryName && (
-                                                <span className="text-[9px] font-black uppercase tracking-wider text-primary-orange px-1 border-l border-primary-orange">
-                                                    {workshop.categoryName}
-                                                </span>
-                                            )}
-                                            <span className="text-[9px] font-bold uppercase tracking-widest text-deep-purple/30">
-                                                {workshop.locationName}
-                                            </span>
-                                        </div>
-
-                                        <h3 className="text-base font-serif font-medium leading-tight group-hover:text-primary-orange transition-colors duration-300 line-clamp-2 min-h-[2.5rem]">
-                                            {workshop.title}
-                                        </h3>
-
-                                        <div className="pt-2 border-t border-deep-purple/5 flex items-center justify-between">
-                                            <div className="flex flex-col">
-                                                <span className="text-lg font-serif font-bold text-deep-purple">
-                                                    <span className="text-[10px] font-normal opacity-40 mr-1">{workshop.currency}</span>
-                                                    {workshop.basePrice.toLocaleString()}
-                                                </span>
-                                            </div>
-                                            <div className="w-8 h-8 rounded-full border border-deep-purple/10 flex items-center justify-center group-hover:bg-deep-purple group-hover:text-white transition-all duration-500">
-                                                <ArrowRight size={14} />
-                                            </div>
-                                        </div>
-                                    </div>
+                                <motion.div key={workshop.id} variants={itemVariants}>
+                                    <WorkshopCard
+                                        workshop={workshop}
+                                        layout="compact"
+                                        onClick={() => handleWorkshopClick(workshop.slug)}
+                                    />
                                 </motion.div>
                             ))}
                         </motion.div>

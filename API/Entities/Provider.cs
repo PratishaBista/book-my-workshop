@@ -47,8 +47,7 @@ public class Provider
     public DateTime? DocumentsReviewedAt { get; set; }
     public string? ReviewNotes { get; set; }
 
-    public float TrustScore { get; set; } = 0.0f; // Calculated based on consistency (0-100)
-    public string? TrustAnalysisJson { get; set; } // Raw results from NLP Consistency Check
+
     public bool IsManuallyVerified { get; set; } = false;
 
     // Lifecycle Status

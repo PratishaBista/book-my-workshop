@@ -1,11 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-    Clock,
     Plus,
     Trash2,
     Filter,
-    CheckSquare,
-    Square,
     RefreshCw,
     X,
     CalendarDays,
@@ -445,7 +442,7 @@ export const ScheduleManagement: React.FC = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-gray-100 pb-6">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Schedule Manager</h2>
+                    <h2 className="text-2xl font-bold text-gray-900">Schedule</h2>
                     <p className="text-gray-500 text-sm mt-1">Manage time slots across all workshops.</p>
                 </div>
                 <div className="flex gap-3">

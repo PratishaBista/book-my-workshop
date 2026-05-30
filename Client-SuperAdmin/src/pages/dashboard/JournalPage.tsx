@@ -22,6 +22,8 @@ const JournalPage: React.FC = () => {
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
+    const [searchQuery, setSearchQuery] = useState('');
+
     // Form state
     const [formData, setFormData] = useState({
         title: '',
@@ -247,7 +249,7 @@ const JournalPage: React.FC = () => {
     return (
         <div className="max-w-6xl">
             <div className="flex justify-between items-center mb-10">
-                <h1 className="text-2xl font-light text-white/90">The Editorial Journal</h1>
+                <h1 className="text-2xl font-light text-white/90">Editorial</h1>
                 <button 
                     onClick={() => {
                         setMessage(null);
@@ -273,6 +275,8 @@ const JournalPage: React.FC = () => {
                             <input 
                                 type="text" 
                                 placeholder="Search articles..." 
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                                 className="bg-transparent border border-white/10 rounded pl-9 pr-4 py-1.5 text-sm focus:outline-none focus:border-white/20 text-white"
                             />
                         </div>
@@ -288,14 +292,23 @@ const JournalPage: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {articles.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} className="px-6 py-10 text-center text-white/20">
-                                        No articles found. Start writing your first story!
-                                    </td>
-                                </tr>
-                            ) : (
-                                articles.map(article => (
+                            {(() => {
+                                const filteredArticles = articles.filter(article => 
+                                    article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                    article.category.toLowerCase().includes(searchQuery.toLowerCase())
+                                );
+
+                                if (filteredArticles.length === 0) {
+                                    return (
+                                        <tr>
+                                            <td colSpan={4} className="px-6 py-10 text-center text-white/20">
+                                                {searchQuery ? 'No articles match your search query.' : 'No articles found. Start writing your first story!'}
+                                            </td>
+                                        </tr>
+                                    );
+                                }
+
+                                return filteredArticles.map(article => (
                                     <tr key={article.id} className="hover:bg-white/[0.02] transition-colors group">
                                         <td className="px-6 py-4 text-white/80 font-serif flex items-center gap-3">
                                             <FileText size={14} className="text-white/20" />
@@ -328,8 +341,8 @@ const JournalPage: React.FC = () => {
                                             </button>
                                         </td>
                                     </tr>
-                                ))
-                            )}
+                                ));
+                            })()}
                         </tbody>
                     </table>
                 </div>

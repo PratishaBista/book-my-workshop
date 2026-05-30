@@ -141,6 +141,9 @@ namespace API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("AttendanceStatus")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("BookingDate")
                         .HasColumnType("datetime2");
 
@@ -156,6 +159,9 @@ namespace API.Migrations
 
                     b.Property<string>("CancelledBy")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("CheckedInAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("ConfirmationCode")
                         .IsRequired()
@@ -205,6 +211,12 @@ namespace API.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<decimal>("VatOnCommission")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("WalletAmountUsed")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int>("WorkshopScheduleId")
                         .HasColumnType("int");
 
@@ -253,6 +265,63 @@ namespace API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ContactMessages");
+                });
+
+            modelBuilder.Entity("API.Entities.GiftCard", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ClaimedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ClaimedByUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PersonalMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("RecipientEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("SenderUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TransactionId")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClaimedByUserId");
+
+                    b.HasIndex("SenderUserId");
+
+                    b.ToTable("GiftCards");
                 });
 
             modelBuilder.Entity("API.Entities.JournalArticle", b =>
@@ -389,7 +458,7 @@ namespace API.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("CommissionPercentage")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(5,2)");
 
                     b.Property<DateTime>("LastUpdated")
                         .HasColumnType("datetime2");
@@ -397,6 +466,9 @@ namespace API.Migrations
                     b.Property<string>("UpdatedBy")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("VatPercentage")
+                        .HasColumnType("decimal(5,2)");
 
                     b.HasKey("Id");
 
@@ -501,12 +573,6 @@ namespace API.Migrations
                     b.Property<string>("Tagline")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("TrustAnalysisJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<float>("TrustScore")
-                        .HasColumnType("real");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -532,6 +598,40 @@ namespace API.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Providers");
+                });
+
+            modelBuilder.Entity("API.Entities.SystemLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Exception")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LogLevel")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TriggeredBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SystemLogs");
                 });
 
             modelBuilder.Entity("API.Entities.UserPreference", b =>
@@ -611,7 +711,7 @@ namespace API.Migrations
                     b.ToTable("Venues");
                 });
 
-            modelBuilder.Entity("API.Entities.Workshop", b =>
+            modelBuilder.Entity("API.Entities.Wallet", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -619,15 +719,78 @@ namespace API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<double?>("AIConfidenceScore")
-                        .HasColumnType("float");
+                    b.Property<decimal>("Balance")
+                        .HasColumnType("decimal(18,2)");
 
-                    b.Property<bool?>("AIIsConfident")
-                        .HasColumnType("bit");
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
 
-                    b.Property<string>("AISuggestedCategory")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Wallets");
+                });
+
+            modelBuilder.Entity("API.Entities.WalletTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("BalanceAfter")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("BookingId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("GiftCardId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WalletId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.HasIndex("GiftCardId");
+
+                    b.HasIndex("WalletId");
+
+                    b.ToTable("WalletTransactions");
+                });
+
+            modelBuilder.Entity("API.Entities.Workshop", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("BookingCutoffHours")
                         .HasColumnType("int");
@@ -952,6 +1115,15 @@ namespace API.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("ImageUrlsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsFlagged")
+                        .HasColumnType("bit");
+
+                    b.Property<float>("OffensiveScore")
+                        .HasColumnType("real");
+
                     b.Property<int>("Rating")
                         .HasColumnType("int");
 
@@ -1179,6 +1351,24 @@ namespace API.Migrations
                     b.Navigation("WorkshopSchedule");
                 });
 
+            modelBuilder.Entity("API.Entities.GiftCard", b =>
+                {
+                    b.HasOne("API.Entities.ApplicationUser", "ClaimedByUser")
+                        .WithMany()
+                        .HasForeignKey("ClaimedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("API.Entities.ApplicationUser", "SenderUser")
+                        .WithMany()
+                        .HasForeignKey("SenderUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ClaimedByUser");
+
+                    b.Navigation("SenderUser");
+                });
+
             modelBuilder.Entity("API.Entities.Notification", b =>
                 {
                     b.HasOne("API.Entities.ApplicationUser", "User")
@@ -1229,6 +1419,42 @@ namespace API.Migrations
                         .IsRequired();
 
                     b.Navigation("Provider");
+                });
+
+            modelBuilder.Entity("API.Entities.Wallet", b =>
+                {
+                    b.HasOne("API.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("API.Entities.WalletTransaction", b =>
+                {
+                    b.HasOne("API.Entities.Booking", "Booking")
+                        .WithMany()
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("API.Entities.GiftCard", "GiftCard")
+                        .WithMany()
+                        .HasForeignKey("GiftCardId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("API.Entities.Wallet", "Wallet")
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+
+                    b.Navigation("GiftCard");
+
+                    b.Navigation("Wallet");
                 });
 
             modelBuilder.Entity("API.Entities.Workshop", b =>

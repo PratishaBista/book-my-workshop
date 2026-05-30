@@ -426,7 +426,7 @@ const AccountSettings: React.FC = () => {
                 </section>
 
                 <section>
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-deep-purple/30 mb-6 ml-1">Account Lifecycle</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-deep-purple/30 mb-6 ml-1">Account</h3>
                     <div className="space-y-4">
                         <button
                             onClick={handleDeactivate}

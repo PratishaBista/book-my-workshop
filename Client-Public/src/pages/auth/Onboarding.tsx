@@ -91,26 +91,14 @@ const Onboarding: React.FC = () => {
                 <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-deep-purple/5 rounded-full blur-[100px]" />
             </div>
 
-            <header className="relative z-10 p-8 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                    <div className="w-10 h-10 bg-deep-purple rounded-xl flex items-center justify-center text-white font-black italic">B</div>
-                    <span className="font-serif font-black text-xl text-deep-purple tracking-tight">BookMyWorkshop</span>
-                </div>
-            </header>
-
             <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 max-w-4xl mx-auto text-center pb-20">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6 }}
                 >
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary-orange/10 rounded-full mb-6">
-                        <Sparkles size={16} className="text-primary-orange" />
-                        <span className="text-xs font-black text-primary-orange uppercase tracking-widest">Personalize Your Feed</span>
-                    </div>
                     <h1 className="text-4xl md:text-6xl font-serif font-black text-deep-purple mb-6 leading-tight">
-                        What are you <br className="hidden md:block" />
-                        <span className="text-primary-orange italic">interested</span> in?
+                        Choose what you want to see
                     </h1>
                     <p className="text-lg text-deep-purple/60 mb-12 max-w-xl mx-auto">
                         Pick <span className="text-deep-purple font-bold">1 or more interests</span> so we can recommend the perfect workshops for you.
@@ -158,7 +146,6 @@ const Onboarding: React.FC = () => {
                         ) : (
                             <>
                                 {selectedIds.length < 1 ? `Pick your interests` : "Let's Explore"}
-                                <ArrowRight size={20} />
                             </>
                         )}
                     </button>

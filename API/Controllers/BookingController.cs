@@ -137,17 +137,65 @@ public class BookingController : ControllerBase
         }
     }
 
+    // GET: api/booking/ticket/{code}
+    [HttpGet("ticket/{code}")]
+    public async Task<IActionResult> GetBookingTicketByCode(string code)
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var ticket = await _bookingService.GetBookingTicketByCodeAsync(code, userId);
+            if (ticket == null)
+                return NotFound(new { message = "Ticket not found." });
+
+            return Ok(ticket);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting ticket by code {Code}", code);
+            return StatusCode(500, new { message = "An error occurred." });
+        }
+    }
+
+    // GET: api/booking/{id}/ticket
+    [HttpGet("{id}/ticket")]
+    public async Task<IActionResult> GetBookingTicket(int id)
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var ticket = await _bookingService.GetBookingTicketAsync(id, userId);
+            if (ticket == null)
+                return NotFound(new { message = "Ticket not found or booking is not confirmed." });
+
+            return Ok(ticket);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting ticket for booking {BookingId}", id);
+            return StatusCode(500, new { message = "An error occurred." });
+        }
+    }
+
     // GET: api/booking/confirmation/{code}
     [HttpGet("confirmation/{code}")]
     public async Task<IActionResult> GetBookingByConfirmation(string code)
     {
         try
         {
-            var booking = await _bookingService.GetBookingByConfirmationCodeAsync(code);
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var booking = await _bookingService.GetBookingByConfirmationCodeAsync(code, userId);
             if (booking == null)
-            {
                 return NotFound();
-            }
 
             return Ok(booking);
         }

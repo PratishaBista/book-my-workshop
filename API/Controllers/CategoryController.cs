@@ -4,6 +4,7 @@ using API.Repositories;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace API.Controllers;
 
@@ -13,11 +14,13 @@ public class CategoryController : ControllerBase
 {
     private readonly ICategoryRepository _categoryRepository;
     private readonly IMapper _mapper;
+    private readonly IMemoryCache _cache;
 
-    public CategoryController(ICategoryRepository categoryRepository, IMapper mapper)
+    public CategoryController(ICategoryRepository categoryRepository, IMapper mapper, IMemoryCache cache)
     {
         _categoryRepository = categoryRepository;
         _mapper = mapper;
+        _cache = cache;
     }
 
     // GET: api/category
@@ -42,7 +45,14 @@ public class CategoryController : ControllerBase
             return Ok(response);
         }
 
+        if (_cache.TryGetValue("CacheKey_PublicCategories", out IEnumerable<Entities.WorkshopCategory>? cachedCategories))
+        {
+            return Ok(cachedCategories!.OrderBy(c => c.Name));
+        }
+
         var categories = await _categoryRepository.GetActiveCategoriesAsync();
+        _cache.Set("CacheKey_PublicCategories", categories, TimeSpan.FromHours(1));
+
         return Ok(categories.OrderBy(c => c.Name));
     }
 
@@ -60,6 +70,7 @@ public class CategoryController : ControllerBase
         var category = _mapper.Map<Entities.WorkshopCategory>(request);
         await _categoryRepository.AddAsync(category);
         await _categoryRepository.SaveChangesAsync();
+        _cache.Remove("CacheKey_PublicCategories");
 
         return CreatedAtAction(nameof(GetAllCategories), new { id = category.Id }, category);
     }
@@ -81,6 +92,7 @@ public class CategoryController : ControllerBase
         _mapper.Map(request, category);
         _categoryRepository.Update(category);
         await _categoryRepository.SaveChangesAsync();
+        _cache.Remove("CacheKey_PublicCategories");
 
         return Ok(category);
     }
@@ -95,6 +107,7 @@ public class CategoryController : ControllerBase
 
         _categoryRepository.Delete(category);
         await _categoryRepository.SaveChangesAsync();
+        _cache.Remove("CacheKey_PublicCategories");
 
         return NoContent();
     }

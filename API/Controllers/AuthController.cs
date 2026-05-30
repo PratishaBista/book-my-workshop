@@ -199,6 +199,13 @@ public class AuthController : ControllerBase
             var emailBody = EmailTemplates.GetSuperAdminMfaEmail(code);
             await _emailService.SendEmailAsync(user.Email!, "SuperAdmin Verification Code - BookMyWorkshop", emailBody);
 
+            try
+            {
+                var logService = HttpContext.RequestServices.GetRequiredService<ISystemLogService>();
+                await logService.LogInfoAsync("Auth", $"MFA verification code generated and sent to SuperAdmin {user.Email}.", user.Email);
+            }
+            catch {}
+
             return Ok(new LoginResponse 
             { 
                 RequiresMFA = true 
@@ -240,6 +247,13 @@ public class AuthController : ControllerBase
             isReactivated = true;
         }
 
+        try
+        {
+            var logService = HttpContext.RequestServices.GetRequiredService<ISystemLogService>();
+            await logService.LogInfoAsync("Auth", $"User {user.Email} successfully logged in as {primaryRole}.", user.Email);
+        }
+        catch {}
+
         return Ok(new LoginResponse 
         { 
             Token = token, 
@@ -269,12 +283,27 @@ public class AuthController : ControllerBase
             return BadRequest("Code expired or invalid. Please login again.");
 
         if (storedCode != request.Code)
+        {
+            try
+            {
+                var logService = HttpContext.RequestServices.GetRequiredService<ISystemLogService>();
+                await logService.LogWarningAsync("Auth", $"Invalid MFA code entered for SuperAdmin {user.Email}.", user.Email);
+            }
+            catch {}
             return BadRequest("Invalid verification code.");
+        }
 
         // Clear code after successful verification
         _cache.Remove(cacheKey);
 
         var (token, expiry) = _tokenService.CreateToken(user, API.Enums.UserRoles.SuperAdmin);
+
+        try
+        {
+            var logService = HttpContext.RequestServices.GetRequiredService<ISystemLogService>();
+            await logService.LogInfoAsync("Auth", $"SuperAdmin {user.Email} successfully authenticated via MFA.", user.Email);
+        }
+        catch {}
 
         return Ok(new LoginResponse 
         { 
@@ -343,10 +372,12 @@ public class AuthController : ControllerBase
                     EmailConfirmed = true
                 };
                 
-                var result = await _userManager.CreateAsync(user); 
+                var result = await _userManager.CreateAsync(user);
                 if (!result.Succeeded) return BadRequest(result.Errors);
+
+                await _userManager.AddToRoleAsync(user, API.Enums.UserRoles.User);
             }
-            else 
+            else
             {
                 bool updated = false;
                 if (string.IsNullOrEmpty(user.GoogleId))
@@ -369,6 +400,15 @@ public class AuthController : ControllerBase
             }
             
             var roles = await _userManager.GetRolesAsync(user);
+            if (!roles.Contains(API.Enums.UserRoles.Admin)
+                && !roles.Contains(API.Enums.UserRoles.Provider)
+                && !roles.Contains(API.Enums.UserRoles.SuperAdmin)
+                && !roles.Contains(API.Enums.UserRoles.User))
+            {
+                await _userManager.AddToRoleAsync(user, API.Enums.UserRoles.User);
+                roles = await _userManager.GetRolesAsync(user);
+            }
+
             string primaryRole = roles.Contains(API.Enums.UserRoles.Admin) ? API.Enums.UserRoles.Admin :
                                (roles.Contains(API.Enums.UserRoles.Provider) ? API.Enums.UserRoles.Provider : API.Enums.UserRoles.User);
 
@@ -402,6 +442,13 @@ public class AuthController : ControllerBase
                 await _userManager.UpdateAsync(user);
                 isReactivated = true;
             }
+
+            try
+            {
+                var logService = HttpContext.RequestServices.GetRequiredService<ISystemLogService>();
+                await logService.LogInfoAsync("Auth", $"User {user.Email} successfully logged in via Google as {primaryRole}.", user.Email);
+            }
+            catch {}
 
             return Ok(new LoginResponse 
             { 

@@ -60,6 +60,8 @@ public class WorkshopDetailResponse
     public DateTime? RejectedAt { get; set; }
     public bool HasPendingModifications { get; set; }
     public List<int> BookedScheduleIds { get; set; } = new();
+    /// <summary>Schedules with an unpaid pending booking — user can complete payment.</summary>
+    public List<int> PendingPaymentScheduleIds { get; set; } = new();
     
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -77,6 +79,9 @@ public class ProviderResponse
 {
     public int Id { get; set; }
     public string BusinessName { get; set; } = string.Empty;
+    public string? Slug { get; set; }
+    public string? Tagline { get; set; }
+    public string? Description { get; set; }
     public string? Address { get; set; }
     public string? LogoUrl { get; set; }
     public string? CoverImageUrl { get; set; }
@@ -118,12 +123,3 @@ public class ScheduleResponse
     public ScheduleStatus Status { get; set; }
 }
 
-public class ReviewResponse
-{
-    public int Id { get; set; }
-    public int Rating { get; set; }
-    public string Comment { get; set; } = string.Empty;
-    public string UserName { get; set; } = string.Empty;
-    public bool IsVerifiedAttendee { get; set; }
-    public DateTime CreatedAt { get; set; }
-}

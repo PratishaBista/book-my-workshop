@@ -15,7 +15,7 @@ const HostDashboardNavbar: React.FC = () => {
             const parts = token.split('.');
             if (parts.length < 2) return null;
 
-            const payload = JSON.parse(atob(parts[1]));
+            const payload = JSON.parse(atob(parts[1])); // decoded content of a JWT token
             return {
                 name: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || payload.name || 'Host',
                 email: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || payload.email || ''
