@@ -1,6 +1,7 @@
 using System.Globalization;
 using API.Entities;
 using API.Enums;
+using API.Helpers;
 using Microsoft.EntityFrameworkCore;
 using QRCoder;
 using API.Data;
@@ -56,7 +57,8 @@ public class BookingTicketService : IBookingTicketService
         }
 
         var workshop = details.WorkshopSchedule.Workshop;
-        var startLocal = details.WorkshopSchedule.StartDateTime.ToLocalTime();
+        var startLocal = PlatformTime.ToNepalTime(details.WorkshopSchedule.StartDateTime);
+        var endLocal = PlatformTime.ToNepalTime(details.WorkshopSchedule.EndDateTime);
         var qrPayload = BuildQrPayload(details.ConfirmationCode);
         var qrBase64 = GenerateQrCodeBase64(qrPayload);
         var ticketUrl = BuildTicketUrl(details.ConfirmationCode);
@@ -65,7 +67,7 @@ public class BookingTicketService : IBookingTicketService
             guestName: details.User.FullName ?? "Maker",
             workshopTitle: workshop.Title,
             sessionDate: startLocal.ToString("dddd, MMMM d, yyyy", CultureInfo.InvariantCulture),
-            sessionTime: $"{startLocal:h:mm tt} – {details.WorkshopSchedule.EndDateTime.ToLocalTime():h:mm tt}",
+            sessionTime: $"{startLocal:h:mm tt} – {endLocal:h:mm tt}",
             venue: workshop.LocationAddress,
             locationName: workshop.LocationName,
             seatCount: details.NumberOfSeats,

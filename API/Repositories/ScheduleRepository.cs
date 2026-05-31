@@ -57,11 +57,20 @@ public class ScheduleRepository : GenericRepository<WorkshopSchedule>, ISchedule
 
     public async Task<IEnumerable<WorkshopSchedule>> GetProviderSchedulesWithBookingsAsync(int providerId)
     {
+        // Paid, confirmed bookings only; exclude admin review-seed rows (SEED-REV-*).
         return await _dbSet
             .Include(s => s.Workshop)
-            .Include(s => s.Bookings)
+                .ThenInclude(w => w.Pricing)
+            .Include(s => s.Bookings.Where(b =>
+                b.BookingStatus == BookingStatus.Confirmed
+                && b.PaymentStatus == PaymentStatus.Paid
+                && !b.ConfirmationCode.StartsWith("SEED-REV-")))
                 .ThenInclude(b => b.User)
-            .Where(s => s.Workshop.ProviderId == providerId)
+            .Where(s => s.Workshop.ProviderId == providerId
+                && s.Bookings.Any(b =>
+                    b.BookingStatus == BookingStatus.Confirmed
+                    && b.PaymentStatus == PaymentStatus.Paid
+                    && !b.ConfirmationCode.StartsWith("SEED-REV-")))
             .OrderByDescending(s => s.StartDateTime)
             .ToListAsync();
     }

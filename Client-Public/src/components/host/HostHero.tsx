@@ -226,7 +226,7 @@ const HostHero: React.FC = () => {
                                     "We review & help shape your workshop",
                                     "Your workshop goes live on the platform",
                                     "Participants book through us",
-                                    "You host - we manage payments & logistics"
+                                    "You host, we manage payments & logistics"
                                 ].map((step, idx) => (
                                     <div key={idx} className="flex gap-5 relative z-10 group">
                                         <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-400 shrink-0 group-hover:border-primary-orange group-hover:text-primary-orange group-hover:bg-primary-orange/5 transition-all shadow-sm">

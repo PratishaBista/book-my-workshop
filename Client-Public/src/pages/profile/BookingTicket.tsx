@@ -6,6 +6,7 @@ import { Calendar, Clock, MapPin, Loader2, Ticket, Users, CheckCircle2 } from 'l
 import Navbar from '../../components/landing/Navbar';
 import Footer from '../../components/landing/Footer';
 import { API_ENDPOINTS } from '../../config/api';
+import { formatWorkshopDate, formatWorkshopTime } from '../../utils/dateTime';
 
 interface TicketData {
     bookingId: number;
@@ -59,9 +60,8 @@ const BookingTicket: React.FC = () => {
     }, [code]);
 
     const formatDate = (iso: string) =>
-        new Date(iso).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-    const formatTime = (iso: string) =>
-        new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+        formatWorkshopDate(iso, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    const formatTime = formatWorkshopTime;
 
     return (
         <div className="min-h-screen bg-[#FDFBF7] text-deep-purple font-sans flex flex-col">

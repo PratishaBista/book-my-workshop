@@ -14,6 +14,7 @@ import {
     CreditCard, Loader2, Mail, User as UserIcon, Wallet, CheckCircle2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { formatWorkshopDate, formatWorkshopTime, parseApiDateTime } from '../../utils/dateTime';
 
 type PaymentProvider = 'esewa' | 'stripe';
 
@@ -25,6 +26,9 @@ const Checkout: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [useWallet, setUseWallet] = useState(false);
     const [walletBalance, setWalletBalance] = useState(0);
+    const [voucherCode, setVoucherCode] = useState('');
+    const [voucherMessage, setVoucherMessage] = useState<string | null>(null);
+    const [voucherLoading, setVoucherLoading] = useState(false);
     const [paymentProvider, setPaymentProvider] = useState<PaymentProvider>('esewa');
 
     // Stripe state
@@ -48,7 +52,9 @@ const Checkout: React.FC = () => {
                 });
                 if (response.ok) {
                     const data = await response.json();
-                    setWalletBalance(data.balance);
+                    const balance = Number(data.balance ?? data.Balance ?? 0);
+                    setWalletBalance(balance);
+                    // Do NOT auto-check — let the user opt in manually
                 }
             } catch (err) {
                 console.error("Error fetching wallet balance:", err);
@@ -56,6 +62,65 @@ const Checkout: React.FC = () => {
         };
         fetchWallet();
     }, []);
+
+    useEffect(() => {
+        const codeFromNav = (state as { giftCardCode?: string })?.giftCardCode;
+        if (codeFromNav?.trim()) {
+            setVoucherCode(codeFromNav.trim().toUpperCase());
+        }
+    }, [state]);
+
+    const refreshWalletBalance = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) return 0;
+        const response = await fetch(API_ENDPOINTS.wallet.get, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) return 0;
+        const data = await response.json();
+        const balance = Number(data.balance ?? data.Balance ?? 0);
+        setWalletBalance(balance);
+        return balance;
+    };
+
+    const handleApplyVoucher = async () => {
+        const code = voucherCode.trim().toUpperCase();
+        if (!code) {
+            setVoucherMessage('Enter your gift voucher code.');
+            return;
+        }
+        try {
+            setVoucherLoading(true);
+            setVoucherMessage(null);
+            setError(null);
+            const token = localStorage.getItem('token');
+            const response = await fetch(API_ENDPOINTS.giftCard.claim, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ code }),
+            });
+            if (response.ok) {
+                const balance = await refreshWalletBalance();
+                setUseWallet(balance > 0);
+                setVoucherMessage(
+                    balance > 0
+                        ? `Voucher applied. Rs. ${balance.toLocaleString()} available in your wallet.`
+                        : 'Voucher claimed successfully.'
+                );
+                setVoucherCode('');
+            } else {
+                const err = await response.json().catch(() => ({}));
+                setVoucherMessage(err.message || 'Could not apply this voucher code.');
+            }
+        } catch {
+            setVoucherMessage('Network error while applying voucher.');
+        } finally {
+            setVoucherLoading(false);
+        }
+    };
 
     // Stripe verification hook
     const { verifyPayment } = useStripeVerify({
@@ -73,7 +138,7 @@ const Checkout: React.FC = () => {
     if (!state?.workshop || !state?.schedule) return null;
 
     const { workshop, schedule, numberOfSeats = 1 } = state;
-    const workshopDate = new Date(schedule.startDateTime);
+    const workshopDate = parseApiDateTime(schedule.startDateTime);
     const totalPrice = workshop.pricing.basePrice * numberOfSeats;
     const walletAppliedAmount = useWallet ? Math.min(walletBalance, totalPrice) : 0;
     const finalPrice = totalPrice - walletAppliedAmount;
@@ -191,7 +256,7 @@ const Checkout: React.FC = () => {
     };
 
     const formatDate = (date: Date) => date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-    const formatTime = (dateStr: string) => new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const formatTime = formatWorkshopTime;
 
     return (
         <div className="min-h-screen bg-[#FDFBF7] text-deep-purple font-sans flex flex-col selection:bg-orange-100 selection:text-deep-purple">
@@ -338,6 +403,35 @@ const Checkout: React.FC = () => {
                                         <span className="w-8 h-[1px] bg-deep-purple"></span>
                                         Payment
                                     </h3>
+
+                                    {/* Gift voucher code */}
+                                    <div className="p-4 bg-white rounded-2xl border border-gray-200 space-y-3 shadow-sm">
+                                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                            Have a gift voucher?
+                                        </p>
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                            <input
+                                                type="text"
+                                                value={voucherCode}
+                                                onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                                                placeholder="GC-XXXX-XXXX-XXXX"
+                                                className="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-sm font-mono focus:ring-2 focus:ring-primary-orange/30 outline-none"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={handleApplyVoucher}
+                                                disabled={voucherLoading || !voucherCode.trim()}
+                                                className="px-5 py-3 bg-deep-purple text-white rounded-xl text-sm font-bold hover:bg-primary-orange transition-colors disabled:opacity-50"
+                                            >
+                                                {voucherLoading ? 'Applying...' : 'Apply voucher'}
+                                            </button>
+                                        </div>
+                                        {voucherMessage && (
+                                            <p className={`text-xs font-semibold ${voucherMessage.includes('applied') || voucherMessage.includes('claimed') ? 'text-emerald-600' : 'text-amber-700'}`}>
+                                                {voucherMessage}
+                                            </p>
+                                        )}
+                                    </div>
 
                                     {/* Wallet Balance */}
                                     {walletBalance > 0 && (

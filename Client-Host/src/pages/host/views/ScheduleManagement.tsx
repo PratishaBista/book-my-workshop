@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { API_ENDPOINTS } from '../../../config/api';
 import Toast, { type ToastType } from '../../../components/ui/Toast';
+import { formatWorkshopDate, formatWorkshopTime, parseApiDateTime, workshopDateKey } from '../../../utils/dateTime';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Workshop {
@@ -261,8 +262,8 @@ const BulkGeneratorModal = ({
                                     </thead>
                                     <tbody className="divide-y divide-gray-200 bg-white">
                                         {previewSlots.map((slot, i) => {
-                                            const start = new Date(slot.startDateTime);
-                                            const end = new Date(slot.endDateTime);
+                                            const start = parseApiDateTime(slot.startDateTime);
+                                            const end = parseApiDateTime(slot.endDateTime);
                                             const diffMins = (end.getTime() - start.getTime()) / 60000;
                                             const durationStr = `${Math.floor(diffMins / 60)}h ${diffMins % 60}m`;
 
@@ -426,14 +427,15 @@ export const ScheduleManagement: React.FC = () => {
             data = data.filter(s => s.workshopId === filterWorkshop);
         }
         if (filterDate) {
-            data = data.filter(s => s.startDateTime.startsWith(filterDate));
+            data = data.filter(s => workshopDateKey(s.startDateTime) === filterDate);
         }
-        return data.sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
+        return data.sort(
+            (a, b) => parseApiDateTime(a.startDateTime).getTime() - parseApiDateTime(b.startDateTime).getTime()
+        );
     }, [schedules, filterWorkshop, filterDate]);
 
-    // Formatters
-    const formatDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-    const formatTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const formatDate = formatWorkshopDate;
+    const formatTime = formatWorkshopTime;
 
     if (loading) return <div className="p-12 text-center text-gray-400">Loading schedules...</div>;
 

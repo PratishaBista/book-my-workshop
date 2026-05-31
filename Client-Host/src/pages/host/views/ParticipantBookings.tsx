@@ -6,6 +6,7 @@ import {
     Clock3, DollarSign, Award
 } from 'lucide-react';
 import { API_ENDPOINTS } from '../../../config/api';
+import { formatWorkshopDate, formatWorkshopTime, parseApiDateTime } from '../../../utils/dateTime';
 
 interface BookingAttendee {
     id: number;
@@ -35,6 +36,35 @@ interface ScheduleWithBookings {
 }
 
 const AttendanceStatus = { Pending: 0, CheckedIn: 1, NoShow: 2 } as const;
+
+/** Attendance only — never treat bookingStatus "Confirmed" (also numeric 1) as present. */
+const normalizeAttendanceStatus = (status: unknown): 0 | 1 | 2 => {
+    if (status === AttendanceStatus.CheckedIn || status === 'CheckedIn') return AttendanceStatus.CheckedIn;
+    if (status === AttendanceStatus.NoShow || status === 'NoShow') return AttendanceStatus.NoShow;
+    if (status === AttendanceStatus.Pending || status === 'Pending') return AttendanceStatus.Pending;
+    return AttendanceStatus.Pending;
+};
+
+const isPaidBooking = (b: BookingAttendee) => {
+    const paymentOk = b.paymentStatus === 1 || String(b.paymentStatus).toLowerCase() === 'paid';
+    const bookingOk =
+        b.bookingStatus === 1 ||
+        String(b.bookingStatus).toLowerCase() === 'confirmed';
+    return paymentOk && bookingOk;
+};
+
+/** Matches API: paid, confirmed, non–review-seed bookings only. */
+const isPaidConfirmedBooking = (b: BookingAttendee) => {
+    const code = (b.confirmationCode ?? '').toUpperCase();
+    if (code.startsWith('SEED-REV-')) return false;
+    const bookingOk =
+        b.bookingStatus === 1 ||
+        b.bookingStatus === 'Confirmed';
+    const paymentOk =
+        b.paymentStatus === 1 ||
+        b.paymentStatus === 'Paid';
+    return bookingOk && paymentOk;
+};
 
 export const ParticipantBookings: React.FC = () => {
     const [schedules, setSchedules] = useState<ScheduleWithBookings[]>([]);
@@ -80,7 +110,13 @@ export const ParticipantBookings: React.FC = () => {
     };
 
     const handleMarkComplete = async (scheduleId: number) => {
-        if (!window.confirm('Are you sure you want to mark this workshop session as completed? This will allow participants to submit their reviews.')) {
+        if (!window.confirm(
+            'Mark this session as completed?\n\n' +
+            '• Only available after the session end time\n' +
+            '• Does NOT mark attendees as present\n' +
+            '• Anyone not checked in will be recorded as no-show\n' +
+            '• Checked-in attendees can leave reviews'
+        )) {
             return;
         }
 
@@ -96,16 +132,9 @@ export const ParticipantBookings: React.FC = () => {
             });
 
             if (response.ok) {
-                setSuccessMessage('Workshop marked as completed successfully!');
+                setSuccessMessage('Session marked as completed.');
                 setTimeout(() => setSuccessMessage(null), 4000);
-                
-                // Update local state
-                setSchedules(prev => prev.map(s => {
-                    if (s.id === scheduleId) {
-                        return { ...s, status: 2 };
-                    }
-                    return s;
-                }));
+                await fetchSchedules();
             } else {
                 const errData = await response.json().catch(() => ({}));
                 setErrorMessage(errData.message || 'Failed to update schedule status.');
@@ -166,8 +195,8 @@ export const ParticipantBookings: React.FC = () => {
         }
     };
 
-    const getAttendanceLabel = (status?: number) => {
-        switch (status) {
+    const getAttendanceLabel = (status?: unknown) => {
+        switch (normalizeAttendanceStatus(status)) {
             case AttendanceStatus.CheckedIn:
                 return 'Present';
             case AttendanceStatus.NoShow:
@@ -177,8 +206,8 @@ export const ParticipantBookings: React.FC = () => {
         }
     };
 
-    const getAttendanceBadge = (status?: number) => {
-        switch (status) {
+    const getAttendanceBadge = (status?: unknown) => {
+        switch (normalizeAttendanceStatus(status)) {
             case AttendanceStatus.CheckedIn:
                 return 'bg-green-50 text-green-700 border-green-100';
             case AttendanceStatus.NoShow:
@@ -246,23 +275,22 @@ export const ParticipantBookings: React.FC = () => {
         }
     };
 
-    const formatDate = (dateStr: string) => {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('en-US', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        });
+    const formatDate = formatWorkshopDate;
+    const formatTime = formatWorkshopTime;
+
+    const hasSessionEnded = (endDateTime: string) => parseApiDateTime(endDateTime) <= new Date();
+
+    const isCheckInOpen = (schedule: ScheduleWithBookings) => {
+        const now = new Date();
+        const start = parseApiDateTime(schedule.startDateTime);
+        const end = parseApiDateTime(schedule.endDateTime);
+        return now >= start && now <= end;
     };
 
-    const formatTime = (dateStr: string) => {
-        const date = new Date(dateStr);
-        return date.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    };
+    const canMarkScheduleComplete = (schedule: ScheduleWithBookings) =>
+        schedule.status !== 2 &&
+        schedule.status !== 3 &&
+        hasSessionEnded(schedule.endDateTime);
 
     // Filter schedules and bookings based on inputs
     const filteredSchedules = schedules.filter(schedule => {
@@ -285,9 +313,17 @@ export const ParticipantBookings: React.FC = () => {
         return matchesTitle || matchesAttendee;
     });
 
-    // Stats calculations
-    const totalBookings = schedules.reduce((sum, s) => sum + (s.bookings?.filter(b => getBookingStatusLabel(b.bookingStatus) === 'Confirmed').length || 0), 0);
-    const totalSeatsBooked = schedules.reduce((sum, s) => sum + (s.bookings?.filter(b => getBookingStatusLabel(b.bookingStatus) === 'Confirmed').reduce((seatsSum, b) => seatsSum + b.numberOfSeats, 0) || 0), 0);
+    // Stats calculations (paid + confirmed only, aligned with API list)
+    const totalBookings = schedules.reduce(
+        (sum, s) => sum + (s.bookings?.filter(isPaidConfirmedBooking).length || 0),
+        0
+    );
+    const totalSeatsBooked = schedules.reduce(
+        (sum, s) =>
+            sum +
+            (s.bookings?.filter(isPaidConfirmedBooking).reduce((seatsSum, b) => seatsSum + b.numberOfSeats, 0) || 0),
+        0
+    );
     const activeSchedulesCount = schedules.filter(s => s.status === 0 || s.status === 1).length;
     const completedSchedulesCount = schedules.filter(s => s.status === 2).length;
 
@@ -297,7 +333,7 @@ export const ParticipantBookings: React.FC = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 className="text-3xl font-serif font-bold text-deep-purple">Participant Bookings</h2>
-                    <p className="text-gray-500 mt-1">Keep track of everyone joining your workshops, check confirmations, and mark sessions completed.</p>
+                    <p className="text-gray-500 mt-1">Sessions with paid bookings only. Check in attendees and mark sessions completed when finished.</p>
                 </div>
             </div>
 
@@ -423,17 +459,16 @@ export const ParticipantBookings: React.FC = () => {
                     <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 mb-6 font-serif text-3xl">
                         <Users size={32} />
                     </div>
-                    <h3 className="text-2xl font-bold text-deep-purple mb-2">No schedules or bookings found</h3>
+                    <h3 className="text-2xl font-bold text-deep-purple mb-2">No paid bookings yet</h3>
                     <p className="text-gray-400 max-w-sm mx-auto text-sm leading-relaxed">
-                        There are no bookings matching your current filters or search terms. Try adjusting them or check back later!
+                        When a customer completes payment for a session, it will appear here with their ticket details.
                     </p>
                 </div>
             ) : (
                 <div className="space-y-6">
                     {filteredSchedules.map((schedule) => {
                         const isExpanded = expandedScheduleId === schedule.id;
-                        const hasBookings = schedule.bookings && schedule.bookings.length > 0;
-                        const confirmedBookings = schedule.bookings?.filter(b => getBookingStatusLabel(b.bookingStatus) === 'Confirmed') || [];
+                        const confirmedBookings = schedule.bookings?.filter(isPaidConfirmedBooking) || [];
                         const totalTicketsBooked = confirmedBookings.reduce((sum, b) => sum + b.numberOfSeats, 0);
 
                         return (
@@ -478,21 +513,30 @@ export const ParticipantBookings: React.FC = () => {
                                     {/* Action items and Toggle */}
                                     <div className="flex items-center gap-3 self-stretch md:self-auto justify-between border-t border-gray-50 md:border-none pt-4 md:pt-0">
                                         {schedule.status !== 2 && schedule.status !== 3 && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleMarkComplete(schedule.id);
-                                                }}
-                                                disabled={actionLoadingId === schedule.id}
-                                                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all shadow-sm active:scale-95 disabled:opacity-50"
-                                            >
-                                                {actionLoadingId === schedule.id ? (
-                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                                ) : (
-                                                    <Check size={14} />
-                                                )}
-                                                <span>Mark Completed</span>
-                                            </button>
+                                            canMarkScheduleComplete(schedule) ? (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleMarkComplete(schedule.id);
+                                                    }}
+                                                    disabled={actionLoadingId === schedule.id}
+                                                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                                                >
+                                                    {actionLoadingId === schedule.id ? (
+                                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                                    ) : (
+                                                        <Check size={14} />
+                                                    )}
+                                                    <span>Mark Completed</span>
+                                                </button>
+                                            ) : (
+                                                <span
+                                                    className="px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-500 border border-gray-200"
+                                                    title={`Available after ${formatDate(schedule.endDateTime)} ${formatTime(schedule.endDateTime)}`}
+                                                >
+                                                    Ends {formatDate(schedule.endDateTime)}
+                                                </span>
+                                            )
                                         )}
 
                                         <div className="p-2.5 hover:bg-gray-100 rounded-xl text-gray-400 hover:text-deep-purple transition-all">
@@ -514,7 +558,7 @@ export const ParticipantBookings: React.FC = () => {
                                             <div className="p-6 md:p-8">
                                                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Participant Details</h4>
 
-                                                {hasBookings && schedule.status !== 3 && (
+                                                {confirmedBookings.length > 0 && schedule.status !== 3 && isCheckInOpen(schedule) && (
                                                     <div className="flex flex-col sm:flex-row gap-3 mb-6">
                                                         <input
                                                             type="text"
@@ -535,7 +579,7 @@ export const ParticipantBookings: React.FC = () => {
                                                     </div>
                                                 )}
                                                 
-                                                {!hasBookings ? (
+                                                {confirmedBookings.length === 0 ? (
                                                     <div className="bg-white rounded-2xl p-8 border border-gray-100 text-center flex flex-col items-center">
                                                         <Clock3 className="text-gray-300 mb-3" size={28} />
                                                         <p className="text-sm font-semibold text-deep-purple">No bookings received yet</p>
@@ -558,7 +602,7 @@ export const ParticipantBookings: React.FC = () => {
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody className="divide-y divide-gray-50 text-sm font-medium text-deep-purple">
-                                                                    {schedule.bookings.map((booking) => (
+                                                                    {confirmedBookings.map((booking) => (
                                                                         <tr key={booking.id} className="hover:bg-gray-50/30 transition-colors">
                                                                             <td className="py-4 px-6">
                                                                                 <div className="flex flex-col">
@@ -598,8 +642,10 @@ export const ParticipantBookings: React.FC = () => {
                                                                                 </span>
                                                                             </td>
                                                                             <td className="py-4 px-6 text-right">
-                                                                                {booking.attendanceStatus !== AttendanceStatus.CheckedIn &&
-                                                                                    (booking.paymentStatus === 1 || String(booking.paymentStatus).toLowerCase() === 'paid') && (
+                                                                                {normalizeAttendanceStatus(booking.attendanceStatus) !== AttendanceStatus.CheckedIn &&
+                                                                                    isPaidBooking(booking) &&
+                                                                                    isCheckInOpen(schedule) &&
+                                                                                    schedule.status !== 2 && (
                                                                                     <button
                                                                                         type="button"
                                                                                         onClick={() => handleCheckIn(booking.confirmationCode, booking.id)}
@@ -608,6 +654,14 @@ export const ParticipantBookings: React.FC = () => {
                                                                                     >
                                                                                         {checkInLoadingId === booking.id ? '...' : 'Mark present'}
                                                                                     </button>
+                                                                                )}
+                                                                                {normalizeAttendanceStatus(booking.attendanceStatus) === AttendanceStatus.Pending &&
+                                                                                    isPaidBooking(booking) &&
+                                                                                    !isCheckInOpen(schedule) &&
+                                                                                    schedule.status !== 2 && (
+                                                                                    <span className="text-[10px] text-gray-400 font-semibold">
+                                                                                        Check-in opens at session start
+                                                                                    </span>
                                                                                 )}
                                                                             </td>
                                                                         </tr>

@@ -33,7 +33,17 @@ const BuyGiftCard: React.FC = () => {
             const type = data.type ?? data.Type;
             const giftCardId = data.giftCardId ?? data.GiftCardId;
             if (type === 'GiftCard' && giftCardId) {
-                navigate(`/payment/success?giftCardId=${giftCardId}`);
+                const params = new URLSearchParams({
+                    type: 'giftcard',
+                    giftCardId: String(giftCardId),
+                });
+                const amount = data.amount ?? data.Amount;
+                const code = data.code ?? data.Code;
+                const recipient = data.recipientEmail ?? data.RecipientEmail;
+                if (amount != null) params.set('amount', String(amount));
+                if (code) params.set('code', String(code));
+                if (recipient) params.set('recipientEmail', String(recipient));
+                navigate(`/payment/success?${params.toString()}`);
             } else {
                 navigate('/payment/success');
             }
@@ -144,8 +154,10 @@ const BuyGiftCard: React.FC = () => {
                 });
 
                 if (response.ok) {
-                    const paymentData = await response.json();
+                    const raw = await response.json();
+                    const paymentData = parseStripeInitiateResponse(raw);
                     submitToEsewa(paymentData);
+
                 } else {
                     setError(await readApiErrorMessage(response, 'Failed to initiate gift card purchase.'));
                 }

@@ -112,14 +112,28 @@ interface StripeCheckoutModalProps {
     onClose: () => void;
 }
 
-/** Normalize API JSON (camelCase or PascalCase) from Stripe initiate endpoints. */
+/** Normalize API JSON (camelCase or PascalCase) from both Stripe and eSewa initiate endpoints. */
 export function parseStripeInitiateResponse(data: Record<string, unknown>) {
     return {
+        // Stripe fields
         clientSecret: String(data.clientSecret ?? data.ClientSecret ?? ''),
         publishableKey: String(data.publishableKey ?? data.PublishableKey ?? ''),
         paymentIntentId: String(data.paymentIntentId ?? data.PaymentIntentId ?? ''),
+        // Shared / wallet fields
         isFullyPaid: Boolean(data.isFullyPaid ?? data.IsFullyPaid),
         transactionUuid: String(data.transactionUuid ?? data.TransactionUuid ?? ''),
+        // eSewa fields
+        esewaUrl: (data.esewaUrl ?? data.EsewaUrl) as string | undefined,
+        amount: (data.amount ?? data.Amount) as string | undefined,
+        taxAmount: (data.taxAmount ?? data.TaxAmount) as string | undefined,
+        totalAmount: (data.totalAmount ?? data.TotalAmount) as string | undefined,
+        productCode: (data.productCode ?? data.ProductCode) as string | undefined,
+        productServiceCharge: (data.productServiceCharge ?? data.ProductServiceCharge) as string | undefined,
+        productDeliveryCharge: (data.productDeliveryCharge ?? data.ProductDeliveryCharge) as string | undefined,
+        successUrl: (data.successUrl ?? data.SuccessUrl) as string | undefined,
+        failureUrl: (data.failureUrl ?? data.FailureUrl) as string | undefined,
+        signedFieldNames: (data.signedFieldNames ?? data.SignedFieldNames) as string | undefined,
+        signature: (data.signature ?? data.Signature) as string | undefined,
     };
 }
 

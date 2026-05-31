@@ -8,6 +8,7 @@ import Navbar from '../../components/landing/Navbar';
 import Footer from '../../components/landing/Footer';
 import ProfileHeader from './ProfileHeader';
 import { API_ENDPOINTS } from '../../config/api';
+import { formatWorkshopDate } from '../../utils/dateTime';
 
 const Profile: React.FC = () => {
     const { username: routeUsername } = useParams<{ username?: string }>();
@@ -60,7 +61,11 @@ const Profile: React.FC = () => {
             });
             if (response.ok) {
                 const data = await response.json();
-                setWalletData(data);
+                setWalletData({
+                    ...data,
+                    balance: Number(data.balance ?? data.Balance ?? 0),
+                    transactions: data.transactions ?? data.Transactions ?? [],
+                });
             }
         } catch (error) {
             console.error('Error fetching wallet:', error);
@@ -221,15 +226,13 @@ const Profile: React.FC = () => {
         }
     };
 
-    const formatDate = (dateStr: string) => {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('en-US', {
+    const formatDate = (dateStr: string) =>
+        formatWorkshopDate(dateStr, {
             weekday: 'short',
             month: 'short',
             day: 'numeric',
-            year: 'numeric'
+            year: 'numeric',
         });
-    };
 
     return (
         <div className="min-h-screen bg-cream-base font-sans text-deep-purple selection:bg-primary-orange selection:text-white">
@@ -431,28 +434,43 @@ const Profile: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="space-y-10">
-                                    {/* Wallet Balance Card */}
-                                    <div className="aspect-[1.58/1] w-full rounded-2xl bg-gradient-to-tr from-[#311E43] via-[#b49e47] to-[#8d66b4] p-4 text-cream-base shadow-lg relative overflow-hidden border border-white/10 justify-between">
-                                        <div className="absolute -right-16 -top-16 w-48 h-48 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 opacity-20 blur-xl pointer-events-none" />
-                                        <div className="flex justify-between items-start z-10">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center">
-                                                    <Wallet className="text-amber-400" size={24} />
+                                    {/* Wallet Balance Card — matches gift voucher styling (BuyGiftCard / ClaimGiftCard) */}
+                                    <div className="max-w-md">
+                                        <div className="aspect-[1.58/1] w-full rounded-[2.5rem] bg-gradient-to-tr from-[#311E43] via-[#b49e47] to-[#8d66b4] p-8 text-cream-base shadow-2xl relative overflow-hidden border border-white/10 flex flex-col justify-between">
+                                            <div className="absolute -right-16 -top-16 w-48 h-48 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 opacity-20 blur-xl pointer-events-none" />
+                                            <div className="absolute -left-16 -bottom-16 w-48 h-48 rounded-full bg-pink-500 opacity-20 blur-xl pointer-events-none" />
+
+                                            <div className="flex justify-between items-start z-10">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
+                                                        <Wallet className="text-white" size={18} />
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-xs font-bold font-mono tracking-widest uppercase text-amber-400">My Wallet</span>
+                                                        <h4 className="text-[10px] font-sans font-semibold tracking-wider opacity-60">BOOK MY WORKSHOP</h4>
+                                                    </div>
                                                 </div>
+                                                <div className="text-right">
+                                                    <div className="text-2xl md:text-3xl font-serif font-bold text-amber-300">
+                                                        Rs. {(walletData?.balance || 0).toLocaleString()}
+                                                    </div>
+                                                    <span className="text-[8px] font-bold uppercase tracking-widest opacity-60">NRP Value</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="my-4 z-10">
+                                                <span className="text-[9px] font-bold text-amber-400 uppercase tracking-widest">Available Balance</span>
+                                                <p className="text-sm font-semibold opacity-90 mt-1">
+                                                    Use at checkout for workshop bookings
+                                                </p>
+                                            </div>
+
+                                            <div className="flex justify-between items-end border-t border-white/10 pt-4 z-10 text-[8px] font-medium opacity-50">
                                                 <div>
-                                                    <span className="text-[10px] font-bold font-mono tracking-widest text-amber-400 uppercase">My Wallet</span>
-                                                    <h3 className="text-xl font-serif font-bold text-cream-base">Available Balance</h3>
+                                                    <p>Refunds from cancellations are credited here.</p>
+                                                    <p>© 2026 BookMyWorkshop.</p>
                                                 </div>
                                             </div>
-                                            <div className="text-right">
-                                                <div className="text-4xl font-serif font-bold text-amber-300">
-                                                    Rs. {(walletData?.balance || 0).toLocaleString()}
-                                                </div>
-                                                <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">NRP</span>
-                                            </div>
-                                        </div>
-                                        <div className="mt-8 text-xs opacity-75 font-medium leading-relaxed z-10">
-                                            Use this balance to purchase bookings. Refunds for cancellations are credited back here.
                                         </div>
                                     </div>
 

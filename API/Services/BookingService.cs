@@ -534,6 +534,13 @@ public class BookingService : IBookingService
         if (booking.BookingStatus != BookingStatus.Confirmed || booking.PaymentStatus != PaymentStatus.Paid)
             throw new InvalidOperationException("Only confirmed, paid bookings can be checked in.");
 
+        var schedule = booking.WorkshopSchedule;
+        var now = DateTime.UtcNow;
+        if (schedule.StartDateTime > now)
+            throw new InvalidOperationException("Check-in is not available until the session start time.");
+        if (schedule.EndDateTime < now)
+            throw new InvalidOperationException("Check-in is closed — this session has already ended.");
+
         if (booking.AttendanceStatus != AttendanceStatus.CheckedIn)
         {
             booking.AttendanceStatus = AttendanceStatus.CheckedIn;

@@ -3,7 +3,8 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { API_ENDPOINTS } from '../../config/api';
 import Navbar from '../../components/landing/Navbar';
 import Footer from '../../components/landing/Footer';
-import { Check, Loader2, ArrowRight, Sparkles, Ticket } from 'lucide-react';
+import { formatWorkshopDate, formatWorkshopTime, parseApiDateTime } from '../../utils/dateTime';
+import { Check, Loader2, ArrowRight, Sparkles, Ticket, Gift } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -22,17 +23,38 @@ const PaymentSuccess = () => {
         bookingId?: number;
     } | null>(null);
 
+    const [giftCardDetails, setGiftCardDetails] = useState<{
+        amount?: number;
+        recipientEmail?: string;
+        code?: string;
+    } | null>(null);
+
     useEffect(() => {
         const data = searchParams.get('data');
         const bookingId = searchParams.get('bookingId');
+        const paymentType = searchParams.get('type');
+
+        if (paymentType === 'giftcard' || searchParams.get('giftCardId')) {
+            const amountParam = searchParams.get('amount');
+            setGiftCardDetails({
+                amount: amountParam ? Number(amountParam) : undefined,
+                recipientEmail: searchParams.get('recipientEmail') ?? undefined,
+                code: searchParams.get('code') ?? undefined,
+            });
+            setStatus('success');
+            setMessage(
+                'Your gift card payment was successful. We emailed the recipient a link to claim their voucher.'
+            );
+            return;
+        }
+
         if (bookingId) {
-            fetchBookingDetailsDirectly(parseInt(bookingId));
+            fetchBookingDetailsDirectly(parseInt(bookingId, 10));
         } else if (data) {
             verifyPayment(data);
         } else {
             setStatus('error');
             setMessage('No payment data received.');
-            return;
         }
     }, [searchParams]);
 
@@ -158,6 +180,33 @@ const PaymentSuccess = () => {
                                 </p>
                             </div>
 
+                            {giftCardDetails && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.4 }}
+                                    className="bg-white border border-gray-100 rounded-3xl p-8 max-w-md mx-auto space-y-4 text-left"
+                                >
+                                    <div className="flex items-center gap-3 text-primary-orange">
+                                        <Gift size={28} />
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.2em]">Gift card sent</p>
+                                    </div>
+                                    {giftCardDetails.amount != null && !Number.isNaN(giftCardDetails.amount) && (
+                                        <p className="text-2xl font-serif font-bold text-deep-purple">
+                                            Rs. {giftCardDetails.amount.toLocaleString()}
+                                        </p>
+                                    )}
+                                    {giftCardDetails.recipientEmail && (
+                                        <p className="text-sm text-gray-500">
+                                            Sent to <span className="font-semibold text-deep-purple">{giftCardDetails.recipientEmail}</span>
+                                        </p>
+                                    )}
+                                    {giftCardDetails.code && (
+                                        <p className="text-xs font-mono text-gray-400">Code: {giftCardDetails.code}</p>
+                                    )}
+                                </motion.div>
+                            )}
+
                             {bookingDetails && (
                                 <motion.div
                                     initial={{ opacity: 0 }}
@@ -171,9 +220,9 @@ const PaymentSuccess = () => {
                                         <p className="text-gray-500 mt-2">
                                             {bookingDetails.startDateTime ? (
                                                 <>
-                                                    {new Date(bookingDetails.startDateTime).toLocaleDateString('en-US', {
+                                                    {formatWorkshopDate(bookingDetails.startDateTime, {
                                                         weekday: 'long', month: 'long', day: 'numeric'
-                                                    })} at {new Date(bookingDetails.startDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    })} at {formatWorkshopTime(bookingDetails.startDateTime)}
                                                 </>
                                             ) : 'Date & Time loading...'}
                                         </p>

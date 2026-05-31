@@ -17,6 +17,7 @@ import Navbar from '../../components/landing/Navbar';
 import Footer from '../../components/landing/Footer';
 import { type WorkshopDetail as IWorkshopDetail, PricingType } from '../../types/workshop';
 import WorkshopMap from '../../components/workshop/WorkshopMap';
+import { formatWorkshopTime, parseApiDateTime, workshopDateKey } from '../../utils/dateTime';
 
 const WorkshopDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -28,6 +29,7 @@ const WorkshopDetail: React.FC = () => {
     const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null);
     const [selectedDate, setSelectedDate] = useState<string>(''); // New State for Calendar View
     const [guests, setGuests] = useState(1);
+    const [giftVoucherCode, setGiftVoucherCode] = useState('');
     const [showLoginToast, setShowLoginToast] = useState(false);
     const [expandedSections, setExpandedSections] = useState<string[]>([]);
     const [hostWorkshops, setHostWorkshops] = useState<any[]>([]);
@@ -93,7 +95,8 @@ const WorkshopDetail: React.FC = () => {
             state: {
                 workshop: workshop,
                 schedule: selectedSchedule,
-                numberOfSeats: guests
+                numberOfSeats: guests,
+                giftCardCode: giftVoucherCode.trim() || undefined,
             }
         });
     };
@@ -170,9 +173,9 @@ const WorkshopDetail: React.FC = () => {
     useEffect(() => {
         if (workshop && workshop.upcomingSchedules.length > 0 && !selectedDate) {
             const sorted = [...workshop.upcomingSchedules].sort((a, b) =>
-                new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()
+                parseApiDateTime(a.startDateTime).getTime() - parseApiDateTime(b.startDateTime).getTime()
             );
-            setSelectedDate(sorted[0].startDateTime.split('T')[0]);
+            setSelectedDate(workshopDateKey(sorted[0].startDateTime));
         }
     }, [workshop, selectedDate]);
 
@@ -539,13 +542,13 @@ const WorkshopDetail: React.FC = () => {
                                 {workshop.upcomingSchedules.length > 0 ? (
                                     <div className="space-y-6">
                                         <div className="flex gap-3 overflow-x-auto pt-6 pb-6 px-4 snap-x hide-scrollbar -mx-4">
-                                            {Array.from(new Set(workshop.upcomingSchedules.map(s => s.startDateTime.split('T')[0])))
+                                            {Array.from(new Set(workshop.upcomingSchedules.map(s => workshopDateKey(s.startDateTime))))
                                                 .sort()
                                                 .map(dateStr => {
-                                                    const date = new Date(dateStr);
+                                                    const date = parseApiDateTime(`${dateStr}T12:00:00Z`);
                                                     const isSelected = selectedDate === dateStr;
                                                     const hasAvailability = workshop.upcomingSchedules
-                                                        .filter(s => s.startDateTime.startsWith(dateStr))
+                                                        .filter(s => workshopDateKey(s.startDateTime) === dateStr)
                                                         .some(s => !s.isSoldOut);
 
                                                     return (
@@ -585,8 +588,10 @@ const WorkshopDetail: React.FC = () => {
                                         <div className="space-y-3">
                                             {(() => {
                                                 const hasAvailability = workshop.upcomingSchedules
-                                                    .filter(s => s.startDateTime.startsWith(selectedDate))
+                                                    .filter(s => workshopDateKey(s.startDateTime) === selectedDate)
                                                     .some(s => !s.isSoldOut);
+
+                                                const selectedDay = parseApiDateTime(`${selectedDate}T12:00:00Z`);
 
                                                 return (
                                                     <p className={`text-sm font-bold flex items-center gap-2 ${hasAvailability ? 'text-gray-900' : 'text-red-600'}`}>
@@ -596,8 +601,8 @@ const WorkshopDetail: React.FC = () => {
                                                             <Ban size={16} className="text-red-500" />
                                                         )}
                                                         {hasAvailability
-                                                            ? `Available Sessions for ${new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`
-                                                            : `No spots available for ${new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`
+                                                            ? `Available Sessions for ${selectedDay.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`
+                                                            : `No spots available for ${selectedDay.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`
                                                         }
                                                     </p>
                                                 );
@@ -605,15 +610,14 @@ const WorkshopDetail: React.FC = () => {
 
                                             <div className="grid grid-cols-2 gap-3">
                                                 {workshop.upcomingSchedules
-                                                    .filter(s => s.startDateTime.startsWith(selectedDate))
-                                                    .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime())
+                                                    .filter(s => workshopDateKey(s.startDateTime) === selectedDate)
+                                                    .sort((a, b) => parseApiDateTime(a.startDateTime).getTime() - parseApiDateTime(b.startDateTime).getTime())
                                                     .map(schedule => {
-                                                        const startTime = new Date(schedule.startDateTime).getTime();
+                                                        const startTime = parseApiDateTime(schedule.startDateTime).getTime();
                                                         const cutoffMs = (workshop.bookingCutoffHours || 0) * 3600000;
                                                         const isLocked = (Date.now() >= (startTime - cutoffMs)) || schedule.isSoldOut;
                                                         const occupied = schedule.maxCapacity - schedule.availableSeats;
                                                         const occupancyPercent = (occupied / schedule.maxCapacity) * 100;
-                                                        const formatTime = (dateStr: string) => new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                                                         const isPendingPayment = workshop.pendingPaymentScheduleIds?.includes(schedule.id);
                                                         const isBooked = workshop.bookedScheduleIds?.includes(schedule.id);
                                                         const isReserved = isBooked || isPendingPayment;
@@ -636,7 +640,7 @@ const WorkshopDetail: React.FC = () => {
                                                             >
                                                                 <div className="flex justify-between w-full mb-2">
                                                                     <span className={`text-md font-bold font-mono tracking-tight ${isReserved ? 'text-white' : selectedScheduleId === schedule.id ? 'text-deep-purple' : 'text-gray-700'}`}>
-                                                                        {formatTime(schedule.startDateTime)} - {formatTime(schedule.endDateTime)}
+                                                                        {formatWorkshopTime(schedule.startDateTime)} - {formatWorkshopTime(schedule.endDateTime)}
                                                                     </span>
                                                                     <div className="flex items-center gap-2">
                                                                         {isReserved && <CheckCircle2 size={18} className="text-white" />}
@@ -705,6 +709,21 @@ const WorkshopDetail: React.FC = () => {
                                         <p className="text-sm font-medium text-gray-500">Total Price</p>
                                         <p className="text-2xl font-serif font-bold text-deep-purple">
                                             Rs {((workshop.pricing.basePrice || 0) * guests).toLocaleString()}
+                                        </p>
+                                    </div>
+                                    <div className="pt-4 space-y-2">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
+                                            Gift voucher (optional)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={giftVoucherCode}
+                                            onChange={(e) => setGiftVoucherCode(e.target.value.toUpperCase())}
+                                            placeholder="GC-XXXX-XXXX-XXXX"
+                                            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm font-mono focus:ring-2 focus:ring-primary-orange/30 outline-none"
+                                        />
+                                        <p className="text-[11px] text-gray-400">
+                                            Enter your code here or apply it on the checkout page to pay from wallet balance.
                                         </p>
                                     </div>
                                 </div>

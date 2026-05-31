@@ -6,6 +6,7 @@ import Navbar from '../../components/landing/Navbar';
 import Footer from '../../components/landing/Footer';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config/api';
+import { isGiftCardActive, isGiftCardClaimed, normalizeGiftCardStatus } from '../../utils/giftCardStatus';
 
 const ClaimGiftCard: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -52,8 +53,10 @@ const ClaimGiftCard: React.FC = () => {
             if (response.ok) {
                 const data = await response.json();
                 setGiftCard(data);
-                if (data.status === 2) { 
+                if (isGiftCardClaimed(data.status)) {
                     setError("This gift card has already been claimed.");
+                } else if (normalizeGiftCardStatus(data.status) === 'pending') {
+                    setError("This gift card is not active yet. Payment may still be processing.");
                 }
             } else {
                 const errData = await response.json();
@@ -243,7 +246,7 @@ const ClaimGiftCard: React.FC = () => {
                                     </div>
                                 )}
 
-                                {giftCard?.status === 1 ? ( // Active
+                                {isGiftCardActive(giftCard?.status) ? (
                                     <button
                                         onClick={handleClaim}
                                         disabled={claiming}
@@ -261,7 +264,7 @@ const ClaimGiftCard: React.FC = () => {
                                     </button>
                                 ) : (
                                     <div className="p-4 bg-gray-50 border border-gray-150 text-gray-500 rounded-xl text-center font-bold text-sm">
-                                        This gift voucher is {giftCard?.status === 2 ? 'Already Claimed' : 'Inactive'}
+                                        This gift voucher is {isGiftCardClaimed(giftCard?.status) ? 'Already Claimed' : 'Inactive'}
                                     </div>
                                 )}
                             </motion.div>

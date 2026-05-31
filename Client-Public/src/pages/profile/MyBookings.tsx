@@ -12,6 +12,7 @@ import {
 import Navbar from '../../components/landing/Navbar';
 import Footer from '../../components/landing/Footer';
 import { API_ENDPOINTS } from '../../config/api';
+import { formatWorkshopDate, formatWorkshopTime, parseApiDateTime } from '../../utils/dateTime';
 
 const BookingStatus = {
     Pending: 'Pending',
@@ -112,29 +113,26 @@ const MyBookings: React.FC = () => {
 
     const formatDate = (dateStr: string | undefined) => {
         if (!dateStr) return 'TBD';
-        const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return 'Invalid Date';
-        return date.toLocaleDateString('en-US', {
+        const parsed = parseApiDateTime(dateStr);
+        if (isNaN(parsed.getTime())) return 'Invalid Date';
+        return formatWorkshopDate(dateStr, {
             weekday: 'short',
             month: 'long',
             day: 'numeric',
-            year: 'numeric'
+            year: 'numeric',
         });
     };
 
     const formatTime = (dateStr: string | undefined) => {
         if (!dateStr) return 'TBD';
-        const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return 'Invalid Time';
-        return date.toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        const parsed = parseApiDateTime(dateStr);
+        if (isNaN(parsed.getTime())) return 'Invalid Time';
+        return formatWorkshopTime(dateStr);
     };
 
     const isUpcoming = (dateStr: string | undefined) => {
         if (!dateStr) return false;
-        return new Date(dateStr) > new Date();
+        return parseApiDateTime(dateStr) > new Date();
     };
 
     const getStatusStyles = (status: BookingStatus) => {
@@ -150,7 +148,7 @@ const MyBookings: React.FC = () => {
     };
 
     const calculateRefundPrediction = (startDateTime: string, totalAmount: number) => {
-        const hoursNotice = (new Date(startDateTime).getTime() - new Date().getTime()) / (1000 * 60 * 60);
+        const hoursNotice = (parseApiDateTime(startDateTime).getTime() - Date.now()) / (1000 * 60 * 60);
         if (hoursNotice >= 24) return { percentage: 100, amount: totalAmount, tier: 'Full Refund (>24h notice)' };
         return { percentage: 0, amount: 0, tier: 'No Refund (<24h notice)' };
     };
@@ -252,8 +250,8 @@ const MyBookings: React.FC = () => {
     };
 
     const sortedBookings = [...bookings].sort((a, b) => {
-        const dateA = new Date(a.schedule?.startDateTime || 0).getTime();
-        const dateB = new Date(b.schedule?.startDateTime || 0).getTime();
+        const dateA = parseApiDateTime(a.schedule?.startDateTime || '').getTime() || 0;
+        const dateB = parseApiDateTime(b.schedule?.startDateTime || '').getTime() || 0;
         return filter === 'past' ? dateB - dateA : dateA - dateB;
     });
 

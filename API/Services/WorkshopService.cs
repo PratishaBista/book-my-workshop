@@ -518,19 +518,23 @@ public class WorkshopService : IWorkshopService
             AvailableSeats = s.AvailableSeats,
             IsSoldOut = s.AvailableSeats <= 0,
             Status = s.Status,
-            Bookings = s.Bookings?.Select(b => new BookingAttendeeResponse
-            {
-                Id = b.Id,
-                GuestName = b.User?.FullName ?? "Unknown",
-                GuestEmail = b.User?.Email,
-                NumberOfSeats = b.NumberOfSeats,
-                ConfirmationCode = b.ConfirmationCode,
-                BookingStatus = b.BookingStatus,
-                PaymentStatus = b.PaymentStatus,
-                BookingDate = b.BookingDate,
-                AttendanceStatus = b.AttendanceStatus,
-                CheckedInAt = b.CheckedInAt
-            }).ToList() ?? new List<BookingAttendeeResponse>()
+            Bookings = s.Bookings?
+                .Where(b => b.BookingStatus == BookingStatus.Confirmed
+                    && b.PaymentStatus == PaymentStatus.Paid
+                    && !b.ConfirmationCode.StartsWith("SEED-REV-", StringComparison.Ordinal))
+                .Select(b => new BookingAttendeeResponse
+                {
+                    Id = b.Id,
+                    GuestName = b.User?.FullName ?? "Unknown",
+                    GuestEmail = b.User?.Email,
+                    NumberOfSeats = b.NumberOfSeats,
+                    ConfirmationCode = b.ConfirmationCode,
+                    BookingStatus = b.BookingStatus,
+                    PaymentStatus = b.PaymentStatus,
+                    BookingDate = b.BookingDate,
+                    AttendanceStatus = b.AttendanceStatus,
+                    CheckedInAt = b.CheckedInAt
+                }).ToList() ?? new List<BookingAttendeeResponse>()
         });
 
         return response;
@@ -546,6 +550,29 @@ public class WorkshopService : IWorkshopService
         var workshop = await _workshopRepository.GetByIdAsync(schedule.WorkshopId);
         if (workshop == null || workshop.ProviderId != providerId)
             throw new UnauthorizedAccessException("You don't have permission to modify this schedule.");
+
+        if (schedule.Status == ScheduleStatus.Completed)
+            throw new InvalidOperationException("This session is already marked as complete.");
+
+        if (schedule.Status == ScheduleStatus.Cancelled)
+            throw new InvalidOperationException("Cancelled sessions cannot be marked complete.");
+
+        if (schedule.EndDateTime > DateTime.UtcNow)
+            throw new InvalidOperationException(
+                "You can only mark a session complete after its scheduled end time has passed.");
+
+        var scheduleWithBookings = await _scheduleRepository.GetScheduleWithBookingsAsync(scheduleId);
+        if (scheduleWithBookings?.Bookings != null)
+        {
+            foreach (var booking in scheduleWithBookings.Bookings.Where(b =>
+                         b.BookingStatus == BookingStatus.Confirmed
+                         && b.PaymentStatus == PaymentStatus.Paid
+                         && b.AttendanceStatus == AttendanceStatus.Pending))
+            {
+                booking.AttendanceStatus = AttendanceStatus.NoShow;
+                _bookingRepository.Update(booking);
+            }
+        }
 
         schedule.Status = ScheduleStatus.Completed;
         _scheduleRepository.Update(schedule);
