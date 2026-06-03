@@ -1,3 +1,8 @@
+// payment controller handles all payment-related operations
+// supports multiple payment gateways: esewa (local) and stripe (international)
+// handles booking payments and gift card purchases
+// all endpoints require authentication except webhook endpoints
+
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -15,13 +20,13 @@ namespace API.Controllers;
 
 [ApiController]
 [Route("api/payment")]
-[Authorize]
+[Authorize] // all payment endpoints require authenticated user
 public class PaymentController : ControllerBase
 {
-    private readonly IPaymentService _paymentService;
+    private readonly IPaymentService _paymentService; // handles esewa payments
     private readonly IBookingService _bookingService;
     private readonly IGiftCardService _giftCardService;
-    private readonly StripePaymentService _stripePaymentService;
+    private readonly StripePaymentService _stripePaymentService; // handles stripe payments
 
     public PaymentController(
         IPaymentService paymentService,
@@ -36,6 +41,10 @@ public class PaymentController : ControllerBase
     }
 
 
+    // initiates payment for a workshop booking using local gateway (esewa)
+    // creates or retrieves booking, calculates remaining amount after wallet deduction
+    // returns payment parameters for frontend to redirect to payment gateway
+    // POST: api/payment/initiate
     [HttpPost("initiate")]
     [Authorize(Roles = API.Enums.UserRoles.User)]
     public async Task<ActionResult<PaymentInitiateResponse>> InitiatePayment([FromBody] CreateBookingRequest request)
@@ -45,7 +54,10 @@ public class PaymentController : ControllerBase
 
         try
         {
+            // get existing booking or create new one in pending state
             var booking = await _bookingService.GetOrCreateBookingForPaymentAsync(userId, request);
+
+            // if already paid, return wallet payment marker
             if (booking.PaymentStatus == PaymentStatus.Paid)
             {
                 return Ok(new PaymentInitiateResponse
@@ -71,7 +83,9 @@ public class PaymentController : ControllerBase
         }
     }
 
-
+    // initiates stripe payment for workshop booking
+    // returns client secret for stripe elements frontend integration
+    // POST: api/payment/initiate/stripe
     [HttpPost("initiate/stripe")]
     [Authorize(Roles = API.Enums.UserRoles.User)]
     public async Task<ActionResult<StripePaymentResponse>> InitiateStripePayment([FromBody] CreateBookingRequest request)
@@ -107,7 +121,9 @@ public class PaymentController : ControllerBase
         }
     }
 
-
+    // initiates stripe payment for gift card purchase
+    // separate endpoint because gift cards have different flow than bookings
+    // POST: api/payment/initiate/stripe/giftcard
     [HttpPost("initiate/stripe/giftcard")]
     [Authorize(Roles = API.Enums.UserRoles.User)]
     public async Task<ActionResult<StripePaymentResponse>> InitiateStripeGiftCardPayment([FromBody] GiftCardPurchaseRequest request)
@@ -132,6 +148,9 @@ public class PaymentController : ControllerBase
     }
 
 
+    // verifies stripe payment after customer completes checkout
+    // checks paymentintent status and updates booking/giftcard accordingly
+    // POST: api/payment/verify/stripe
     [HttpPost("verify/stripe")]
     public async Task<IActionResult> VerifyStripePayment([FromBody] StripeVerifyRequest request)
     {
@@ -151,6 +170,8 @@ public class PaymentController : ControllerBase
             if (transactionUuid == null)
                 return BadRequest("Could not determine transaction type from PaymentIntent metadata.");
 
+            // parse transaction uuid to determine if this is giftcard or booking
+            // format: "giftcard-123" or "booking-456"
             var parts = transactionUuid.Split('-');
 
             if (parts[0] == "giftcard")
@@ -169,7 +190,7 @@ public class PaymentController : ControllerBase
                     GiftCardId = giftCardId,
                     Amount = giftCard?.Amount,
                     RecipientEmail = giftCard?.RecipientEmail,
-                    Code = giftCard?.Code,
+                    Code = giftCard?.Code, // unique code for recipient to claim
                     PersonalMessage = giftCard?.PersonalMessage
                 });
             }
@@ -205,6 +226,9 @@ public class PaymentController : ControllerBase
     }
 
 
+    // verifies local gateway payment (esewa) after redirect
+    // decodes base64 data, validates signature, updates booking/giftcard
+    // POST: api/payment/verify
     [HttpPost("verify")]
     public async Task<IActionResult> VerifyPayment([FromBody] PaymentVerifyRequest request)
     {
@@ -215,23 +239,25 @@ public class PaymentController : ControllerBase
 
         try
         {
+            // decode base64 encoded payment response from gateway
             var json = Encoding.UTF8.GetString(Convert.FromBase64String(request.Data));
             var paymentData = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
-            
+
             if (paymentData == null) return BadRequest("Invalid data");
 
-            // Extract
+            // extract required fields for signature verification
             var status = paymentData.ContainsKey("status") ? paymentData["status"].ToString() : "";
             var signature = paymentData.ContainsKey("signature") ? paymentData["signature"].ToString() : "";
             var transactionUuid = paymentData.ContainsKey("transaction_uuid") ? paymentData["transaction_uuid"].ToString() : "";
             var signedFieldNames = paymentData.ContainsKey("signed_field_names") ? paymentData["signed_field_names"].ToString() : "";
 
+            // only process completed transactions
             if (status != "COMPLETE") return BadRequest("Status not COMPLETE");
 
-            // Reconstruct
+            // reconstruct signature data string exactly as gateway generated it
             var fields = (signedFieldNames ?? "").Split(',');
             var signingData = new StringBuilder();
-            
+
             for (int i = 0; i < fields.Length; i++)
             {
                 var field = fields[i];
@@ -240,12 +266,14 @@ public class PaymentController : ControllerBase
                 if (i < fields.Length - 1) signingData.Append(",");
             }
 
+            // verify signature to prevent tampering
             var isValid = _paymentService.VerifySignature(signingData.ToString(), signature!);
             if (!isValid) return BadRequest("Invalid Signature");
 
             var parts = transactionUuid!.Split('-');
             if (parts.Length < 1) return BadRequest("Invalid UUID");
 
+            // determine transaction type from uuid prefix
             if (parts[0] == "giftcard")
             {
                 if (parts.Length < 2 || !int.TryParse(parts[1], out int giftCardId)) return BadRequest("Invalid Gift Card UUID");
@@ -255,9 +283,9 @@ public class PaymentController : ControllerBase
 
                 var giftCard = await _giftCardService.GetGiftCardByIdAsync(giftCardId);
 
-                return Ok(new 
-                { 
-                    Message = "Verified", 
+                return Ok(new
+                {
+                    Message = "Verified",
                     Type = "GiftCard",
                     GiftCardId = giftCardId,
                     Amount = giftCard?.Amount,
@@ -268,6 +296,7 @@ public class PaymentController : ControllerBase
             }
             else
             {
+                // for booking, parts[0] is the booking id directly (no prefix in old format)
                 if (!int.TryParse(parts[0], out int bookingId)) return BadRequest("Invalid Booking UUID");
 
                 var success = await _bookingService.ConfirmBookingPaymentAsync(bookingId, transactionUuid);
@@ -276,9 +305,9 @@ public class PaymentController : ControllerBase
                 // Fetch extra details for the frontend success page
                 var booking = await _bookingService.GetBookingByIdAsync(bookingId, userId);
 
-                return Ok(new 
-                { 
-                    Message = "Verified", 
+                return Ok(new
+                {
+                    Message = "Verified",
                     Type = "Booking",
                     BookingId = bookingId,
                     ConfirmationCode = booking?.ConfirmationCode,

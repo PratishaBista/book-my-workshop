@@ -1,3 +1,7 @@
+// Admin controller handles all administrative operations for the workshop booking system
+// Includes provider/workshop approval, user moderation, and review management
+// Only accessible by users with admin or superadmin roles
+
 using System.Text.Json;
 using API.DTOs.Requests;
 using API.Data;
@@ -23,6 +27,8 @@ public class AdminController : ControllerBase
     private readonly IReviewSeedService _reviewSeedService;
     private readonly IReviewModerationService _reviewModeration;
 
+    // Dependency injection through constructor
+    // All services are registered in program.cs
     public AdminController(
         ApplicationDbContext context,
         UserManager<ApplicationUser> userManager,
@@ -39,13 +45,20 @@ public class AdminController : ControllerBase
         _reviewModeration = reviewModeration;
     }
 
+    // fetches all provider applications waiting for admin review
+    // excludes admins who might have accidentally created provider profiles
+    // returns only essential fields for the admin approval dashboard
     // GET: api/admin/providers/pending
     [HttpGet("providers/pending")]
     public async Task<IActionResult> GetPendingProviders()
     {
+        // get all admin users so we can exclude them from provider list
+        // admins shouldn't appear as pending providers
         var admins = await _userManager.GetUsersInRoleAsync(UserRoles.Admin);
         var adminIds = admins.Select(a => a.Id).ToList();
 
+        // eager loading with include() to avoid n+1 query problem
+        // where clause filters only pending providers who are not admins
         var pendingProviders = await _context.Providers
             .Include(p => p.User)
             .Where(p => p.Status == ProviderStatus.PendingReview && !adminIds.Contains(p.UserId))
@@ -73,21 +86,31 @@ public class AdminController : ControllerBase
         return Ok(pendingProviders);
     }
 
+    // approves a pending provider application
+    // changes status from pendingreview to approved
+    // sends email and in-app notification to the host
     // PUT: api/admin/approve-provider/{id}
     [HttpPut("approve-provider/{id}")]
     public async Task<IActionResult> ApproveProvider(int id)
     {
+        // findasync is sufficient here because we only need the provider entity
+        // no need for include since we're not accessing navigation properties yet
         var provider = await _context.Providers.FindAsync(id);
         if (provider == null) return NotFound("Provider not found");
 
+        // guard clause to prevent re-approving already approved providers
         if (provider.Status == ProviderStatus.Approved) return BadRequest("Provider is already approved");
 
+        // update status flags
+        // utcnow ensures timezone consistency across the system
         provider.Status = ProviderStatus.Approved;
         provider.IsApproved = true;
         provider.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        // Send Approval Email
+        // fetch the associated user to get email address
+        // send approval email with dashboard link
+        // localhost:4000 is the frontend/client-public dev server 
         var user = await _userManager.FindByIdAsync(provider.UserId);
         if (user != null && !string.IsNullOrEmpty(user.Email))
         {
@@ -96,21 +119,27 @@ public class AdminController : ControllerBase
             await _emailService.SendEmailAsync(user.Email, "Account Approved - BookMyWorkshop", emailBody);
         }
 
-        // Notify Host via SignalR
-        await _notificationService.CreateNotificationAsync(provider.UserId, 
-            "Profile Approved", 
-            "Congratulations! Your host profile has been approved. You can now publish workshops.", 
-            NotificationType.Success, 
+        // SignalR real-time notification appears instantly in user's dashboard
+        // notificationtype.success determines icon/color in ui
+        await _notificationService.CreateNotificationAsync(provider.UserId,
+            "Profile Approved",
+            "Congratulations! Your host profile has been approved. You can now publish workshops.",
+            NotificationType.Success,
             "/host/dashboard");
 
         return Ok(new { Message = $"Provider '{provider.BusinessName}' approved successfully." });
     }
 
+    // simple dto for rejection reason
+    // used as request body for reject endpoints
     public class RejectProviderRequest
     {
         public string Reason { get; set; } = string.Empty;
     }
 
+    // rejects a provider application with a reason
+    // stores rejection reason in reviewnotes field for audit
+    // sends rejection email and notification so host can fix and reapply
     // PUT: api/admin/reject-provider/{id}
     [HttpPut("reject-provider/{id}")]
     public async Task<IActionResult> RejectProvider(int id, [FromBody] RejectProviderRequest request)
@@ -118,6 +147,8 @@ public class AdminController : ControllerBase
         var provider = await _context.Providers.FindAsync(id);
         if (provider == null) return NotFound("Provider not found");
 
+        // cannot reject an already approved provider
+        // must use suspend endpoint instead for approved providers
         if (provider.Status == ProviderStatus.Approved) return BadRequest("Provider is already approved. You must suspend them instead.");
 
         provider.Status = ProviderStatus.Rejected;
@@ -129,20 +160,24 @@ public class AdminController : ControllerBase
         var user = await _userManager.FindByIdAsync(provider.UserId);
         if (user != null && !string.IsNullOrEmpty(user.Email))
         {
+            // email body includes the rejection reason so host knows what to fix
             var emailBody = EmailTemplates.GetNotificationEmail("Host Profile Requires Action", $"We have reviewed your host application. Unfortunately, it cannot be approved at this time for the following reason:<br/><br/><i>{request.Reason}</i><br/><br/>Please login to your dashboard to update your profile and resubmit.");
             await _emailService.SendEmailAsync(user.Email, "Action Required: Host Profile Update - BookMyWorkshop", emailBody);
         }
 
         // Notify Host via SignalR
-        await _notificationService.CreateNotificationAsync(provider.UserId, 
-            "Profile Needs Update", 
-            $"Your host profile was reviewed but requires changes. Reason: {request.Reason}", 
-            NotificationType.Alert, 
+        await _notificationService.CreateNotificationAsync(provider.UserId,
+            "Profile Needs Update",
+            $"Your host profile was reviewed but requires changes. Reason: {request.Reason}",
+            NotificationType.Alert,
             "/host/settings");
 
         return Ok(new { Message = $"Provider '{provider.BusinessName}' rejected.", Reason = request.Reason });
     }
 
+    // fetches all workshops pending approval or with pending modifications
+    // haspendingmodifications flag indicates an already published workshop was edited and needs re-review
+    // this allows admins to review changes to live workshops without taking them offline
     // GET: api/admin/workshops/pending
     [HttpGet("workshops/pending")]
     public async Task<IActionResult> GetPendingWorkshops()
@@ -150,6 +185,8 @@ public class AdminController : ControllerBase
         var admins = await _userManager.GetUsersInRoleAsync(UserRoles.Admin);
         var adminIds = admins.Select(a => a.Id).ToList();
 
+        // multiple includes to populate workshop, provider, user, categories, pricing in one query
+        // theninclude for nested navigation properties
         var pendingWorkshops = await _context.Workshops
             .Include(w => w.Provider)
             .ThenInclude(p => p.User)
@@ -173,11 +210,13 @@ public class AdminController : ControllerBase
                 CategoryNames = w.Categories.Select(c => c.Name).ToList(),
                 Price = w.Pricing != null ? w.Pricing.BasePrice : 0,
                 w.HasPendingModifications,
-                PendingChanges = _context.WorkshopMedia.Where(m => false).ToList() // Placeholder, we'll fetch actual modifications below
+                // placeholder, actual pending data fetched below
+                PendingChanges = _context.WorkshopMedia.Where(m => false).ToList()
             })
             .ToListAsync();
 
-        // Add pending data if exists
+        // second pass to fetch actual pending modification data for workshops that have it
+        // workshopmodifications table stores pending changes as json in pendingdata column
         var result = new List<object>();
         foreach (var w in pendingWorkshops)
         {
@@ -188,17 +227,30 @@ public class AdminController : ControllerBase
                     .Where(m => m.WorkshopId == w.Id && m.ReviewedAt == null)
                     .OrderByDescending(m => m.CreatedAt)
                     .FirstOrDefaultAsync();
-                
+
+                // deserialize json string back into updateworkshoprequest object
                 if (mod?.PendingData != null)
                 {
                     pendingData = JsonSerializer.Deserialize<UpdateWorkshopRequest>(mod.PendingData);
                 }
             }
-            
-            result.Add(new {
-                w.Id, w.Title, w.Description, w.Tagline, w.Duration, w.MaxCapacity,
-                w.LocationAddress, w.LocationName, w.ProviderName, w.ProviderContact,
-                w.ProviderEmail, w.SubmittedAt, w.CategoryNames, w.Price,
+
+            result.Add(new
+            {
+                w.Id,
+                w.Title,
+                w.Description,
+                w.Tagline,
+                w.Duration,
+                w.MaxCapacity,
+                w.LocationAddress,
+                w.LocationName,
+                w.ProviderName,
+                w.ProviderContact,
+                w.ProviderEmail,
+                w.SubmittedAt,
+                w.CategoryNames,
+                w.Price,
                 w.HasPendingModifications,
                 PendingData = pendingData
             });
@@ -207,6 +259,9 @@ public class AdminController : ControllerBase
         return Ok(result);
     }
 
+    // fetches all live (published) workshops
+    // includes workshops that are published plus those with pending modifications
+    // the latter still appear live while changes are under review
     // GET: api/admin/workshops/live
     [HttpGet("workshops/live")]
     public async Task<IActionResult> GetLiveWorkshops()
@@ -242,15 +297,22 @@ public class AdminController : ControllerBase
         return Ok(liveWorkshops);
     }
 
+    // optional category id when approving a workshop
+    // admin can manually assign a category if auto-categorization failed
     public class ApproveWorkshopRequest
     {
         public int? CategoryId { get; set; }
     }
 
+    // approves a workshop for publishing
+    // handles two scenarios:
+    // 1. new workshop pending review -> approve and publish
+    // 2. existing published workshop with pending modifications -> apply changes and keep published
     // PUT: api/admin/approve-workshop/{id}
     [HttpPut("approve-workshop/{id}")]
     public async Task<IActionResult> ApproveWorkshop(int id, [FromBody] ApproveWorkshopRequest request)
     {
+        // need all navigation properties for the modification application logic
         var workshop = await _context.Workshops
             .Include(w => w.Categories)
             .Include(w => w.Pricing)
@@ -259,7 +321,8 @@ public class AdminController : ControllerBase
             .FirstOrDefaultAsync(w => w.Id == id);
         if (workshop == null) return NotFound("Workshop not found");
 
-        // Handle Pending Modifications if it's already Published
+        // scenario 2: published workshop with pending edits
+        // apply the pending changes from workshopmodifications table
         if (workshop.Status == WorkshopStatus.Published && workshop.HasPendingModifications)
         {
             var mod = await _context.WorkshopModifications
@@ -272,7 +335,7 @@ public class AdminController : ControllerBase
                 var pendingRequest = JsonSerializer.Deserialize<UpdateWorkshopRequest>(mod.PendingData);
                 if (pendingRequest != null)
                 {
-                    // Apply pending data to workshop entity
+                    // apply each field from the pending request to the actual workshop entity
                     workshop.Title = pendingRequest.Title;
                     workshop.Tagline = pendingRequest.Tagline;
                     workshop.Subtitle = pendingRequest.Subtitle;
@@ -301,7 +364,7 @@ public class AdminController : ControllerBase
                         workshop.Pricing.UpdatedAt = DateTime.UtcNow;
                     }
 
-                    // Update Categories
+                    // many-to-many relationship: clear existing categories and add new ones
                     var categoryIds = pendingRequest.CategoryIds ?? new List<int>();
                     var newCategories = await _context.WorkshopCategories
                         .Where(c => categoryIds.Contains(c.Id))
@@ -315,11 +378,12 @@ public class AdminController : ControllerBase
                 }
             }
         }
-        else if (workshop.Status == WorkshopStatus.Published) 
+        else if (workshop.Status == WorkshopStatus.Published)
         {
             return BadRequest("Workshop is already published");
         }
 
+        // manual category assignment by admin
         if (request.CategoryId.HasValue)
         {
             var category = await _context.WorkshopCategories.FindAsync(request.CategoryId.Value);
@@ -327,16 +391,17 @@ public class AdminController : ControllerBase
             {
                 workshop.Categories.Clear();
                 workshop.Categories.Add(category);
-                
+
                 workshop.IsManuallyCategorized = true;
-                
+
                 _context.Workshops.Update(workshop);
             }
         }
 
+        // every workshop must belong to at least one category
         if (!workshop.Categories.Any())
         {
-             return BadRequest("Cannot approve a workshop without a category. Please select one.");
+            return BadRequest("Cannot approve a workshop without a category. Please select one.");
         }
 
         workshop.Status = WorkshopStatus.Published;
@@ -347,10 +412,10 @@ public class AdminController : ControllerBase
         await _context.SaveChangesAsync();
 
         // Notify Host
-        await _notificationService.CreateNotificationAsync(workshop.Provider.UserId, 
-            "Workshop Approved", 
-            $"Your workshop '{workshop.Title}' has been approved and is now live.", 
-            NotificationType.Success, 
+        await _notificationService.CreateNotificationAsync(workshop.Provider.UserId,
+            "Workshop Approved",
+            $"Your workshop '{workshop.Title}' has been approved and is now live.",
+            NotificationType.Success,
             $"/host/workshops"); // Adjusted for host dashboard workshops list
 
         return Ok(new { Message = $"Workshop '{workshop.Title}' approved and published." });
@@ -361,6 +426,9 @@ public class AdminController : ControllerBase
         public string Reason { get; set; } = string.Empty;
     }
 
+    // rejects a workshop and provides feedback to the host
+    // stores rejection reason and timestamp for audit
+    // workshop stays in rejected status until host resubmits
     // PUT: api/admin/reject-workshop/{id}
     [HttpPut("reject-workshop/{id}")]
     public async Task<IActionResult> RejectWorkshop(int id, [FromBody] RejectWorkshopRequest request)
@@ -375,7 +443,7 @@ public class AdminController : ControllerBase
         workshop.RejectedAt = DateTime.UtcNow;
         workshop.UpdatedAt = DateTime.UtcNow;
         workshop.HasPendingModifications = false;
-        
+
         await _context.SaveChangesAsync();
 
         // Send Email
@@ -387,15 +455,18 @@ public class AdminController : ControllerBase
         }
 
         // Notify Host
-        await _notificationService.CreateNotificationAsync(workshop.Provider.UserId, 
-            "Workshop Rejected", 
-            $"Your workshop '{workshop.Title}' requires changes. Reason: {request.Reason}", 
-            NotificationType.Alert, 
+        await _notificationService.CreateNotificationAsync(workshop.Provider.UserId,
+            "Workshop Rejected",
+            $"Your workshop '{workshop.Title}' requires changes. Reason: {request.Reason}",
+            NotificationType.Alert,
             $"/host/workshops");
 
         return Ok(new { Message = $"Workshop '{workshop.Title}' has been rejected.", Reason = request.Reason });
     }
 
+    // suspends a provider account
+    // all their workshops become hidden from the marketplace
+    // suspension reason stored for audit trail
     // PUT: api/admin/suspend-provider/{id}
     [HttpPut("suspend-provider/{id}")]
     public async Task<IActionResult> SuspendProvider(int id, [FromBody] SuspendRequest request)
@@ -427,16 +498,19 @@ public class AdminController : ControllerBase
             NotificationType.Alert,
             "/host/settings");
 
+        // optional system log service, wrapped in try-catch so suspension succeeds even if logging fails
         try
         {
             var logService = HttpContext.RequestServices.GetRequiredService<ISystemLogService>();
             await logService.LogWarningAsync("Moderation", $"Host account '{provider.BusinessName}' (ID: {id}) suspended. Reason: {request.Reason}.", User.Identity?.Name ?? "Admin");
         }
-        catch {}
+        catch { }
 
         return Ok(new { Message = $"Provider '{provider.BusinessName}' has been suspended." });
     }
 
+    // reinstates a previously suspended provider
+    // sets status back to approved
     // PUT: api/admin/unsuspend-provider/{id}
     [HttpPut("unsuspend-provider/{id}")]
     public async Task<IActionResult> UnsuspendProvider(int id)
@@ -471,16 +545,20 @@ public class AdminController : ControllerBase
             var logService = HttpContext.RequestServices.GetRequiredService<ISystemLogService>();
             await logService.LogInfoAsync("Moderation", $"Host account '{provider.BusinessName}' (ID: {id}) suspension lifted.", User.Identity?.Name ?? "Admin");
         }
-        catch {}
+        catch { }
 
         return Ok(new { Message = $"Provider '{provider.BusinessName}' has been reinstated." });
     }
 
+    // reusable dto for suspension requests
     public class SuspendRequest
     {
         public string Reason { get; set; } = string.Empty;
     }
 
+    // suspends a regular user (customer) account
+    // uses asp.net identity's built-in lockout mechanism
+    // lockoutend set to datetimeoffset.maxvalue means permanent suspension
     // PUT: api/admin/suspend-user/{userId}
     [HttpPut("suspend-user/{userId}")]
     public async Task<IActionResult> SuspendUser(string userId, [FromBody] SuspendRequest request)
@@ -507,11 +585,13 @@ public class AdminController : ControllerBase
             var logService = HttpContext.RequestServices.GetRequiredService<ISystemLogService>();
             await logService.LogWarningAsync("Moderation", $"User account '{user.FullName}' (Email: {user.Email}) suspended. Reason: {request.Reason}.", User.Identity?.Name ?? "Admin");
         }
-        catch {}
+        catch { }
 
         return Ok(new { Message = $"User '{user.FullName}' has been suspended." });
     }
 
+    // reinstates a suspended user by clearing the lockout
+    // also resets failed access count to remove any temporary locks
     // PUT: api/admin/unsuspend-user/{userId}
     [HttpPut("unsuspend-user/{userId}")]
     public async Task<IActionResult> UnsuspendUser(string userId)
@@ -519,6 +599,7 @@ public class AdminController : ControllerBase
         var user = await _userManager.FindByIdAsync(userId);
         if (user == null) return NotFound("User not found");
 
+        // setting lockoutend to null removes the lockout
         await _userManager.SetLockoutEndDateAsync(user, null);
         await _userManager.ResetAccessFailedCountAsync(user);
 
@@ -536,11 +617,16 @@ public class AdminController : ControllerBase
             var logService = HttpContext.RequestServices.GetRequiredService<ISystemLogService>();
             await logService.LogInfoAsync("Moderation", $"User account '{user.FullName}' (Email: {user.Email}) suspension lifted.", User.Identity?.Name ?? "Admin");
         }
-        catch {}
+        catch { }
 
         return Ok(new { Message = $"User '{user.FullName}' has been reinstated." });
     }
 
+    // lists all users filtered by role (customer or provider)
+    // role parameter is required because returning all users would be too heavy
+    // provider view shows business name instead of personal name
+    // customer view excludes admins and providers (pure customers only)
+    // GET: api/admin/users?role=Customer|Provider
     // GET: api/admin/users
     [HttpGet("users")]
     public async Task<IActionResult> GetUsers([FromQuery] string? role)
@@ -557,13 +643,14 @@ public class AdminController : ControllerBase
                 .Select(p => new
                 {
                     Id = p.User.Id,
-                    FullName = p.BusinessName,
+                    FullName = p.BusinessName,  // for providers, show business name as the display name
                     p.User.Email,
                     p.User.PhoneNumber,
                     p.User.EmailConfirmed,
                     Role = "Provider",
                     ProviderId = p.Id,
                     IsSuspended = p.Status == ProviderStatus.Suspended,
+                    // map enum status to human-readable string for ui
                     Status = p.Status == ProviderStatus.Approved ? "Active" :
                              p.Status == ProviderStatus.Suspended ? "Suspended" :
                              p.Status == ProviderStatus.PendingReview ? "Pending" :
@@ -575,12 +662,14 @@ public class AdminController : ControllerBase
 
         if (role == "Customer")
         {
+            // build exclusion set: all admin and superadmin users
             var excludedUserIds = new HashSet<string>();
             foreach (var admin in await _userManager.GetUsersInRoleAsync(UserRoles.Admin))
                 excludedUserIds.Add(admin.Id);
             foreach (var superAdmin in await _userManager.GetUsersInRoleAsync(UserRoles.SuperAdmin))
                 excludedUserIds.Add(superAdmin.Id);
 
+            // get all user ids that have provider profiles
             var providerUserIds = (await _context.Providers.Select(p => p.UserId).ToListAsync()).ToHashSet();
 
             // Clients = any account that is not admin/super-admin and has no host (Provider) profile.
@@ -596,6 +685,7 @@ public class AdminController : ControllerBase
                     u.PhoneNumber,
                     u.EmailConfirmed,
                     Role = "Customer",
+                    // lockoutend greater than now means user is currently locked out
                     IsSuspended = u.LockoutEnd != null && u.LockoutEnd > DateTimeOffset.UtcNow,
                     Status = (u.LockoutEnd != null && u.LockoutEnd > DateTimeOffset.UtcNow) ? "Suspended" : "Active"
                 })
@@ -607,6 +697,8 @@ public class AdminController : ControllerBase
         return BadRequest("Please specify a role (Customer or Provider).");
     }
 
+    // manual email verification for users who have issues with email confirmation flow
+    // sets emailconfirmed flag to true without requiring the user to click the confirmation link
     // PUT: api/admin/verify-user/{userId}
     [HttpPut("verify-user/{userId}")]
     public async Task<IActionResult> VerifyUser(string userId)
@@ -627,6 +719,9 @@ public class AdminController : ControllerBase
         return Ok(new { Message = $"User '{user.FullName}' has been manually verified." });
     }
 
+    // runs moderation on all existing reviews
+    // analyzes each review comment for offensive content and updates flagged status
+    // useful for cleaning up old reviews after moderation rules change
     // POST: api/admin/reviews/remoderate
     [HttpPost("reviews/remoderate")]
     public async Task<IActionResult> RemoderateAllReviews()
@@ -636,6 +731,7 @@ public class AdminController : ControllerBase
 
         foreach (var review in reviews)
         {
+            // analyzeasync returns (isflagged, score, categories)
             var (isFlagged, score, _) = await _reviewModeration.AnalyzeAsync(review.Comment);
             review.IsFlagged = isFlagged;
             review.OffensiveScore = score;
@@ -646,6 +742,8 @@ public class AdminController : ControllerBase
         return Ok(new { updated = reviews.Count, flagged });
     }
 
+    // seeds the database with sample reviews for testing/demo purposes
+    // force=true overwrites existing seeded reviews
     // POST: api/admin/seed-sample-reviews?force=false
     [HttpPost("seed-sample-reviews")]
     public async Task<IActionResult> SeedSampleReviews([FromQuery] bool force = false)
@@ -657,12 +755,14 @@ public class AdminController : ControllerBase
         return Ok(result);
     }
 
+    // retrieves reviews with optional filtering for flagged content only
+    // filter parameter: "all" or "flagged"
     // GET: api/admin/reviews?filter=all|flagged
     [HttpGet("reviews")]
     public async Task<IActionResult> GetReviews([FromQuery] string filter = "all")
     {
         var query = _context.WorkshopReviews
-            .AsNoTracking()
+            .AsNoTracking() // improves performance since we're only reading
             .Include(r => r.User)
             .Include(r => r.Workshop)
             .AsQueryable();
@@ -681,6 +781,8 @@ public class AdminController : ControllerBase
     [HttpGet("reviews/flagged")]
     public Task<IActionResult> GetFlaggedReviews() => GetReviews("flagged");
 
+    // maps workshopreview entity to a clean dto for admin panel
+    // static method so it doesn't capture instance state
     private static DTOs.Responses.AdminReviewResponse MapAdminReview(WorkshopReview r) =>
         new()
         {
@@ -697,6 +799,9 @@ public class AdminController : ControllerBase
             CreatedAt = r.CreatedAt
         };
 
+    // deletes a flagged review
+    // only flagged reviews can be deleted through this endpoint (safety constraint)
+    // returns 204 no content on success (rest convention for delete)
     // DELETE: api/admin/reviews/{id}
     [HttpDelete("reviews/{id}")]
     public async Task<IActionResult> DeleteFlaggedReview(int id)
@@ -715,11 +820,17 @@ public class AdminController : ControllerBase
         return NoContent();
     }
 
+    // dashboard summary statistics for admin landing page
+    // calculates total platform revenue from booking fees
+    // counts active workshops, pending host applications, total users, and review stats
+    // GET: api/admin/overview-stats
     [HttpGet("overview-stats")]
     public async Task<IActionResult> GetOverviewStats()
     {
+        // total revenue = sum of platform fee minus vat on commission
+        // only includes paid bookings that are not refunded and not in escrow
         var totalRevenue = await _context.Bookings
-            .Where(b => b.PaymentStatus == PaymentStatus.Paid 
+            .Where(b => b.PaymentStatus == PaymentStatus.Paid
                      && b.BookingStatus != BookingStatus.Refunded
                      && b.PayoutStatus != PayoutStatus.Escrow)
             .SumAsync(b => b.PlatformFee - b.VatOnCommission);
@@ -742,6 +853,7 @@ public class AdminController : ControllerBase
     }
 }
 
+// simple dto for overview statistics response
 public class AdminOverviewStatsResponse
 {
     public decimal TotalRevenue { get; set; }

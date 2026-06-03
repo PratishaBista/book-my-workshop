@@ -1,3 +1,8 @@
+// wallet controller manages user wallet functionality
+// allows users to view their wallet balance and transaction history
+// wallet balance can be used for booking payments and gift card purchases
+// all endpoints require authentication
+
 using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -11,7 +16,7 @@ namespace API.Controllers;
 
 [ApiController]
 [Route("api/wallet")]
-[Authorize]
+[Authorize] // all wallet operations require authenticated user
 public class WalletController : ControllerBase
 {
     private readonly IGiftCardService _giftCardService;
@@ -21,8 +26,12 @@ public class WalletController : ControllerBase
         _giftCardService = giftCardService;
     }
 
+    // retrieves current user's wallet information
+    // includes balance, transaction history, and gift card claims
+    // returns walletresponse dto with all wallet-related data
+    // GET: api/wallet
     [HttpGet]
-    [Authorize(Roles = UserRoles.User)]
+    [Authorize(Roles = UserRoles.User)] // only regular users have wallets (providers have separate wallet for payouts)
     public async Task<ActionResult<WalletResponse>> GetWallet()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);

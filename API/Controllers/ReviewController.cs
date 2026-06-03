@@ -1,3 +1,7 @@
+// review controller handles customer reviews for workshops
+// includes posting reviews with images, viewing reviews, checking eligibility, and deletion
+// uses moderation service to flag offensive content automatically
+
 using API.Data;
 using API.DTOs.Requests;
 using API.DTOs.Responses;
@@ -21,11 +25,11 @@ public class ReviewController : ControllerBase
     private readonly IBookingRepository _bookingRepository;
     private readonly IWorkshopRepository _workshopRepository;
     private readonly IMapper _mapper;
-    private readonly IReviewModerationService _reviewModeration;
+    private readonly IReviewModerationService _reviewModeration; // flags offensive content
     private readonly IMediaService _mediaService;
     private readonly ILogger<ReviewController> _logger;
 
-    private const int MaxReviewImages = 3;
+    private const int MaxReviewImages = 3; // limit to prevent abuse and storage costs
 
     public ReviewController(
         ApplicationDbContext context,
@@ -47,10 +51,13 @@ public class ReviewController : ControllerBase
         _logger = logger;
     }
 
-    // POST: api/workshop/{workshopId}/review (multipart: rating, comment, bookingId, images)
+    // adds a new review for a workshop
+    // multipart form allows image uploads alongside review data
+    // only users who attended the workshop and were checked in can review
+    // POST: api/workshop/{workshopId}/review
     [HttpPost]
     [Authorize]
-    [RequestSizeLimit(15_000_000)]
+    [RequestSizeLimit(15_000_000)] // ~15mb max request size for images
     public async Task<IActionResult> AddReview(
         int workshopId,
         [FromForm] int bookingId,
@@ -66,27 +73,32 @@ public class ReviewController : ControllerBase
                 return Unauthorized();
             }
 
+            // validate rating range
             if (rating < 1 || rating > 5)
             {
                 return BadRequest(new { message = "Rating must be between 1 and 5." });
             }
 
+            // validate comment not empty
             if (string.IsNullOrWhiteSpace(comment))
             {
                 return BadRequest(new { message = "Comment is required." });
             }
 
+            // prevent excessively long reviews
             if (comment.Length > 2000)
             {
                 return BadRequest(new { message = "Comment cannot exceed 2000 characters." });
             }
 
+            // verify workshop exists
             var workshop = await _workshopRepository.GetByIdAsync(workshopId);
             if (workshop == null)
             {
                 return NotFound(new { message = "Workshop not found." });
             }
 
+            // verify booking exists and belongs to user
             var booking = await _bookingRepository.GetBookingWithDetailsAsync(bookingId);
             if (booking == null)
             {
@@ -98,32 +110,38 @@ public class ReviewController : ControllerBase
                 return Forbid("You can only review workshops you have attended.");
             }
 
+            // ensure booking matches the workshop being reviewed
             if (booking.WorkshopSchedule.WorkshopId != workshopId)
             {
                 return BadRequest(new { message = "This booking is not for the specified workshop." });
             }
 
+            // only confirmed bookings can be reviewed
             if (booking.BookingStatus != BookingStatus.Confirmed)
             {
                 return BadRequest(new { message = "You can only review confirmed bookings." });
             }
 
+            // workshop must be completed before review is allowed
             if (booking.WorkshopSchedule.Status != ScheduleStatus.Completed)
             {
                 return BadRequest(new { message = "You can only review workshops after the session has been completed by the host." });
             }
 
+            // host must have checked in the customer
             if (booking.AttendanceStatus != AttendanceStatus.CheckedIn)
             {
                 return BadRequest(new { message = "You can only review after your attendance has been confirmed at the venue." });
             }
 
+            // prevent duplicate reviews for the same booking
             var existingReview = await _reviewRepository.FirstOrDefaultAsync(r => r.BookingId == bookingId);
             if (existingReview != null)
             {
                 return BadRequest(new { message = "You have already reviewed this workshop." });
             }
 
+            // upload images if any
             var imageUrls = new List<string>();
             if (images != null && images.Count > 0)
             {
@@ -140,6 +158,7 @@ public class ReviewController : ControllerBase
                 }
             }
 
+            // run moderation on comment to detect offensive content
             var (isFlagged, offensiveScore, _) = await _reviewModeration.AnalyzeAsync(comment);
 
             var review = new WorkshopReview
@@ -150,17 +169,19 @@ public class ReviewController : ControllerBase
                 Rating = rating,
                 Comment = comment.Trim(),
                 ImageUrls = imageUrls,
-                IsFlagged = isFlagged,
-                OffensiveScore = offensiveScore,
+                IsFlagged = isFlagged, // flagged reviews hidden from public view
+                OffensiveScore = offensiveScore, // score for admin review
                 CreatedAt = DateTime.UtcNow
             };
 
             await _reviewRepository.AddAsync(review);
             await _reviewRepository.SaveChangesAsync();
 
+            // load full review with includes for response
             var loaded = await GetReviewWithIncludesAsync(review.Id);
             var reviewResponse = _mapper.Map<ReviewResponse>(loaded);
 
+            // returns 201 with location header
             return CreatedAtAction(nameof(GetWorkshopReviews), new { workshopId }, reviewResponse);
         }
         catch (Exception ex)
@@ -170,14 +191,19 @@ public class ReviewController : ControllerBase
         }
     }
 
-    // POST JSON fallback for clients not sending multipart
+    // json fallback endpoint for clients that can't send multipart
+    // POST: api/workshop/{workshopId}/review/json
     [HttpPost("json")]
     [Authorize]
     public async Task<IActionResult> AddReviewJson(int workshopId, [FromBody] AddReviewRequest request)
     {
+        // reuse the main method with null images
         return await AddReview(workshopId, request.BookingId, request.Rating, request.Comment, null);
     }
 
+    // returns all public (non-flagged) reviews for a workshop
+    // includes average rating calculation
+    // GET: api/workshop/{workshopId}/review
     [HttpGet]
     public async Task<IActionResult> GetWorkshopReviews(int workshopId)
     {
@@ -205,6 +231,9 @@ public class ReviewController : ControllerBase
         }
     }
 
+    // checks if the current user can review a workshop
+    // returns eligibility status and reason
+    // GET: api/workshop/{workshopId}/review/can-review
     [HttpGet("can-review")]
     [Authorize]
     public async Task<IActionResult> CanUserReview(int workshopId)
@@ -225,9 +254,9 @@ public class ReviewController : ControllerBase
             {
                 canReview = canReview && !hasReviewed,
                 hasReviewed,
-                message = canReview && !hasReviewed 
-                    ? "You can review this workshop." 
-                    : hasReviewed 
+                message = canReview && !hasReviewed
+                    ? "You can review this workshop."
+                    : hasReviewed
                         ? "You have already reviewed this workshop."
                         : "Reviews unlock after your host checks you in and marks the session complete."
             });
@@ -239,6 +268,8 @@ public class ReviewController : ControllerBase
         }
     }
 
+    // deletes a review (users can delete their own, admins can delete any)
+    // DELETE: api/workshop/{workshopId}/review/{reviewId}
     [HttpDelete("{reviewId}")]
     [Authorize]
     public async Task<IActionResult> DeleteReview(int workshopId, int reviewId)
@@ -258,6 +289,7 @@ public class ReviewController : ControllerBase
             }
 
             var isAdmin = User.IsInRole("Admin");
+            // users can only delete their own reviews, admins can delete any
             if (review.UserId != userId && !isAdmin)
             {
                 return Forbid("You can only delete your own reviews.");
@@ -275,11 +307,13 @@ public class ReviewController : ControllerBase
         }
     }
 
+    // returns query for public reviews (excludes flagged content)
+    // eager loads user, workshop, provider, and media data
     private IQueryable<WorkshopReview> QueryPublicReviews()
     {
         return _context.WorkshopReviews
-            .AsNoTracking()
-            .Where(r => !r.IsFlagged)
+            .AsNoTracking() // read-only optimization
+            .Where(r => !r.IsFlagged) // filter out offensive reviews
             .Include(r => r.User)
             .Include(r => r.Workshop)
                 .ThenInclude(w => w.Provider)
@@ -287,6 +321,7 @@ public class ReviewController : ControllerBase
                 .ThenInclude(w => w.Media);
     }
 
+    // helper method to fetch review with all navigation properties populated
     private async Task<WorkshopReview?> GetReviewWithIncludesAsync(int reviewId)
     {
         return await _context.WorkshopReviews

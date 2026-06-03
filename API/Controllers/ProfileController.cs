@@ -1,3 +1,8 @@
+// profile controller manages user profile operations
+// includes profile viewing, editing, avatar/cover uploads, account deactivation/deletion
+// also handles password management and google account linking/disconnecting
+// most endpoints require authentication except public profile viewing by username
+
 using System.Security.Claims;
 using API.DTOs.Requests;
 using API.DTOs.Responses;
@@ -13,7 +18,7 @@ using Google.Apis.Auth;
 
 namespace API.Controllers;
 
-[Authorize]
+[Authorize] // profile operations require authentication
 [ApiController]
 [Route("api/[controller]")]
 public class ProfileController : ControllerBase
@@ -33,6 +38,9 @@ public class ProfileController : ControllerBase
         _configuration = configuration;
     }
 
+    // uploads a profile picture (avatar) for the current user
+    // stores image in cloudinary under profiles/avatars folder
+    // POST: api/profile/upload-avatar
     [HttpPost("upload-avatar")]
     public async Task<ActionResult> UploadAvatar([FromForm] IFormFile file)
     {
@@ -60,6 +68,9 @@ public class ProfileController : ControllerBase
         }
     }
 
+    // uploads a cover photo for the user's profile page
+    // similar to facebook/twitter cover image
+    // POST: api/profile/upload-cover
     [HttpPost("upload-cover")]
     public async Task<ActionResult> UploadCover([FromForm] IFormFile file)
     {
@@ -87,6 +98,9 @@ public class ProfileController : ControllerBase
         }
     }
 
+    // returns the current authenticated user's profile data
+    // includes all public and private profile fields
+    // GET: api/profile
     [HttpGet]
     public async Task<ActionResult<ProfileResponse>> GetProfile()
     {
@@ -118,6 +132,9 @@ public class ProfileController : ControllerBase
         };
     }
 
+    // public endpoint to view any user's profile by their username
+    // used for social features like user profiles and reviews
+    // GET: api/profile/u/{username}
     [AllowAnonymous]
     [HttpGet("u/{username}")]
     public async Task<ActionResult<ProfileResponse>> GetProfileByUsername(string username)
@@ -147,6 +164,9 @@ public class ProfileController : ControllerBase
         };
     }
 
+    // updates the current user's profile information
+    // handles email change, username uniqueness, and all other editable fields
+    // PUT: api/profile
     [HttpPut]
     public async Task<ActionResult<ProfileResponse>> UpdateProfile(UpdateProfileRequest request)
     {
@@ -156,8 +176,8 @@ public class ProfileController : ControllerBase
         var user = await _userManager.FindByEmailAsync(email);
         if (user == null) return NotFound();
 
+        // update basic fields
         user.FullName = request.FullName ?? string.Empty;
-
         user.Bio = request.Bio;
         user.Pronouns = request.Pronouns;
         user.Location = request.Location;
@@ -167,14 +187,16 @@ public class ProfileController : ControllerBase
         user.CoverImageUrl = request.CoverImageUrl;
         user.PhoneNumber = request.PhoneNumber;
 
+        // handle email change (requires updating username as well)
         if (!string.IsNullOrEmpty(request.Email) && request.Email != user.Email)
         {
-             user.Email = request.Email;
-             user.UserName = request.Email;
-             user.NormalizedEmail = request.Email.ToUpper();
-             user.NormalizedUserName = request.Email.ToUpper();
+            user.Email = request.Email;
+            user.UserName = request.Email;
+            user.NormalizedEmail = request.Email.ToUpper();
+            user.NormalizedUserName = request.Email.ToUpper();
         }
 
+        // handle username change (check uniqueness)
         if (!string.IsNullOrEmpty(request.ProfileUsername) && request.ProfileUsername != user.ProfileUsername)
         {
             var existing = await _userManager.Users.AnyAsync(u => u.ProfileUsername == request.ProfileUsername);
@@ -207,6 +229,9 @@ public class ProfileController : ControllerBase
         };
     }
 
+    // soft-deletes the account by setting isdeactivated flag
+    // user can reactivate by logging in again
+    // PUT: api/profile/deactivate
     [HttpPut("deactivate")]
     public async Task<ActionResult> DeactivateAccount()
     {
@@ -222,6 +247,9 @@ public class ProfileController : ControllerBase
         return Ok(new { message = "Account deactivated successfully. You can reactivate by logging in anytime." });
     }
 
+    // permanently deletes the user account with data anonymization (gdpr compliant)
+    // removes personally identifiable information (pii) and anonymizes records
+    // DELETE: api/profile/delete
     [HttpDelete("delete")]
     public async Task<ActionResult> DeleteAccountNow()
     {
@@ -231,10 +259,10 @@ public class ProfileController : ControllerBase
         var user = await _userManager.FindByEmailAsync(email);
         if (user == null) return NotFound();
 
-        // 1. Identity Scrubbing (PII Removal)
+        // step 1: anonymize identity fields to free up email for new accounts
         string randomId = Guid.NewGuid().ToString().Substring(0, 8);
         string oldEmail = user.Email!;
-        
+
         // Change identity fields to anonymous values to free up the email for new accounts
         user.Email = $"deleted_{randomId}@bookmyworkshop.com";
         user.NormalizedEmail = user.Email.ToUpper();
@@ -249,18 +277,18 @@ public class ProfileController : ControllerBase
         user.IsDeactivated = true;
         user.DeletionScheduledAt = DateTime.UtcNow; // Log when the purge happened
 
-        // 2. Remove non-essential references
+        // step 2: remove non-essential references (preferences)
         var prefs = await _context.UserPreferences.Where(p => p.UserId == user.Id).ToListAsync();
         _context.UserPreferences.RemoveRange(prefs);
 
-        // 3. Handle Provider Status if applicable
+        // step 3: handle provider data if user was a host
         var provider = await _context.Providers.FirstOrDefaultAsync(p => p.UserId == user.Id);
         if (provider != null)
         {
             provider.BusinessName = "Former Provider (Closed)";
             provider.Status = API.Enums.ProviderStatus.Suspended;
             provider.IsApproved = false;
-            
+
             // Unpublish all their workshops
             var workshops = await _context.Workshops.Where(w => w.ProviderId == provider.Id).ToListAsync();
             foreach (var w in workshops)
@@ -278,6 +306,9 @@ public class ProfileController : ControllerBase
         return Ok(new { message = "Your account has been permanently deleted and all personal data has been removed." });
     }
 
+    // reactivates a previously deactivated account
+    // clears deactivation flags so user can access the platform again
+    // POST: api/profile/reactivate
     [HttpPost("reactivate")]
     public async Task<ActionResult> ReactivateAccount()
     {
@@ -294,6 +325,9 @@ public class ProfileController : ControllerBase
         return Ok(new { message = "Welcome back! Your account has been reactivated." });
     }
 
+    // internal endpoint for hard-deleting a user completely (bypasses anonymization)
+    // used by admin tools for data cleanup
+    // hidden from swagger docs via apiexplorersettings
     [ApiExplorerSettings(IgnoreApi = true)]
     [HttpDelete("hard-delete-internal/{userId}")]
     public async Task<ActionResult> HardDeleteInternal(string userId)
@@ -303,6 +337,9 @@ public class ProfileController : ControllerBase
         return Ok(new { message = "User purged successfully" });
     }
 
+    // sets or changes user password
+    // works for both: setting first password (google users) or changing existing
+    // POST: api/profile/set-password
     [HttpPost("set-password")]
     public async Task<ActionResult> SetPassword(SetPasswordRequest request)
     {
@@ -317,13 +354,15 @@ public class ProfileController : ControllerBase
 
         if (hasPassword)
         {
+            // existing password user (require current password for security)
             if (string.IsNullOrEmpty(request.CurrentPassword))
                 return BadRequest(new { message = "Current password is required to change password" });
-            
+
             result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
         }
         else
         {
+            // google user setting password for first time
             result = await _userManager.AddPasswordAsync(user, request.NewPassword);
         }
 
@@ -332,6 +371,9 @@ public class ProfileController : ControllerBase
         return Ok(new { message = "Password set successfully" });
     }
 
+    // disconnects google account from local user profile
+    // user must have a password set first to avoid lockout
+    // POST: api/profile/disconnect-google
     [HttpPost("disconnect-google")]
     public async Task<ActionResult> DisconnectGoogle()
     {
@@ -355,29 +397,34 @@ public class ProfileController : ControllerBase
         return Ok(new { message = "Google account disconnected successfully." });
     }
 
+    // links a google account to an existing local user profile
+    // validates google token and ensures email matches
+    // POST: api/profile/link-google
     [HttpPost("link-google")]
     public async Task<ActionResult> LinkGoogle([FromBody] GoogleLoginRequest request)
     {
         try
         {
+            // validate google id token
             var settings = new GoogleJsonWebSignature.ValidationSettings()
             {
                 Audience = new List<string> { _configuration["Google:ClientId"]! }
             };
-            
+
             var payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, settings);
-            
+
             var email = User.FindFirstValue(ClaimTypes.Email);
             var currentUser = await _userManager.FindByEmailAsync(email!);
-            
+
             if (currentUser == null) return NotFound();
 
+            // security: ensure google email matches current user's email
             if (!string.Equals(payload.Email, currentUser.Email, StringComparison.OrdinalIgnoreCase))
             {
                 return BadRequest(new { message = $"You can only link the Google account associated with your current email ({currentUser.Email})." });
             }
-            
-            // Check if this Google ID is already linked to another user
+
+            // prevent linking a google account already used by another user
             var existingWithGoogle = await _userManager.Users.FirstOrDefaultAsync(u => u.GoogleId == payload.Subject);
             if (existingWithGoogle != null && existingWithGoogle.Id != currentUser!.Id)
             {
@@ -385,7 +432,7 @@ public class ProfileController : ControllerBase
             }
 
             currentUser!.GoogleId = payload.Subject;
-            currentUser.EmailConfirmed = true; 
+            currentUser.EmailConfirmed = true; // google emails are verified
 
             var result = await _userManager.UpdateAsync(currentUser);
             if (!result.Succeeded) return BadRequest(result.Errors);

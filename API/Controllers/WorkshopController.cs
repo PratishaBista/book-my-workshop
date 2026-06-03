@@ -1,3 +1,7 @@
+// workshop controller handles crud operations for workshops (host side)
+// includes creating, updating, deleting, publishing/unpublishing workshops
+// accessible by providers and admins only
+
 using API.DTOs.Requests;
 using API.Entities;
 using API.Enums;
@@ -33,6 +37,8 @@ public class WorkshopController : ControllerBase
         _logger = logger;
     }
 
+    // creates a new workshop (draft by default)
+    // provider must have an approved profile
     // POST: api/workshop
     [Authorize(Roles = "Provider,Admin")]
     [HttpPost]
@@ -46,7 +52,7 @@ public class WorkshopController : ControllerBase
                 return Unauthorized();
             }
 
-            // Get provider ID from user
+            // get the provider id associated with this user account
             var providerId = await GetProviderIdAsync(userId);
             if (providerId == null)
             {
@@ -54,6 +60,7 @@ public class WorkshopController : ControllerBase
             }
 
             var result = await _workshopService.CreateWorkshopAsync(providerId.Value, request);
+            // returns 201 with location header pointing to getworkshop endpoint
             return CreatedAtAction(nameof(GetWorkshop), new { id = result.Id }, result);
         }
         catch (UnauthorizedAccessException ex)
@@ -71,6 +78,9 @@ public class WorkshopController : ControllerBase
         }
     }
 
+    // updates an existing workshop
+    // only the owning provider or admin can update
+    // if workshop is published, changes go to pending modifications queue
     // PUT: api/workshop/{id}
     [Authorize(Roles = "Provider,Admin")]
     [HttpPut("{id}")]
@@ -112,6 +122,8 @@ public class WorkshopController : ControllerBase
         }
     }
 
+    // soft deletes a workshop (sets status to archived)
+    // prevents new bookings but preserves history
     // DELETE: api/workshop/{id}
     [Authorize(Roles = "Provider,Admin")]
     [HttpDelete("{id}")]
@@ -137,7 +149,7 @@ public class WorkshopController : ControllerBase
                 return NotFound();
             }
 
-            return NoContent();
+            return NoContent();  // 204 (standard rest delete response)
         }
         catch (UnauthorizedAccessException ex)
         {
@@ -150,6 +162,8 @@ public class WorkshopController : ControllerBase
         }
     }
 
+    // returns all workshops owned by the current provider
+    // used for host dashboard workshop management
     // GET: api/workshop/my-workshops
     [Authorize(Roles = "Provider,Admin")]
     [HttpGet("my-workshops")]
@@ -166,7 +180,7 @@ public class WorkshopController : ControllerBase
             var providerId = await GetProviderIdAsync(userId);
             if (providerId == null)
             {
-                return Ok(new List<object>()); // Return empty list if not a provider
+                return Ok(new List<object>());  // user is admin or not a provider (return empty list)
             }
 
             var workshops = await _workshopService.GetProviderWorkshopsAsync(providerId.Value);
@@ -179,6 +193,8 @@ public class WorkshopController : ControllerBase
         }
     }
 
+    // returns single workshop by id (public endpoint)
+    // used for workshop details page
     // GET: api/workshop/{id}
     [AllowAnonymous]
     [HttpGet("{id}")]
@@ -201,6 +217,9 @@ public class WorkshopController : ControllerBase
         }
     }
 
+    // returns related workshop recommendations based on category and tags
+    // public endpoint for "you might also like" section
+    // GET: api/workshop/{id}/recommendations
     [AllowAnonymous]
     [HttpGet("{id}/recommendations")]
     public async Task<IActionResult> GetRelatedWorkshops(int id)
@@ -217,7 +236,11 @@ public class WorkshopController : ControllerBase
         }
     }
 
+    // submits workshop for admin review and publishing
+    // changes status from draft to pendingreview
+    // admin must approve before workshop goes live
     // POST: api/workshop/{id}/publish
+
     [Authorize(Roles = "Provider,Admin")]
     [HttpPost("{id}/publish")]
     public async Task<IActionResult> PublishWorkshop(int id)
@@ -255,6 +278,8 @@ public class WorkshopController : ControllerBase
         }
     }
 
+    // takes a live workshop offline (sets status to draft)
+    // workshop disappears from marketplace but retains data
     // POST: api/workshop/{id}/unpublish
     [Authorize(Roles = "Provider,Admin")]
     [HttpPost("{id}/unpublish")]
@@ -293,7 +318,8 @@ public class WorkshopController : ControllerBase
         }
     }
 
-    // Helper method to get provider ID
+    // helper method to get provider id from user id
+    // returns null if user doesn't have a provider profile
     private async Task<int?> GetProviderIdAsync(string userId)
     {
         var provider = await _providerRepository.FirstOrDefaultAsync(p => p.UserId == userId);

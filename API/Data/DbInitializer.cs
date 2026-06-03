@@ -1,3 +1,7 @@
+// db initializer seeds initial data into the database when the application starts
+// creates roles, default admin/superadmin accounts, and workshop categories
+// this class is typically called from program.cs during app startup
+
 using API.Entities;
 using API.Enums;
 using Microsoft.AspNetCore.Identity;
@@ -7,18 +11,20 @@ namespace API.Data;
 
 public static class DbInitializer
 {
+    // entry point for seeding (call this from program.cs after building the app)
+    // requires usermanager and rolemanager from identity, plus db context for custom entities
     public static async Task SeedAsync(
-        UserManager<ApplicationUser> userManager, 
+        UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole> roleManager,
         ApplicationDbContext context)
     {
-        // 1. Seed Roles
+        // 1. Seed all four Roles
         await SeedRoleAsync(roleManager, UserRoles.Admin);
         await SeedRoleAsync(roleManager, UserRoles.User);
         await SeedRoleAsync(roleManager, UserRoles.Provider);
         await SeedRoleAsync(roleManager, UserRoles.SuperAdmin);
 
-        // 2. Seed Admin User
+        // 2. Seed Admin User (general platform admin)
         var adminEmail = "admin@bookmyworkshop.com";
         var adminUser = await userManager.FindByEmailAsync(adminEmail);
 
@@ -29,17 +35,17 @@ public static class DbInitializer
                 UserName = adminEmail,
                 Email = adminEmail,
                 FullName = "Pratisha Bista",
-                EmailConfirmed = true
+                EmailConfirmed = true // admin doesn't need email verification
             };
 
-            var result = await userManager.CreateAsync(admin, "Admin@123"); 
+            var result = await userManager.CreateAsync(admin, "Admin@123"); // default password (should be changed on first login)
             if (result.Succeeded)
             {
                 await userManager.AddToRoleAsync(admin, UserRoles.Admin);
             }
         }
 
-        // 2.1 Seed SuperAdmin User
+        // 2.1 Seed SuperAdmin User (system owner with full financial and system access)
         var superAdminEmail = "velvetscarfsoda@gmail.com";
         var superAdminUser = await userManager.FindByEmailAsync(superAdminEmail);
 
@@ -53,7 +59,7 @@ public static class DbInitializer
                 EmailConfirmed = true
             };
 
-            var result = await userManager.CreateAsync(superAdmin, "SuperAdmin@123"); 
+            var result = await userManager.CreateAsync(superAdmin, "SuperAdmin@123"); // default password - must be changed
             if (result.Succeeded)
             {
                 await userManager.AddToRoleAsync(superAdmin, UserRoles.SuperAdmin);
@@ -64,6 +70,7 @@ public static class DbInitializer
         await SeedWorkshopCategoriesAsync(context);
     }
 
+    // helper method to create a role if it doesn't exist
     private static async Task SeedRoleAsync(RoleManager<IdentityRole> roleManager, string roleName)
     {
         if (!await roleManager.RoleExistsAsync(roleName))
@@ -72,12 +79,14 @@ public static class DbInitializer
         }
     }
 
+    // seeds ten default workshop categories covering common creative workshop types
+    // categories include art, cooking, wellness, tech, photography, music, business, language, diy, and kids
     private static async Task SeedWorkshopCategoriesAsync(ApplicationDbContext context)
     {
-        // Check if categories already exist
+        // check if categories already exist (prevents duplicate seeding on subsequent app starts)
         if (context.WorkshopCategories.Any())
         {
-            return; // Categories already seeded
+            return; // categories already seeded, skip
         }
 
         var categories = new List<WorkshopCategory>

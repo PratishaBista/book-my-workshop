@@ -1,3 +1,7 @@
+// giftcard controller handles purchasing and claiming digital gift cards
+// gift cards can be purchased by users and claimed by recipients to add wallet balance
+// all endpoints require authentication (authorize attribute at controller level)
+
 using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -12,7 +16,7 @@ namespace API.Controllers;
 
 [ApiController]
 [Route("api/giftcard")]
-[Authorize]
+[Authorize] // all gift card operations require logged-in user
 public class GiftCardController : ControllerBase
 {
     private readonly IGiftCardService _giftCardService;
@@ -24,16 +28,24 @@ public class GiftCardController : ControllerBase
         _paymentService = paymentService;
     }
 
+    // initiates gift card purchase flow
+    // creates a gift card record in pending state, returns payment parameters for frontend
+    // buyer pays first, then gift card becomes active for claiming
+    // POST: api/giftcard/purchase
     [HttpPost("purchase")]
-    [Authorize(Roles = UserRoles.User)]
+    [Authorize(Roles = UserRoles.User)]  // only regular users (not providers/admins) can purchase gift cards
     public async Task<ActionResult<PaymentInitiateResponse>> PurchaseGiftCard([FromBody] GiftCardPurchaseRequest request)
     {
+        // extract user id from jwt token claims
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null) return Unauthorized();
 
         try
         {
+            // create gift card record with pending status
             var giftCard = await _giftCardService.PurchaseGiftCardAsync(userId, request);
+
+            // generate payment parameters (as of now esewa, stripe) for frontend to redirect
             var paymentParams = await _paymentService.InitiateGiftCardPaymentAsync(giftCard.Id, giftCard.Amount);
             return Ok(paymentParams);
         }
@@ -43,6 +55,10 @@ public class GiftCardController : ControllerBase
         }
     }
 
+    // claims a gift card using its unique code
+    // adds the gift card amount to the claiming user's wallet balance
+    // one-time use only (claimed status prevents double claiming)
+    // POST: api/giftcard/claim
     [HttpPost("claim")]
     [Authorize(Roles = UserRoles.User)]
     public async Task<IActionResult> ClaimGiftCard([FromBody] GiftCardClaimRequest request)
@@ -66,6 +82,10 @@ public class GiftCardController : ControllerBase
         }
     }
 
+    // retrieves gift card details by its unique code
+    // useful for checking balance/status before claiming
+    // returns sender info, amount, and current status
+    // GET: api/giftcard/code/{code}
     [HttpGet("code/{code}")]
     [Authorize(Roles = UserRoles.User)]
     public async Task<ActionResult<GiftCardResponse>> GetGiftCardByCode(string code)
@@ -82,7 +102,7 @@ public class GiftCardController : ControllerBase
             Code = giftCard.Code,
             Amount = giftCard.Amount,
             SenderUserId = giftCard.SenderUserId,
-            SenderName = giftCard.SenderUser?.FullName ?? "Someone",
+            SenderName = giftCard.SenderUser?.FullName ?? "Someone", // fallback if user deleted
             RecipientEmail = giftCard.RecipientEmail,
             PersonalMessage = giftCard.PersonalMessage,
             ClaimedByUserId = giftCard.ClaimedByUserId,

@@ -1,3 +1,8 @@
+// schedule controller manages workshop schedules (date/time instances of a workshop)
+// each workshop can have multiple schedules (e.g., multiple dates/times)
+// handles adding, updating, deleting schedules, and provider operations like check-in, marking no-show, completing sessions
+// accessible by providers and admins for management, public endpoints for viewing
+
 using API.DTOs.Requests;
 using API.Entities;
 using API.Repositories;
@@ -9,7 +14,7 @@ namespace API.Controllers;
 
 [ApiController]
 [Route("api/workshop/{workshopId}/[controller]")]
-[Authorize(Roles = "Provider,Admin")]
+[Authorize(Roles = "Provider,Admin")] // schedule management requires provider or admin role
 public class ScheduleController : ControllerBase
 {
     private readonly IWorkshopService _workshopService;
@@ -29,6 +34,8 @@ public class ScheduleController : ControllerBase
         _logger = logger;
     }
 
+    // adds a single schedule instance to a workshop
+    // schedule defines a specific date/time when the workshop will be held
     // POST: api/workshop/{workshopId}/schedule
     [HttpPost]
     public async Task<IActionResult> AddSchedule(int workshopId, [FromBody] AddScheduleRequest request)
@@ -65,6 +72,8 @@ public class ScheduleController : ControllerBase
         }
     }
 
+    // adds multiple schedule instances in one request (bulk operation)
+    // useful for workshops that run on recurring dates (e.g., every saturday for a month)
     // POST: api/workshop/{workshopId}/schedule/bulk
     [HttpPost("bulk")]
     public async Task<IActionResult> BulkAddSchedules(int workshopId, [FromBody] IEnumerable<AddScheduleRequest> requests)
@@ -89,6 +98,7 @@ public class ScheduleController : ControllerBase
         }
     }
 
+    // updates an existing schedule (date, time, capacity, etc.)
     // PUT: api/workshop/{workshopId}/schedule/{scheduleId}
     [HttpPut("{scheduleId}")]
     public async Task<IActionResult> UpdateSchedule(int workshopId, int scheduleId, [FromBody] AddScheduleRequest request)
@@ -129,6 +139,8 @@ public class ScheduleController : ControllerBase
         }
     }
 
+    // deletes a schedule instance
+    // automatically refunds any existing bookings for that schedule
     // DELETE: api/workshop/{workshopId}/schedule/{scheduleId}
     [HttpDelete("{scheduleId}")]
     public async Task<IActionResult> DeleteSchedule(int workshopId, int scheduleId)
@@ -153,7 +165,7 @@ public class ScheduleController : ControllerBase
                 return NotFound();
             }
 
-            // Refund any existing bookings to wallets
+            // Refund any customers who booked this cancelled schedule
             await _bookingService.CancelScheduleBookingsAsync(scheduleId);
 
             return NoContent();
@@ -169,6 +181,8 @@ public class ScheduleController : ControllerBase
         }
     }
 
+    // returns all schedules for a workshop (public endpoint)
+    // used by customers to see available dates and times
     // GET: api/workshop/{workshopId}/schedule
     [AllowAnonymous]
     [HttpGet]
@@ -186,6 +200,8 @@ public class ScheduleController : ControllerBase
         }
     }
 
+    // returns all schedules for the current provider (across all workshops)
+    // used in provider dashboard calendar view
     // GET: api/provider/schedule
     [HttpGet("~/api/provider/schedule")]
     public async Task<IActionResult> GetProviderSchedules()
@@ -208,6 +224,8 @@ public class ScheduleController : ControllerBase
         }
     }
 
+    // returns provider schedules with booking details (who booked, how many seats, etc.)
+    // used for attendance management at the venue
     // GET: api/provider/schedule/with-bookings
     [HttpGet("~/api/provider/schedule/with-bookings")]
     public async Task<IActionResult> GetProviderSchedulesWithBookings()
@@ -230,6 +248,8 @@ public class ScheduleController : ControllerBase
         }
     }
 
+    // marks a booking as checked in (participant has arrived at venue)
+    // uses unique confirmation code for scanning (qr code)
     // PUT: api/provider/booking/check-in
     [HttpPut("~/api/provider/booking/check-in")]
     public async Task<IActionResult> CheckInBooking([FromBody] CheckInBookingRequest request)
@@ -266,6 +286,8 @@ public class ScheduleController : ControllerBase
         }
     }
 
+    // marks a booking as no-show (participant didn't attend)
+    // affects refund eligibility if no-show policy applies
     // PUT: api/provider/booking/{bookingId}/no-show
     [HttpPut("~/api/provider/booking/{bookingId}/no-show")]
     public async Task<IActionResult> MarkNoShow(int bookingId)
@@ -295,6 +317,8 @@ public class ScheduleController : ControllerBase
         }
     }
 
+    // marks a schedule as completed (workshop session has ended)
+    // triggers escrow release and allows customers to leave reviews
     // PUT: api/provider/schedule/{scheduleId}/complete
     [HttpPut("~/api/provider/schedule/{scheduleId}/complete")]
     public async Task<IActionResult> CompleteSchedule(int scheduleId)
@@ -327,6 +351,7 @@ public class ScheduleController : ControllerBase
         }
     }
 
+    // helper method to get provider id from user id
     private async Task<int?> GetProviderIdAsync(string userId)
     {
         var provider = await _providerRepository.FirstOrDefaultAsync(p => p.UserId == userId);
